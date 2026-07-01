@@ -409,8 +409,12 @@
   .blocos-grid {
     display: grid;
     grid-template-columns: repeat(3, 300px);
-    justify-content: start;
+    justify-content: center;
     gap: 18px;
+  }
+  .blocks-inner {
+    max-width: 936px;
+    margin: 0 auto;
   }
   .bloco-card {
     background: var(--navy-2);
@@ -1522,16 +1526,18 @@
 
   <!-- ===== VIEW: CATEGORIAS POR BLOCO ===== -->
   <div id="viewBlocks" class="view-container">
-    <div class="btn-back-container">
-      <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
-    </div>
-
-    <div class="section" id="sectionBlocos">
-      <div class="section-head">
-        <h2>Categorias por bloco <span style="font-size: 13px; font-weight: 400; color: var(--bone-dim);">(protótipo)</span></h2>
-        <div class="desc">Cada bloco agrupa as categorias do Omie do mesmo grupo. Ranking do maior para o menor valor, com % do bloco ao lado do nome.</div>
+    <div class="blocks-inner">
+      <div class="btn-back-container">
+        <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
       </div>
-      <div class="blocos-grid" id="blocosGrid"></div>
+
+      <div class="section" id="sectionBlocos">
+        <div class="section-head">
+          <h2>Categorias por bloco <span style="font-size: 13px; font-weight: 400; color: var(--bone-dim);">(protótipo)</span></h2>
+          <div class="desc">Cada bloco agrupa as categorias do Omie do mesmo grupo. Ranking do maior para o menor valor, com % do bloco ao lado do nome.</div>
+        </div>
+        <div class="blocos-grid" id="blocosGrid"></div>
+      </div>
     </div>
 
   </div>
