@@ -1,0 +1,3696 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Painel Financeiro · Multi-empresa</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --navy:      #0E1E2B;
+    --navy-2:    #142C3E;
+    --blue-belt: #1C5D8C;
+    --blue-belt-light: #3E89BC;
+    --bone:      #F3EFE6;
+    --bone-dim:  #C9C2B2;
+    --green:     #3FA66A;
+    --red:       #C75450;
+    --line:      rgba(243,239,230,0.10);
+    --line-soft: rgba(243,239,230,0.06);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--navy);
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 48px 32px 80px;
+  }
+
+  /* ---------- header ---------- */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    flex-wrap: wrap;
+    gap: 24px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 16px;
+    margin-bottom: 40px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    background: var(--navy);
+    padding-top: 16px;
+    margin-left: -32px;
+    margin-right: -32px;
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .eyebrow {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.16em;
+    text-transform: uppercase;
+    color: var(--blue-belt-light);
+    margin-bottom: 10px;
+  }
+
+  h1 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-weight: 700;
+    font-size: 38px;
+    letter-spacing: -0.01em;
+    color: var(--bone);
+  }
+
+  .period-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .period-controls select {
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    color: var(--bone);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    padding: 9px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .period-controls select:focus-visible { outline: 2px solid var(--blue-belt-light); }
+
+  .company-multiselect { position: relative; }
+  .company-multiselect-btn {
+    background: var(--navy-2);
+    border: 1px solid var(--blue-belt-light);
+    color: var(--blue-belt-light);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 9px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .company-multiselect-btn:focus-visible { outline: 2px solid var(--blue-belt-light); }
+  .company-multiselect-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 8px;
+    min-width: 200px;
+    z-index: 20;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+  }
+  .company-multiselect-option {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 13.5px;
+  }
+  .company-multiselect-option:hover { background: rgba(243,239,230,0.05); }
+  .company-multiselect-option input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--blue-belt-light);
+    cursor: pointer;
+  }
+
+  .status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--bone-dim);
+    padding: 6px 11px;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+  }
+  .status-dot {
+    width: 7px; height: 7px; border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 0 rgba(63,166,106,0.5);
+    animation: pulse 2.2s infinite;
+  }
+  .status-dot.bad { background: var(--red); }
+  @keyframes pulse {
+    0%   { box-shadow: 0 0 0 0 rgba(63,166,106,0.45); }
+    70%  { box-shadow: 0 0 0 6px rgba(63,166,106,0); }
+    100% { box-shadow: 0 0 0 0 rgba(63,166,106,0); }
+  }
+
+  /* ---------- charts ---------- */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 32px;
+  }
+  .chart-card {
+    background: var(--navy-2);
+    padding: 20px 22px 12px;
+    min-height: 280px;
+    overflow: hidden;
+  }
+  .chart-card-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  @media (max-width: 760px) {
+    .chart-grid { grid-template-columns: 1fr; }
+  }
+
+  .chart-grid-3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 48px;
+  }
+  .chart-grid-3 .chart-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 340px;
+    overflow: hidden;
+  }
+  .latest-paid-list {
+    margin-top: 6px;
+    border-top: 1px solid var(--line-soft);
+    padding-top: 8px;
+  }
+  .latest-paid-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    padding: 5px 0;
+    font-size: 11.5px;
+  }
+  .latest-paid-row .desc {
+    color: var(--bone-dim);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .latest-paid-row .date {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--bone-dim);
+    flex-shrink: 0;
+    font-size: 10.5px;
+  }
+  .latest-paid-row .tag {
+    width: 6px; height: 6px; border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 2px;
+  }
+  .tag.in { background: var(--green); }
+  .tag.out { background: var(--red); }
+  .latest-paid-legend {
+    display: flex;
+    gap: 14px;
+    margin-top: 6px;
+    padding-top: 8px;
+    border-top: 1px solid var(--line-soft);
+    font-size: 10.5px;
+    color: var(--bone-dim);
+  }
+  .latest-paid-legend span {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  @media (max-width: 900px) {
+    .chart-grid-3 { grid-template-columns: 1fr; }
+  }
+
+  /* ---------- summary cards ---------- */
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 48px;
+  }
+  .summary-card {
+    background: var(--navy-2);
+    padding: 24px 22px;
+  }
+  .summary-card.alert {
+    background: rgba(199,84,80,0.08);
+  }
+  .summary-card .label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .summary-card .value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 27px;
+    font-weight: 600;
+    line-height: 1.1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .summary-card .value > span:first-child {
+    flex-basis: 100%;
+  }
+  .value.pos { color: var(--green); }
+  .value.neg { color: var(--red); }
+  .summary-card .sub {
+    margin-top: 8px;
+    font-size: 12.5px;
+    color: var(--bone-dim);
+  }
+  .delta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+  }
+  .delta.good { color: var(--green); }
+  .delta.bad { color: var(--red); }
+  .delta.flat { color: var(--bone-dim); }
+  @media (max-width: 1000px) {
+    .summary-grid { grid-template-columns: repeat(3, 1fr); }
+  }
+  @media (max-width: 760px) {
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ---------- section ---------- */
+  .section {
+    margin-bottom: 52px;
+  }
+  .section-head {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    margin-bottom: 18px;
+    gap: 16px;
+  }
+  .section-head h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 21px;
+    font-weight: 600;
+  }
+  .section-head .desc {
+    font-size: 13px;
+    color: var(--bone-dim);
+    max-width: 420px;
+    text-align: right;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 14px;
+  }
+  thead th {
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+    padding: 0 0 10px;
+    border-bottom: 1px solid var(--line);
+    font-weight: 500;
+  }
+  thead th:first-child { text-align: left; }
+
+  tbody td {
+    padding: 11px 0;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: right;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13.5px;
+    white-space: nowrap;
+  }
+  tbody td:first-child {
+    text-align: left;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    white-space: normal;
+  }
+
+  tr.group td:first-child {
+    font-weight: 600;
+    color: var(--bone);
+  }
+  tr.item td:first-child {
+    padding-left: 18px;
+    color: var(--bone-dim);
+  }
+  tr.total td {
+    font-weight: 600;
+    border-top: 1px solid var(--line);
+    border-bottom: none;
+    padding-top: 14px;
+    color: var(--bone);
+  }
+  tr.total.result td {
+    font-size: 16px;
+  }
+  tr.total.result td:first-child { font-family: 'Space Grotesk', sans-serif; }
+
+  .pos { color: var(--green); }
+  .neg { color: var(--red); }
+  .muted { color: var(--bone-dim); }
+
+  .blocos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 18px;
+  }
+  .bloco-card {
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 18px 20px;
+  }
+  .bloco-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line);
+  }
+  .bloco-head .bloco-titulo { flex: 1; }
+  .bloco-toggle {
+    background: none;
+    border: 1px solid var(--line);
+    color: var(--bone-dim);
+    cursor: pointer;
+    font-size: 12px;
+    width: 22px; height: 22px;
+    border-radius: 4px;
+    line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+    flex-shrink: 0;
+  }
+  .bloco-toggle:hover { background: rgba(243,239,230,0.06); color: var(--bone); border-color: var(--blue-belt-light); }
+  .bloco-toggle.collapsed { color: var(--bone-dim); opacity: 0.5; }
+  .bloco-body { overflow: hidden; transition: max-height 0.25s ease; }
+  .bloco-body.collapsed { max-height: 0 !important; }
+  .painel-toggle {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+  }
+  .painel-toggle input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: var(--blue-belt-light);
+    cursor: pointer;
+  }
+  .bloco-titulo {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .bloco-titulo.receita { color: var(--green); }
+  .bloco-titulo.despesa { color: var(--red); }
+  .bloco-total {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--bone);
+  }
+  .bloco-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+    max-height: 185px;
+    overflow-y: auto;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(243,239,230,0.15) transparent;
+  }
+  .bloco-lista::-webkit-scrollbar { width: 5px; }
+  .bloco-lista::-webkit-scrollbar-track { background: transparent; }
+  .bloco-lista::-webkit-scrollbar-thumb { background: rgba(243,239,230,0.15); border-radius: 4px; }
+  .bloco-lista::-webkit-scrollbar-thumb:hover { background: rgba(243,239,230,0.25); }
+  .bloco-linha {
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    align-items: center;
+    gap: 10px;
+  }
+  .bloco-rank {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--bone-dim);
+  }
+  .bloco-barra-wrap {
+    position: relative;
+    background: rgba(243,239,230,0.06);
+    border-radius: 4px;
+    height: 26px;
+    overflow: hidden;
+  }
+  .bloco-barra-fill {
+    position: absolute;
+    inset: 0;
+    height: 100%;
+    border-radius: 4px;
+    background: var(--blue-belt-light);
+    opacity: 0.35;
+  }
+  .bloco-barra-fill.receita { background: var(--green); }
+  .bloco-barra-fill.despesa { background: var(--red); }
+  .bloco-linha-texto {
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    height: 100%;
+    padding: 0 10px;
+    font-size: 12.5px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .bloco-nome {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-right: 8px;
+  }
+  .bloco-pct {
+    font-family: 'IBM Plex Mono', monospace;
+    color: var(--bone-dim);
+    flex-shrink: 0;
+  }
+  .bloco-valor {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+    text-align: right;
+    white-space: nowrap;
+  }
+  .bloco-vazio {
+    font-size: 13px;
+    color: var(--bone-dim);
+    padding: 8px 0;
+  }
+
+  .empty-row td {
+    color: var(--bone-dim);
+    font-style: italic;
+    font-family: 'Inter', sans-serif;
+  }
+
+  .forecast-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+  }
+  .forecast-card {
+    background: var(--navy-2);
+    padding: 20px 22px;
+  }
+  .forecast-period {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 12px;
+  }
+  .forecast-card table { width: 100%; }
+  @media (max-width: 760px) {
+    .forecast-grid { grid-template-columns: 1fr; }
+  }
+
+  footer {
+    margin-top: 60px;
+    padding-top: 22px;
+    border-top: 1px solid var(--line);
+    display: flex;
+    justify-content: space-between;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--bone-dim);
+  }
+
+  .loading-state, .error-state {
+    padding: 60px 0;
+    text-align: center;
+    color: var(--bone-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px;
+  }
+  .error-state { color: var(--red); }
+
+  /* ---------- login screen ---------- */
+  .login-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--navy);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .login-overlay.hidden { display: none; }
+  .login-box {
+    width: 100%;
+    max-width: 400px;
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 40px 36px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .login-box .eyebrow { margin-bottom: 8px; }
+  .login-box h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 28px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .login-box .login-sub {
+    font-size: 13.5px;
+    color: var(--bone-dim);
+    margin-bottom: 28px;
+  }
+  .login-box label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 6px;
+  }
+  .login-box input[type="email"],
+  .login-box input[type="password"] {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(14,30,43,0.6);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    margin-bottom: 18px;
+    outline: none;
+  }
+  .login-box input:focus {
+    border-color: var(--blue-belt-light);
+    box-shadow: 0 0 0 3px rgba(28,93,140,0.25);
+  }
+  .login-box .login-error {
+    background: rgba(199,84,80,0.12);
+    border: 1px solid rgba(199,84,80,0.35);
+    color: var(--red);
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    display: none;
+  }
+  .login-box .login-error.show { display: block; }
+  .login-box button[type="submit"] {
+    width: 100%;
+    padding: 12px;
+    background: var(--blue-belt);
+    border: none;
+    border-radius: 6px;
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .login-box button[type="submit"]:hover { background: var(--blue-belt-light); }
+  .login-box button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  .btn-logout {
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    color: var(--bone-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .btn-logout:hover { background: rgba(243,239,230,0.06); color: var(--bone); }
+  .user-info {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--bone-dim);
+    text-align: right;
+    line-height: 1.5;
+  }
+  .user-info .user-role {
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    font-size: 10px;
+  }
+
+  .wrap.hidden { display: none; }
+
+  @media (max-width: 760px) {
+    .section-head { flex-direction: column; align-items: flex-start; }
+    .section-head .desc { text-align: left; }
+    header { flex-direction: column; align-items: flex-start; }
+  }
+
+  /* ========== MENU LATERAL ========== */
+  .sidebar-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.45);
+    z-index: 900;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.25s;
+  }
+  .sidebar-overlay.open { opacity: 1; pointer-events: auto; }
+
+  .sidebar {
+    position: fixed; top: 0; right: 0;
+    width: 300px; height: 100vh;
+    background: var(--navy-2);
+    border-left: 1px solid var(--line);
+    z-index: 1000;
+    transform: translateX(100%);
+    transition: transform 0.3s cubic-bezier(0.4,0,0.2,1);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+  }
+  .sidebar.open { transform: translateX(0); }
+
+  .sidebar-header {
+    padding: 22px 20px 14px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+  .sidebar-header-text .sidebar-title {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 16px; font-weight: 600;
+  }
+  .sidebar-header-text .sidebar-sub {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--bone-dim); margin-top: 2px;
+  }
+  .sidebar-close {
+    background: none; border: none; color: var(--bone-dim);
+    font-size: 22px; cursor: pointer; padding: 4px 6px;
+    border-radius: 4px; line-height: 1;
+  }
+  .sidebar-close:hover { color: var(--bone); background: rgba(243,239,230,0.06); }
+
+  .sidebar-body {
+    flex: 1; overflow-y: auto; padding: 14px 16px 20px;
+  }
+  .sidebar-body::-webkit-scrollbar { width: 5px; }
+  .sidebar-body::-webkit-scrollbar-track { background: transparent; }
+  .sidebar-body::-webkit-scrollbar-thumb { background: rgba(62,137,188,0.35); border-radius: 3px; }
+
+  .sidebar-group-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 600;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--blue-belt-light);
+    margin: 16px 0 8px 2px;
+  }
+  .sidebar-group-title:first-child { margin-top: 0; }
+
+  .sidebar-item {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 10px; border-radius: 6px; cursor: pointer;
+    transition: background 0.15s; font-size: 13px;
+  }
+  .sidebar-item:hover { background: rgba(243,239,230,0.06); }
+  .sidebar-item input[type="checkbox"] {
+    width: 15px; height: 15px;
+    accent-color: var(--blue-belt-light);
+    cursor: pointer; flex-shrink: 0;
+  }
+  .sidebar-item-label { flex: 1; user-select: none; }
+  .sidebar-item.off .sidebar-item-label { color: var(--bone-dim); text-decoration: line-through; }
+
+  .sidebar-footer {
+    padding: 10px 16px; border-top: 1px solid var(--line);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; color: var(--bone-dim);
+    flex-shrink: 0; text-align: center;
+  }
+
+  /* Botão flutuante */
+  .sidebar-fab {
+    position: fixed; bottom: 24px; right: 24px;
+    width: 48px; height: 48px;
+    background: var(--blue-belt);
+    border: none; border-radius: 50%;
+    color: var(--bone); font-size: 20px;
+    cursor: pointer; z-index: 800;
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 4px 14px rgba(28,93,140,0.4);
+    transition: transform 0.2s, background 0.2s;
+  }
+  .sidebar-fab:hover { transform: scale(1.1); background: var(--blue-belt-light); }
+
+  .hidden-block { display: none !important; }
+
+  @media (max-width: 760px) {
+    .sidebar { width: 280px; }
+  }
+
+  /* ---------- Projeção, Tendência e Metas ---------- */
+  .proj-section { margin-bottom: 52px; }
+
+  .proj-mode-tabs {
+    display: flex;
+    gap: 2px;
+    margin-bottom: 20px;
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    overflow: hidden;
+    width: fit-content;
+  }
+  .proj-mode-tab {
+    background: none;
+    border: none;
+    color: var(--bone-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+    padding: 10px 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .proj-mode-tab:hover { background: rgba(243,239,230,0.04); color: var(--bone); }
+  .proj-mode-tab.active {
+    background: var(--blue-belt);
+    color: var(--bone);
+    font-weight: 600;
+  }
+
+  .proj-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .proj-card {
+    background: var(--navy-2);
+    padding: 22px 24px;
+  }
+  .proj-card .proj-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .proj-card .proj-value {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 26px;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+  .proj-card .proj-sub {
+    margin-top: 8px;
+    font-size: 12px;
+    color: var(--bone-dim);
+  }
+
+  .proj-progress-wrap {
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 22px 24px;
+    margin-bottom: 20px;
+  }
+  .proj-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .proj-progress-header .proj-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+  }
+  .proj-progress-header .proj-pct {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+  }
+  .proj-bar-bg {
+    width: 100%;
+    height: 14px;
+    background: rgba(243,239,230,0.06);
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+  }
+  .proj-bar-fill {
+    height: 100%;
+    border-radius: 7px;
+    transition: width 0.5s ease;
+    background: var(--blue-belt-light);
+  }
+  .proj-bar-fill.on-track { background: var(--green); }
+  .proj-bar-fill.behind { background: var(--red); }
+  .proj-bar-marker {
+    position: absolute;
+    top: -3px;
+    width: 2px;
+    height: 20px;
+    background: var(--bone);
+    opacity: 0.7;
+    border-radius: 1px;
+  }
+  .proj-progress-legend {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 11.5px;
+    color: var(--bone-dim);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .proj-manual-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 20px;
+  }
+  .proj-manual-card {
+    background: var(--navy-2);
+    padding: 18px 22px;
+  }
+  .proj-manual-card .proj-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 10px;
+  }
+  .proj-manual-input {
+    background: var(--navy);
+    border: 1px solid var(--line);
+    color: var(--bone);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    width: 100%;
+    transition: border-color 0.2s;
+  }
+  .proj-manual-input:focus {
+    outline: none;
+    border-color: var(--blue-belt-light);
+  }
+  .proj-manual-input::placeholder { color: rgba(243,239,230,0.25); }
+  .proj-save-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .proj-save-btn {
+    background: var(--blue-belt);
+    border: none;
+    color: var(--bone);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 9px 20px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .proj-save-btn:hover { background: var(--blue-belt-light); }
+  .proj-save-msg {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--green);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .proj-save-msg.show { opacity: 1; }
+
+  .proj-chart-wrap {
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 22px 12px;
+  }
+
+  @media (max-width: 900px) {
+    .proj-grid { grid-template-columns: 1fr; }
+    .proj-manual-grid { grid-template-columns: 1fr; }
+  }
+  /* ==========================================================================
+   SISTEMA DE NAVEGAÇÃO POR CARDS E VIEWS (SPA)
+   ========================================================================== */
+
+/* Contentores das Views: Escondidos por padrão, aparecem quando ativos */
+.view-container {
+  display: none;
+  animation: fadeIn 0.3s ease-in-out forwards;
+}
+
+.view-container.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Grelha dos Cards de Menu da Tela Inicial */
+.nav-menu-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+  margin: 32px 0 48px;
+}
+
+@media (max-width: 850px) {
+  .nav-menu-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Estilo dos Cards Grandes Clicáveis */
+.nav-card {
+  background: var(--navy-2);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 32px 24px;
+  cursor: pointer;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px;
+}
+
+.nav-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--blue-belt-light);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+.nav-card-icon {
+  font-size: 36px;
+  margin-bottom: 16px;
+}
+
+.nav-card-title {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--bone);
+  margin-bottom: 8px;
+}
+
+.nav-card-desc {
+  font-size: 13.5px;
+  color: var(--bone-dim);
+  line-height: 1.5;
+}
+
+/* Botões de Voltar ao Menu Principal */
+.btn-back-container {
+  margin-bottom: 28px;
+}
+
+.btn-back {
+  background: var(--navy-2);
+  border: 1px solid var(--line);
+  color: var(--bone);
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 10px 18px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s;
+}
+
+.btn-back:hover {
+  background: rgba(243, 239, 230, 0.06);
+  border-color: var(--blue-belt-light);
+  color: var(--blue-belt-light);
+}
+</style>
+</head>
+<body>
+
+<!-- ===== MENU LATERAL ===== -->
+<div class="sidebar-overlay" id="sidebarOverlay"></div>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-header-text">
+      <div class="sidebar-title">Painel de Blocos</div>
+      <div class="sidebar-sub">Ativar / Desativar Seções</div>
+    </div>
+    <button class="sidebar-close" id="sidebarClose" title="Fechar">✕</button>
+  </div>
+  <div class="sidebar-body" id="sidebarBody">
+    <!-- Preenchido por JS -->
+  </div>
+  <div class="sidebar-footer">Preferências salvas automaticamente</div>
+</aside>
+<button class="sidebar-fab" id="sidebarFab" title="Configurar blocos visíveis">⚙</button>
+
+<div class="login-overlay" id="loginOverlay">
+  <div class="login-box">
+    <div class="eyebrow">BPO Financeiro</div>
+    <h2>Acesso ao dashboard</h2>
+    <div class="login-sub">Entre com seu e-mail corporativo para continuar.</div>
+    <div class="login-error" id="loginError"></div>
+    <form id="loginForm" onsubmit="return handleLogin(event)">
+      <label for="loginEmail">E-mail</label>
+      <input type="email" id="loginEmail" autocomplete="email" required>
+      <label for="loginPassword">Senha</label>
+      <input type="password" id="loginPassword" autocomplete="current-password" required>
+      <button type="submit" id="loginBtn">Entrar</button>
+    </form>
+  </div>
+</div>
+
+<div class="wrap hidden" id="dashboardWrap">
+
+  <header>
+    <div>
+      <div class="eyebrow" id="companyEyebrow">RT &middot; Gracie Barra</div>
+      <h1>Painel Financeiro</h1>
+    </div>
+    <div style="display:flex; align-items:center; gap:14px; flex-wrap: wrap;">
+      <div class="user-info" id="userInfo"></div>
+      <button type="button" class="btn-logout" id="btnLogout" onclick="handleLogout()">⎋ Sair</button>
+      <span class="status-pill"><span class="status-dot" id="statusDot"></span><span id="statusText">conectando…</span></span>
+      <div class="period-controls">
+        <div class="company-multiselect" id="companyMultiselect">
+          <button type="button" class="company-multiselect-btn" id="companyMultiselectBtn" aria-haspopup="true" aria-expanded="false">
+            <span id="companyMultiselectLabel">Empresas</span>
+            <span aria-hidden="true" style="font-size:10px;">&#9662;</span>
+          </button>
+          <div class="company-multiselect-panel" id="companyMultiselectPanel" hidden></div>
+        </div>
+        <select id="monthOnlySelect" aria-label="Selecionar mês"></select>
+        <select id="yearOnlySelect" aria-label="Selecionar ano"></select>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MENU PRINCIPAL (3 CARDS) ===== -->
+  <div id="viewMenu" class="view-container active">
+    <div class="nav-menu-grid">
+
+      <div class="nav-card" onclick="switchView('viewCharts')">
+        <div>
+          <div class="nav-card-title">Gráficos e Indicadores</div>
+          <div class="nav-card-desc">Análise visual de faturamento, despesas por categoria, fluxo de caixa futuro e saldos liquidados.</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="switchView('viewProjections')">
+        <div>
+          <div class="nav-card-title">Metas & Tendências</div>
+          <div class="nav-card-desc">Acompanhamento do atingimento de metas anuais estimadas ou manuais e projeções de performance.</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="switchView('viewBlocks')">
+        <div>
+          <div class="nav-card-title">Categorias por Bloco</div>
+          <div class="nav-card-desc">Visão analítica detalhada e ranqueamento das movimentações agrupadas por blocos operacionais.</div>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="section" id="sectionResumoMes">
+      <div class="section-head">
+        <h2>Resumo do mês selecionado</h2>
+        <div class="desc">Consolidado de DRE (competência) e DFC (caixa) das empresas selecionadas, para o mês escolhido no topo.</div>
+      </div>
+      <div class="summary-grid" id="resumoMesGrid">
+        <div class="summary-card">
+          <div class="label">Receitas (DRE)</div>
+          <div class="value"><span id="resumoMesReceita">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Despesas (DRE)</div>
+          <div class="value"><span id="resumoMesDespesa">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Resultado (DRE)</div>
+          <div class="value"><span id="resumoMesResultado">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Entradas (DFC)</div>
+          <div class="value"><span id="resumoMesEntradas">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Saídas (DFC)</div>
+          <div class="value"><span id="resumoMesSaidas">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Saldo de Caixa (DFC)</div>
+          <div class="value"><span id="resumoMesSaldo">—</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section" id="sectionResumoAno">
+      <div class="section-head">
+        <h2>Acumulado no ano</h2>
+        <div class="desc">Consolidado de 01/jan até o fim do mês selecionado (mesmo critério: DRE por competência, DFC por caixa).</div>
+      </div>
+      <div class="summary-grid" id="resumoAnoGrid">
+        <div class="summary-card">
+          <div class="label">Receitas (DRE)</div>
+          <div class="value"><span id="resumoAnoReceita">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Despesas (DRE)</div>
+          <div class="value"><span id="resumoAnoDespesa">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Resultado (DRE)</div>
+          <div class="value"><span id="resumoAnoResultado">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Entradas (DFC)</div>
+          <div class="value"><span id="resumoAnoEntradas">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Saídas (DFC)</div>
+          <div class="value"><span id="resumoAnoSaidas">—</span></div>
+        </div>
+        <div class="summary-card">
+          <div class="label">Saldo de Caixa (DFC)</div>
+          <div class="value"><span id="resumoAnoSaldo">—</span></div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+
+
+  <!-- ===== VIEW: GRÁFICOS E INDICADORES ===== -->
+  <div id="viewCharts" class="view-container">
+    <div class="btn-back-container">
+      <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+    </div>
+
+    <div class="chart-grid" id="sectionCharts1">
+      <div class="chart-card" id="chartCardDre">
+        <div class="chart-card-title">DRE — Receitas x Despesas (últimos 6 meses)</div>
+        <div style="position: relative; height: 200px;">
+          <canvas id="chartDre" role="img" aria-label="Gráfico de barras comparando receitas e despesas mensais dos últimos 6 meses">Gráfico de receitas e despesas mensais.</canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="chartCardDfc">
+        <div class="chart-card-title">DFC — Saldo de caixa (últimos 6 meses)</div>
+        <div style="position: relative; height: 200px;">
+          <canvas id="chartDfc" role="img" aria-label="Gráfico de linha mostrando o saldo de caixa mensal dos últimos 6 meses">Gráfico de saldo de caixa mensal.</canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="chart-grid-3" id="sectionCharts2">
+      <div class="chart-card" id="chartCardStacked">
+        <div class="chart-card-title">Despesas por categoria (últimos 6 meses)</div>
+        <div style="position: relative; height: 230px; flex: 1;">
+          <canvas id="chartStacked" role="img" aria-label="Gráfico de barras empilhadas mostrando despesas por categoria nos últimos 6 meses">Despesas por categoria, mês a mês.</canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="chartCardDonut">
+        <div class="chart-card-title">Receitas por categoria (mês selecionado)</div>
+        <div id="chartDonutWrap" style="position: relative; height: 230px; flex: 1; display: flex; align-items: center; justify-content: center;">
+          <canvas id="chartDonut" role="img" aria-label="Gráfico de rosca mostrando a distribuição de receitas por categoria no mês selecionado">Distribuição de receitas por categoria.</canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="chartCardInOut">
+        <div class="chart-card-title">Entradas x saídas liquidadas no mês</div>
+        <div id="chartInOutWrap" style="position: relative; height: 170px; display: flex; align-items: center; justify-content: center;">
+          <canvas id="chartInOut" role="img" aria-label="Gráfico de rosca mostrando a proporção entre entradas e saídas liquidadas no mês">Proporção entre entradas e saídas.</canvas>
+        </div>
+        <div id="latestPaidList" class="latest-paid-list"></div>
+      </div>
+    </div>
+
+    <div class="chart-card" id="chartCardForecast" style="border: 1px solid var(--line); border-radius: 10px; margin-bottom: 32px;">
+      <div class="chart-card-title">Fluxo de caixa futuro — próximos 60 dias</div>
+      <div style="position: relative; height: 260px;">
+        <canvas id="chartForecastFlow" role="img" aria-label="Gráfico de linha mostrando o fluxo de caixa projetado para os próximos 60 dias">Fluxo de caixa projetado.</canvas>
+      </div>
+    </div>
+
+    <div class="summary-grid" id="summaryGrid">
+      <div class="summary-card">
+        <div class="label">Receitas</div>
+        <div class="value"><span id="sumReceitas">—</span><span class="delta" id="deltaReceitas"></span></div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Despesas</div>
+        <div class="value"><span id="sumDespesas">—</span><span class="delta" id="deltaDespesas"></span></div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Resultado (DRE)</div>
+        <div class="value"><span id="sumResultado">—</span><span class="delta" id="deltaResultado"></span></div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Saldo de Caixa (DFC)</div>
+        <div class="value"><span id="sumCaixa">—</span><span class="delta" id="deltaCaixa"></span></div>
+      </div>
+      <div class="summary-card" id="cardInadimplencia">
+        <div class="label">⚠ Inadimplência</div>
+        <div class="value" id="sumInadimplencia">—</div>
+        <div class="sub" id="subInadimplencia"></div>
+      </div>
+    </div>
+
+    <div class="section" id="sectionDre">
+      <div class="section-head">
+        <h2>DRE — Demonstração do Resultado</h2>
+        <div class="desc">Receitas e despesas por categoria, pela data de emissão do lançamento (regime de competência).</div>
+      </div>
+      <table id="dreTable">
+        <thead>
+          <tr><th>Categoria</th><th>Valor</th></tr>
+        </thead>
+        <tbody id="dreBody">
+          <tr class="empty-row"><td colspan="2">Carregando dados…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section" id="sectionDfc">
+      <div class="section-head">
+        <h2>DFC — Fluxo de Caixa</h2>
+        <div class="desc">Entradas e saídas efetivamente liquidadas, pela data real de pagamento (regime de caixa).</div>
+      </div>
+      <table id="dfcTable">
+        <thead>
+          <tr><th>Movimento</th><th>Valor</th></tr>
+        </thead>
+        <tbody id="dfcBody">
+          <tr class="empty-row"><td colspan="2">Carregando dados…</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="section" id="sectionForecast">
+      <div class="section-head">
+        <h2>Previsão de caixa</h2>
+        <div class="desc">Contas a pagar e a receber já lançadas, com vencimento nos próximos 30 e 60 dias (ainda não liquidadas).</div>
+      </div>
+      <div class="forecast-grid" id="forecastGrid">
+        <div class="forecast-card">
+          <div class="forecast-period">Próximos 30 dias</div>
+          <table>
+            <tbody id="forecast30Body">
+              <tr class="empty-row"><td colspan="2">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="forecast-card">
+          <div class="forecast-period">Próximos 60 dias</div>
+          <table>
+            <tbody id="forecast60Body">
+              <tr class="empty-row"><td colspan="2">Carregando…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== VIEW: METAS & TENDÊNCIAS ===== -->
+  <div id="viewProjections" class="view-container">
+    <div class="btn-back-container">
+      <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+    </div>
+    <div class="proj-section">
+
+    <div style="background: var(--navy-2); border: 1px solid var(--line); border-radius: 10px; padding: 24px; margin-bottom: 32px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; align-items: end;">
+      <div>
+        <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--bone-dim); text-transform: uppercase; margin-bottom: 8px; display: block;">Ano Anterior (R$)</label>
+        <input type="number" id="anoAnterior" value="1000" oninput="calcularDiferencaAnual()" style="background: var(--navy); border: 1px solid var(--line); color: var(--bone); padding: 10px; border-radius: 6px; width: 100%; font-family: 'IBM Plex Mono', monospace;">
+      </div>
+      <div>
+        <label style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--bone-dim); text-transform: uppercase; margin-bottom: 8px; display: block;">Ano Atual (R$)</label>
+        <input type="number" id="anoAtual" value="1250" oninput="calcularDiferencaAnual()" style="background: var(--navy); border: 1px solid var(--line); color: var(--bone); padding: 10px; border-radius: 6px; width: 100%; font-family: 'IBM Plex Mono', monospace;">
+      </div>
+      <div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--bone-dim); text-transform: uppercase; margin-bottom: 4px;">Diferença Absoluta</div>
+        <div id="resAbsoluto" style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; color: var(--green);">R$ 250,00</div>
+      </div>
+      <div>
+        <div style="font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--bone-dim); text-transform: uppercase; margin-bottom: 4px;">Diferença Percentual</div>
+        <div id="resPorcentagem" style="font-family: 'Space Grotesk', sans-serif; font-size: 22px; font-weight: 600; color: var(--green);">+25.00%</div>
+      </div>
+    </div>
+
+    <div class="section proj-section" id="sectionProjections">
+      <div class="section-head">
+        <h2>Projeção, Tendência e Metas</h2>
+        <div class="desc">Projeção anual baseada no desempenho acumulado, com meta estimada ou manual.</div>
+      </div>
+
+      <div class="proj-mode-tabs">
+        <button type="button" class="proj-mode-tab active" data-mode="estimada" onclick="switchProjMode('estimada')">📊 Meta Estimada</button>
+        <button type="button" class="proj-mode-tab" data-mode="manual" onclick="switchProjMode('manual')">✏️ Meta Manual</button>
+      </div>
+
+      <div class="proj-grid" id="projGrid">
+        <div class="proj-card">
+          <div class="proj-label">📈 Receita acumulada no ano</div>
+          <div class="proj-value pos" id="projAccumRevenue">—</div>
+          <div class="proj-sub" id="projAccumRevenueSub"></div>
+        </div>
+        <div class="proj-card">
+          <div class="proj-label">🎯 Meta anual de receita</div>
+          <div class="proj-value" id="projGoalRevenue" style="color:var(--blue-belt-light);">—</div>
+          <div class="proj-sub" id="projGoalRevenueSub"></div>
+        </div>
+        <div class="proj-card">
+          <div class="proj-label">🔮 Projeção p/ fim do ano</div>
+          <div class="proj-value" id="projForecastRevenue">—</div>
+          <div class="proj-sub" id="projForecastRevenueSub"></div>
+        </div>
+      </div>
+
+      <div class="proj-progress-wrap" id="projProgressWrap">
+        <div class="proj-progress-header">
+          <span class="proj-label">Progresso em direção à meta</span>
+          <span class="proj-pct" id="projProgressPct">—</span>
+        </div>
+        <div class="proj-bar-bg">
+          <div class="proj-bar-fill" id="projBarFill" style="width:0%"></div>
+          <div class="proj-bar-marker" id="projBarMarker" style="left:0%" title="Posição esperada no ano"></div>
+        </div>
+        <div class="proj-progress-legend">
+          <span id="projLegendLeft">Jan</span>
+          <span id="projLegendCenter" style="text-align:center;"></span>
+          <span id="projLegendRight">Dez</span>
+        </div>
+      </div>
+
+      <div id="projManualPanel" style="display:none;">
+        <div class="proj-manual-grid">
+          <div class="proj-manual-card">
+            <div class="proj-label">Meta de receita anual (R$)</div>
+            <input type="text" class="proj-manual-input" id="projManualRevenue" placeholder="Ex: 500000">
+          </div>
+          <div class="proj-manual-card">
+            <div class="proj-label">Meta de despesas anual (R$)</div>
+            <input type="text" class="proj-manual-input" id="projManualExpense" placeholder="Ex: 350000">
+          </div>
+          <div class="proj-manual-card">
+            <div class="proj-label">Meta de resultado anual (R$)</div>
+            <input type="text" class="proj-manual-input" id="projManualResult" placeholder="Ex: 150000">
+          </div>
+        </div>
+        <div class="proj-save-row">
+          <button type="button" class="proj-save-btn" onclick="saveManualGoals()">Salvar Metas</button>
+          <span class="proj-save-msg" id="projSaveMsg">✓ Metas salvas</span>
+        </div>
+      </div>
+
+      <div class="proj-chart-wrap">
+        <div class="chart-card-title">Tendência de Receita — Acumulado vs Meta (ano corrente)</div>
+        <div style="position: relative; height: 260px;">
+          <canvas id="chartProjTrend" role="img" aria-label="Gráfico de tendência anual de receita vs meta">Tendência de receita.</canvas>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ===== VIEW: CATEGORIAS POR BLOCO ===== -->
+  <div id="viewBlocks" class="view-container">
+    <div class="btn-back-container">
+      <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+    </div>
+
+    <div class="section" id="sectionBlocos">
+      <div class="section-head">
+        <h2>Categorias por bloco <span style="font-size: 13px; font-weight: 400; color: var(--bone-dim);">(protótipo)</span></h2>
+        <div class="desc">Cada bloco agrupa as categorias do Omie do mesmo grupo. Ranking do maior para o menor valor, com % do bloco ao lado do nome.</div>
+      </div>
+      <div class="blocos-grid" id="blocosGrid"></div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span id="footerLeft">omie-sync-rt</span>
+    <span id="footerRight">—</span>
+  </footer>
+
+</div>
+
+<script>
+  // Função responsável por alternar as secções do Dashboard de forma fluida
+function switchView(viewId) {
+  // 1. Esconde todas as views ativas
+  document.querySelectorAll('.view-container').forEach(view => {
+    view.classList.remove('active');
+  });
+  
+  // 2. Torna visível apenas a view clicada
+  const targetView = document.getElementById(viewId);
+  if (targetView) {
+    targetView.classList.add('active');
+  }
+  
+  /* 3. TRUQUE CRÍTICO PARA GRÁFICOS: 
+    Quando elementos com gráficos do Chart.js estão escondidos com 'display: none', 
+    eles não conseguem calcular o seu tamanho e ficam com 0px. Disparar um evento 'resize' 
+    força o Chart.js a redesenhar todos os gráficos perfeitamente assim que a View abre.
+  */
+  if (viewId === 'viewCharts') {
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 60);
+  }
+  
+  // 4. Faz scroll suave para o topo da página para dar conforto ao utilizador
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+// ─── Supabase Auth ─────────────────────────────────────────
+const DASHBOARD = {
+  url: 'https://ihekejwxdvipgldblskn.supabase.co',
+  anonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloZWtland4ZHZpcGdsZGJsc2tuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODI4MTg4NTMsImV4cCI6MjA5ODM5NDg1M30.32QzBgjnmTfglhFCK82YmQZgw9MWPrcwsRdu80upp1g',
+};
+
+const supabaseClient = supabase.createClient(DASHBOARD.url, DASHBOARD.anonKey);
+let currentSession = null;
+let currentProfile = null;
+
+async function initAuth() {
+  const { data: { session } } = await supabaseClient.auth.getSession();
+  if (session) {
+    currentSession = session;
+    await loadProfile(session.user.id);
+    showDashboard();
+  } else {
+    showLogin();
+  }
+
+  supabaseClient.auth.onAuthStateChange(async (event, session) => {
+    currentSession = session;
+    if (session) {
+      await loadProfile(session.user.id);
+      showDashboard();
+    } else {
+      currentProfile = null;
+      showLogin();
+    }
+  });
+}
+
+async function loadProfile(userId) {
+  try {
+    const { data } = await supabaseClient.from('profiles').select('*').eq('id', userId).maybeSingle();
+    currentProfile = data;
+  } catch (e) {
+    console.error('Erro ao carregar profile:', e);
+    currentProfile = null;
+  }
+}
+
+async function handleLogin(e) {
+  e.preventDefault();
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value;
+  const btn = document.getElementById('loginBtn');
+  const errEl = document.getElementById('loginError');
+
+  errEl.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Entrando…';
+
+  const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+
+  if (error) {
+    errEl.textContent = error.message === 'Invalid login credentials'
+      ? 'E-mail ou senha incorretos.'
+      : error.message;
+    errEl.classList.add('show');
+    btn.disabled = false;
+    btn.textContent = 'Entrar';
+    return false;
+  }
+
+  // Log access
+  try {
+    await supabaseClient.from('acessos_log').insert({
+      user_id: (await supabaseClient.auth.getUser()).data.user.id,
+      acessado_em: new Date().toISOString(),
+    });
+  } catch (_) { /* ignore */ }
+
+  return false;
+}
+
+async function handleLogout() {
+  await supabaseClient.auth.signOut();
+  currentSession = null;
+  currentProfile = null;
+  showLogin();
+}
+
+function showLogin() {
+  document.getElementById('loginOverlay').classList.remove('hidden');
+  document.getElementById('dashboardWrap').classList.add('hidden');
+}
+
+function showDashboard() {
+  document.getElementById('loginOverlay').classList.add('hidden');
+  document.getElementById('dashboardWrap').classList.remove('hidden');
+
+  // Update user info
+  const infoEl = document.getElementById('userInfo');
+  if (currentSession && currentProfile) {
+    infoEl.innerHTML = `${currentSession.user.email}<br><span class="user-role">${currentProfile.role || '—'}</span>`;
+  } else if (currentSession) {
+    infoEl.textContent = currentSession.user.email;
+  }
+
+  // Filter companies based on profile permissions
+  if (currentProfile) {
+    const allowed = currentProfile.role === 'admin'
+      ? Object.keys(COMPANIES)
+      : (currentProfile.empresas_permitidas || []);
+    selectedCompanyKeys = allowed.filter(k => COMPANIES[k]);
+    if (selectedCompanyKeys.length === 0) selectedCompanyKeys = ['RT'];
+    currentCompanyKey = selectedCompanyKeys[0];
+  }
+
+  populateCompanyMultiselect();
+  setupCompanyMultiselectToggle();
+  loadCompanyData();
+}
+
+// Metadados visuais de cada empresa (labels, eyebrow, etc)
+const COMPANIES = {
+  RT: {
+    label: 'RT',
+    eyebrow: 'RT · Gracie Barra',
+    footerSlug: 'omie-sync-rt',
+  },
+  KMNO: {
+    label: 'KMNO',
+    eyebrow: 'KMNO · Sports',
+    footerSlug: 'omie-sync-kmno',
+  },
+  BLUELINE: {
+    label: 'Blue Line',
+    eyebrow: 'Blue Line',
+    footerSlug: 'omie-sync-blueline',
+  },
+};
+
+let currentCompanyKey = 'RT';
+let selectedCompanyKeys = ['RT'];
+let categoriesCache = null;
+let movementsCache = null; // unifiedMovements (receivable+payable) — usar SOMENTE para DRE/competência (dt_emissao)
+let financialMovementsCache = null; // omie_financial_movements puro — usar para DFC/caixa (dt_pagamento real)
+let receivableCache = null;
+let payableCache = null;
+
+// Categorias ativas no Omie que NÃO têm "Conta do DRE" vinculada no cadastro.
+// O relatório DRE/Fluxo de Caixa nativo do Omie ignora essas categorias mesmo
+// havendo movimento real — replicamos esse comportamento aqui para o painel bater
+// com os números do Omie. Confirmado manualmente em Configurações → Categorias (RT).
+const CATEGORIAS_SEM_CONTA_DRE = new Set([
+  'Simples Nacional Parcelado',
+  'Parcelamento ICMS',
+  'Venda de Ativos',
+  'Remessa Industrialização',
+  'Máquinas e Equipamentos',
+]);
+
+// Mapeamento de código de grupo Omie (2 primeiros segmentos do código da
+// categoria, ex: "2.06") para o nome do bloco. Fonte: ListarCategorias
+// (API Omie), grupo "categoria_superior". Usado para agrupar categorias
+// específicas em blocos temáticos (Impostos, Investimento, etc), mesmo
+// quando a "Conta do DRE" oficial está vazia ou é inconsistente dentro do
+// grupo — replicando a hierarquia nativa do cadastro de categorias do Omie.
+const GRUPOS_OMIE = {
+  '0.01': 'Transferência',
+  '1.01': 'Receitas Diretas',
+  '1.02': 'Receitas Indiretas',
+  '1.03': 'Devoluções',
+  '1.04': 'Outras Entradas',
+  '2.01': 'Custo Produto',
+  '2.02': 'Despesas de Vendas e Marketing',
+  '2.03': 'Despesas com Pessoal',
+  '2.04': 'Despesas Administrativas',
+  '2.05': 'Despesas Financeiras / Bancos',
+  '2.06': 'Impostos e Taxas',
+  '2.07': 'Investimento',
+  '2.08': 'Outras Despesas',
+  '2.09': 'Devoluções de Vendas',
+  '2.10': 'Máquinas e Equipos',
+};
+
+// Natureza fixa de cada grupo (R = receita, P = despesa), usada para que
+// blocos sem nenhum movimento no mês ainda apareçam na cor/posição certa.
+const GRUPOS_NATUREZA = {
+  '0.01': 'P',
+  '1.01': 'R', '1.02': 'R', '1.03': 'R', '1.04': 'R',
+  '2.01': 'P', '2.02': 'P', '2.03': 'P', '2.04': 'P', '2.05': 'P',
+  '2.06': 'P', '2.07': 'P', '2.08': 'P', '2.09': 'P', '2.10': 'P',
+};
+
+function grupoOmieDoCodigo(codigo) {
+  if (!codigo) return null;
+  const parts = String(codigo).split('.');
+  return parts.slice(0, 2).join('.');
+}
+
+function fmtPct(v) {
+  return (v * 100).toFixed(1).replace('.', ',') + '%';
+}
+
+// Monta os blocos (categoria chave) a partir de movements (unifiedMovements,
+// regime de competência) + categoriesCache, agrupando por grupo Omie e
+// rankeando as categorias específicas do maior para o menor valor dentro
+// de cada bloco, com % relativo ao total do próprio bloco.
+function nomeDoGrupo(grupo, catByCode) {
+  if (GRUPOS_OMIE[grupo]) return GRUPOS_OMIE[grupo];
+  // Fallback: o próprio grupo (ex: "2.17") costuma existir como categoria
+  // "pai" no cadastro do Omie, com sua própria descrição (ex: "Comissões
+  // sobre Vendas"). Usamos essa descrição em vez do código bruto sempre
+  // que disponível — isso cobre grupos de planos de conta diferentes entre
+  // empresas (cada empresa Omie pode ter seu próprio plano de contas).
+  const catPai = catByCode[grupo];
+  if (catPai && catPai.descricao) return decodeHtmlEntities(catPai.descricao);
+  return grupo || 'Outros';
+}
+
+function buildBlocosCategorias(categories, movements, monthStart, monthEnd) {
+  const catByCode = {};
+  (categories || []).forEach(c => { catByCode[c.codigo] = c; });
+
+  // Inicializa todos os blocos conhecidos (mesmo sem nenhum movimento ainda)
+  const blocos = {}; // key = grupo -> { nome, natureza, itens: [{label, val}], total }
+  Object.entries(GRUPOS_OMIE).forEach(([grupo, nome]) => {
+    blocos[grupo] = { nome, natureza: GRUPOS_NATUREZA[grupo] || 'P', itens: [], total: 0 };
+  });
+
+  // total por categoria específica (cod_categoria) dentro do mês selecionado
+  const totalPorCategoria = {}; // cod_categoria -> { val, natureza }
+  movements.forEach(m => {
+    if (!m.dt_emissao || !m.cod_categoria) return;
+    const d = dayjs(m.dt_emissao);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v) return;
+    if (!totalPorCategoria[m.cod_categoria]) {
+      totalPorCategoria[m.cod_categoria] = { val: 0, natureza: m.natureza };
+    }
+    totalPorCategoria[m.cod_categoria].val += v;
+  });
+
+  // distribuir os totais nos blocos já inicializados
+  Object.entries(totalPorCategoria).forEach(([codCategoria, info]) => {
+    if (!info.val) return;
+    const cat = catByCode[codCategoria];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : codCategoria;
+    const grupo = grupoOmieDoCodigo(codCategoria);
+    if (!blocos[grupo]) {
+      // categoria de um grupo que não está no mapa conhecido — cria bloco extra
+      blocos[grupo] = { nome: nomeDoGrupo(grupo, catByCode), natureza: info.natureza, itens: [], total: 0 };
+    }
+    blocos[grupo].itens.push({ label, val: info.val });
+    blocos[grupo].total += info.val;
+  });
+
+  // ordenar itens dentro de cada bloco (maior pro menor) e blocos por total (maior pro menor)
+  const listaBlocos = Object.values(blocos);
+  listaBlocos.forEach(b => b.itens.sort((a, z) => z.val - a.val));
+  listaBlocos.sort((a, z) => z.total - a.total);
+
+  return listaBlocos;
+}
+
+function slugify(str) {
+  return String(str)
+    .toLowerCase()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/(^-|-$)/g, '');
+}
+
+// Lista global dos blocos de categorias renderizados (para o sidebar)
+window._renderedBlocos = [];
+
+function renderBlocosCategorias(categories, movements, monthStart, monthEnd) {
+  const container = document.getElementById('blocosGrid');
+  if (!container) return;
+  const blocos = buildBlocosCategorias(categories, movements, monthStart, monthEnd);
+  
+  // Guardar referência para o sidebar
+  window._renderedBlocos = blocos.map(b => ({
+    id: 'bloco-' + slugify(b.nome),
+    label: b.nome
+  }));
+
+  container.innerHTML = blocos.map(bloco => {
+    const corClasse = bloco.natureza === 'R' ? 'receita' : 'despesa';
+    const blocoId = 'bloco-' + slugify(bloco.nome);
+
+    const corpo = bloco.itens.length
+      ? `<div class="bloco-lista">${bloco.itens.map((item, idx) => {
+          const pct = bloco.total ? item.val / bloco.total : 0;
+          const widthPct = Math.max(pct * 100, 2);
+          return `
+            <div class="bloco-linha">
+              <div class="bloco-rank">${idx + 1}.</div>
+              <div class="bloco-barra-wrap">
+                <div class="bloco-barra-fill ${corClasse}" style="width:${widthPct}%"></div>
+                <div class="bloco-linha-texto">
+                  <span class="bloco-nome">${item.label} <span class="bloco-pct">(${fmtPct(pct)})</span></span>
+                </div>
+              </div>
+              <div class="bloco-valor">${fmtBRL(item.val)}</div>
+            </div>`;
+        }).join('')}</div>`
+      : `<div class="bloco-vazio">Sem movimento neste mês.</div>`;
+
+    const itemCount = bloco.itens.length;
+    const countLabel = itemCount ? `<span style="font-size:11px;color:var(--bone-dim);font-family:'IBM Plex Mono',monospace;">${itemCount} ${itemCount === 1 ? 'categoria' : 'categorias'}</span>` : '';
+
+    return `
+      <div class="bloco-card" id="${blocoId}">
+        <div class="bloco-head">
+          <button type="button" class="bloco-toggle" onclick="event.stopPropagation(); toggleBloco('${blocoId}')" title="Esconder bloco" aria-label="Esconder bloco">✕</button>
+          <div class="bloco-titulo ${corClasse}">${bloco.nome}</div>
+          ${countLabel}
+          <div class="bloco-total">${fmtBRL(bloco.total)}</div>
+        </div>
+        <div class="bloco-body" id="body-${blocoId}">
+          ${corpo}
+        </div>
+      </div>`;
+  }).join('');
+
+  // Aplicar preferências salvas (esconder blocos que o usuário já fechou)
+  const prefs = loadSidebarPrefs();
+  window._renderedBlocos.forEach(b => {
+    const el = document.getElementById(b.id);
+    if (el && prefs[b.id] === false) {
+      el.classList.add('hidden-block');
+    }
+  });
+}
+
+function toggleBloco(blocoId) {
+  // Esconde o bloco completamente
+  const card = document.getElementById(blocoId);
+  if (!card) return;
+  card.classList.add('hidden-block');
+  // Salvar no localStorage
+  const p = loadSidebarPrefs();
+  p[blocoId] = false;
+  saveSidebarPrefs(p);
+}
+
+// Mostra/esconde um bloco ou gráfico marcado com data-painel-toggle, a
+// partir de um checkbox com data-target = id do elemento. Puramente
+// visual: não afeta nenhum cálculo, só o display do card.
+function togglePainelItem(checkbox) {
+  const targetId = checkbox.getAttribute('data-target');
+  const el = document.getElementById(targetId);
+  if (!el) return;
+  el.style.display = checkbox.checked ? '' : 'none';
+}
+
+// NOTA SOBRE omie_financial_movements: o endpoint ListarMovimentos pode
+// retornar DUAS linhas para o mesmo dinheiro — uma representando o título
+// (origem VENR/COMP/MANP/MANR/etc) e outra representando a baixa real em
+// caixa (origem BAXR/BAXP/EXTR/EXTP/TRAR/TRAP) — com cod_titulo, natureza,
+// val_pago e dt_pagamento IDÊNTICOS nas duas. Excluir por código de origem
+// é arriscado (suporte Omie confirmou que nem todo MANP/MANR tem baixa
+// correspondente garantida), então deduplicamos pelo conteúdo: ver
+// dedupFinancialMovements() abaixo.
+
+const fmtBRL = (n) => {
+  const v = Number(n || 0);
+  return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
+};
+
+const decodeHtmlEntities = (str) => {
+  if (!str) return str;
+  const ta = document.createElement('textarea');
+  ta.innerHTML = str;
+  return ta.value;
+};
+
+// Busca dados do banco do dashboard, filtrando por empresa_id.
+// path = tabela + query params (ex: 'dash_categories?select=codigo,descricao&limit=2000')
+async function sb(path, empresaId) {
+  const sep = path.includes('?') ? '&' : '?';
+  const url = `${DASHBOARD.url}/rest/v1/${path}${sep}empresa_id=eq.${empresaId}`;
+  const token = currentSession?.access_token || DASHBOARD.anonKey;
+  const res = await fetch(url, {
+    headers: {
+      'apikey': DASHBOARD.anonKey,
+      'Authorization': `Bearer ${token}`,
+    }
+  });
+  if (!res.ok) throw new Error(`Supabase ${res.status} (${empresaId}): ${await res.text()}`);
+  return res.json();
+}
+
+// Busca o mesmo path em todas as empresas selecionadas em paralelo,
+// e devolve a junção dos arrays — cada linha recebe _empresa.
+let lastFetchHadErrors = false;
+
+async function sbMulti(path) {
+  const keys = selectedCompanyKeys.length ? selectedCompanyKeys : [currentCompanyKey];
+  const results = await Promise.all(keys.map(k => sb(path, k).catch(err => {
+    console.error(`Falha ao buscar de ${k}:`, err);
+    lastFetchHadErrors = true;
+    return [];
+  })));
+  const merged = [];
+  results.forEach((rows, idx) => {
+    (rows || []).forEach(r => merged.push({ ...r, _empresa: keys[idx] }));
+  });
+  return merged;
+}
+
+// omie_financial_movements pode trazer duas linhas para o mesmo dinheiro:
+// uma "título" (origem VENR/COMP/MANP/MANR/RPTP/APIP) e outra "baixa real"
+// (BAXR/BAXP/EXTR/EXTP), ambas com o mesmo cod_titulo. Confirmado com o
+// suporte Omie (26/06/2026): cod_titulo é a chave de ligação correta;
+// numero_parcela NÃO pode ser usado para casar as linhas (vem vazio na
+// linha de baixa mesmo quando o título tem parcela).
+//
+// TRAR/TRAP (transferência entre contas correntes da própria empresa) são
+// tratadas separadamente: o Fluxo de Caixa nativo do Omie as mostra numa
+// seção própria ("Transferências e ajustes de saldo"), FORA de Receitas e
+// Despesas — porque são apenas dinheiro mudando de conta dentro da mesma
+// empresa, sem efeito líquido no caixa total. Incluí-las nas Entradas e
+// Saídas operacionais infla os dois lados pelo mesmo valor (cada
+// transferência gera uma perna TRAR e uma TRAP, ambas com o mesmo valor).
+// Por isso TRAR/TRAP ficam de fora de ORIGENS_BAIXA_REAL.
+//
+// Estratégia: agrupar por (cod_titulo, natureza). Dentro de cada grupo,
+// se existem linhas de baixa real, elas SÃO os eventos de caixa — mantemos
+// só elas. Se houver mais linhas de título do que de baixa (parcelas ainda
+// não liquidadas), as títulos "sobrando" são mantidas (ainda não viraram
+// caixa, mas não devem ser descartadas caso apareçam em algum cálculo que
+// não exija liquidação). Títulos sem nenhuma baixa correspondente são
+// mantidos como estão.
+const ORIGENS_BAIXA_REAL = new Set(['BAXR', 'BAXP', 'EXTR', 'EXTP']);
+const ORIGENS_TRANSFERENCIA = new Set(['TRAR', 'TRAP']);
+
+function dedupFinancialMovements(movements) {
+  const byTitulo = new Map();
+  const noTitulo = [];
+  movements.forEach((m) => {
+    if (ORIGENS_TRANSFERENCIA.has(m.origem)) return; // transferência interna entre contas: fora do DFC operacional
+    if (!m.cod_titulo) { noTitulo.push(m); return; } // cod_titulo ausente/zero: nunca agrupar, dedup não é seguro aqui
+    const key = [m.cod_titulo, m.natureza].join('|');
+    if (!byTitulo.has(key)) byTitulo.set(key, []);
+    byTitulo.get(key).push(m);
+  });
+
+  const result = [...noTitulo];
+  byTitulo.forEach((rows) => {
+    const baixas = rows.filter((r) => ORIGENS_BAIXA_REAL.has(r.origem));
+    const titulos = rows.filter((r) => !ORIGENS_BAIXA_REAL.has(r.origem));
+
+    if (baixas.length === 0) { result.push(...titulos); return; }
+    if (titulos.length === 0) { result.push(...baixas); return; }
+
+    result.push(...baixas);
+    if (titulos.length > baixas.length) {
+      result.push(...titulos.slice(baixas.length));
+    }
+  });
+  return result;
+}
+
+function updateCompanyMultiselectLabel() {
+  const label = document.getElementById('companyMultiselectLabel');
+  if (selectedCompanyKeys.length === 0) {
+    label.textContent = 'Nenhuma empresa';
+  } else if (selectedCompanyKeys.length === 1) {
+    label.textContent = COMPANIES[selectedCompanyKeys[0]].label;
+  } else if (selectedCompanyKeys.length === Object.keys(COMPANIES).length) {
+    label.textContent = 'Todas as empresas';
+  } else {
+    label.textContent = selectedCompanyKeys.map(k => COMPANIES[k].label).join(' + ');
+  }
+}
+
+function populateCompanyMultiselect() {
+  const panel = document.getElementById('companyMultiselectPanel');
+  const allowed = currentProfile
+    ? (currentProfile.role === 'admin' ? Object.keys(COMPANIES) : (currentProfile.empresas_permitidas || []))
+    : Object.keys(COMPANIES);
+
+  panel.innerHTML = Object.entries(COMPANIES).map(([key, c]) => {
+    const canAccess = allowed.includes(key);
+    return `
+    <label class="company-multiselect-option" style="${canAccess ? '' : 'opacity:0.35;pointer-events:none;'}">
+      <input type="checkbox" value="${key}" ${selectedCompanyKeys.includes(key) ? 'checked' : ''} ${canAccess ? '' : 'disabled'} onchange="onCompanyCheckboxChange(this)">
+      ${c.label}
+    </label>`;
+  }).join('');
+  updateCompanyMultiselectLabel();
+}
+
+function onCompanyCheckboxChange(checkbox) {
+  const key = checkbox.value;
+  if (checkbox.checked) {
+    if (!selectedCompanyKeys.includes(key)) selectedCompanyKeys.push(key);
+  } else {
+    // impede ficar sem nenhuma empresa selecionada
+    if (selectedCompanyKeys.length === 1) {
+      checkbox.checked = true;
+      return;
+    }
+    selectedCompanyKeys = selectedCompanyKeys.filter(k => k !== key);
+  }
+  currentCompanyKey = selectedCompanyKeys[0];
+  updateCompanyMultiselectLabel();
+  loadCompanyData();
+}
+
+let companyToggleSetup = false;
+function setupCompanyMultiselectToggle() {
+  if (companyToggleSetup) return;
+  companyToggleSetup = true;
+  const btn = document.getElementById('companyMultiselectBtn');
+  const panel = document.getElementById('companyMultiselectPanel');
+  btn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = !panel.hidden;
+    panel.hidden = isOpen;
+    btn.setAttribute('aria-expanded', String(!isOpen));
+  });
+  document.addEventListener('click', (e) => {
+    if (!document.getElementById('companyMultiselect').contains(e.target)) {
+      panel.hidden = true;
+      btn.setAttribute('aria-expanded', 'false');
+    }
+  });
+}
+
+const MESES_PT = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+
+function populateMonthSelect(selectedMonth) {
+  const monthSel = document.getElementById('monthOnlySelect');
+  const yearSel = document.getElementById('yearOnlySelect');
+
+  // Mês: lista fixa de Janeiro a Dezembro
+  monthSel.innerHTML = '';
+  MESES_PT.forEach((nome, idx) => {
+    const opt = document.createElement('option');
+    opt.value = String(idx + 1).padStart(2, '0');
+    opt.textContent = nome;
+    monthSel.appendChild(opt);
+  });
+
+  // Ano: do ano atual até 3 anos atrás (cobre o histórico de dados disponível)
+  yearSel.innerHTML = '';
+  const anoAtual = dayjs().year();
+  for (let y = anoAtual; y >= anoAtual - 3; y--) {
+    const opt = document.createElement('option');
+    opt.value = String(y);
+    opt.textContent = String(y);
+    yearSel.appendChild(opt);
+  }
+
+  const alvo = selectedMonth ? dayjs(selectedMonth + '-01') : dayjs();
+  monthSel.value = alvo.format('MM');
+  yearSel.value = alvo.format('YYYY');
+}
+
+// Combina os dois seletores (mês + ano) no formato 'YYYY-MM' usado no resto do código
+function getSelectedMonthValue() {
+  const mes = document.getElementById('monthOnlySelect').value;
+  const ano = document.getElementById('yearOnlySelect').value;
+  return `${ano}-${mes}`;
+}
+
+function findMostRecentMonthWithData(dreMovements, cashMovements) {
+  // Prefer the most recent month that has REAL cash data (financial_movements),
+  // since DFC/donut/últimos-liquidados depend on it and would render empty otherwise.
+  let latestCash = null;
+  (cashMovements || []).forEach(m => {
+    const ref = m.dt_pagamento;
+    if (!ref) return;
+    if (!latestCash || dayjs(ref).isAfter(latestCash)) latestCash = dayjs(ref);
+  });
+  if (latestCash) return latestCash.format('YYYY-MM');
+
+  // Fallback: most recent month with DRE data, if no cash data exists at all
+  let latestDre = null;
+  (dreMovements || []).forEach(m => {
+    const ref = m.dt_emissao || m.dt_pagamento;
+    if (!ref) return;
+    if (!latestDre || dayjs(ref).isAfter(latestDre)) latestDre = dayjs(ref);
+  });
+  return latestDre ? latestDre.format('YYYY-MM') : dayjs().format('YYYY-MM');
+}
+
+function buildDreRows(categories, movements, monthStart, monthEnd) {
+  const catByCode = {};
+  categories.forEach(c => { catByCode[c.codigo] = c; });
+
+  const inRange = movements.filter(m => {
+    if (!m.dt_emissao) return false;
+    const d = dayjs(m.dt_emissao);
+    return !d.isBefore(monthStart) && d.isBefore(monthEnd);
+  });
+
+  const totals = {};
+  inRange.forEach(m => {
+    const code = m.cod_categoria;
+    if (!code) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    const key = m.natureza + ':' + code;
+    totals[key] = (totals[key] || { natureza: m.natureza, code, val: 0 });
+    totals[key].val += v;
+  });
+
+  const receitaRows = [];
+  const despesaRows = [];
+  let totalReceita = 0, totalDespesa = 0;
+
+  Object.values(totals).forEach(({ natureza, code, val }) => {
+    if (!val) return;
+    const cat = catByCode[code];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : code;
+    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return; // categoria sem "Conta do DRE" no Omie — não entra no DRE (mas tem movimento de caixa real, aparece no DFC)
+    if (natureza === 'R') {
+      receitaRows.push({ label, val });
+      totalReceita += val;
+    } else if (natureza === 'P') {
+      despesaRows.push({ label, val });
+      totalDespesa += val;
+    }
+  });
+
+  receitaRows.sort((a, b) => b.val - a.val);
+  despesaRows.sort((a, b) => b.val - a.val);
+
+  return { receitaRows, despesaRows, totalReceita, totalDespesa };
+}
+
+function renderDre(data, hasAnyDataEver) {
+  const body = document.getElementById('dreBody');
+  body.innerHTML = '';
+
+  const addRow = (cls, label, val, extraClass) => {
+    const tr = document.createElement('tr');
+    tr.className = cls;
+    const tdL = document.createElement('td');
+    tdL.textContent = label;
+    const tdV = document.createElement('td');
+    tdV.textContent = fmtBRL(val);
+    if (extraClass) tdV.classList.add(extraClass);
+    tr.appendChild(tdL); tr.appendChild(tdV);
+    body.appendChild(tr);
+  };
+
+  if (!data.receitaRows.length && !data.despesaRows.length) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="2">Nenhum lançamento neste período. Tente outro mês no seletor acima.</td></tr>`;
+    document.getElementById('sumReceitas').textContent = fmtBRL(0);
+    document.getElementById('sumDespesas').textContent = fmtBRL(0);
+    const resEl = document.getElementById('sumResultado');
+    resEl.textContent = fmtBRL(0);
+    resEl.className = 'value';
+    return;
+  }
+
+  addRow('group', 'Receitas', data.totalReceita, 'pos');
+  data.receitaRows.forEach(r => addRow('item', r.label, r.val));
+
+  addRow('group', 'Despesas', data.totalDespesa, 'neg');
+  data.despesaRows.forEach(r => addRow('item', r.label, r.val));
+
+  const resultado = data.totalReceita - data.totalDespesa;
+  addRow('total result', 'Resultado do período', resultado, resultado >= 0 ? 'pos' : 'neg');
+
+  document.getElementById('sumReceitas').textContent = fmtBRL(data.totalReceita);
+  document.getElementById('sumDespesas').textContent = fmtBRL(data.totalDespesa);
+  const resEl = document.getElementById('sumResultado');
+  resEl.textContent = fmtBRL(resultado);
+  resEl.className = 'value ' + (resultado >= 0 ? 'pos' : 'neg');
+}
+
+function buildDfc(movements, monthStart, monthEnd) {
+  // Nota: NÃO filtramos CATEGORIAS_SEM_CONTA_DRE aqui — essas categorias (ex: Simples
+  // Nacional Parcelado, Máquinas e Equipamentos) ficam fora do DRE do Omie, mas têm
+  // movimento de caixa real e aparecem normalmente no Fluxo de Caixa nativo.
+  const inRange = movements.filter(m => {
+    if (!m.dt_pagamento) return false;
+    const d = dayjs(m.dt_pagamento);
+    return !d.isBefore(monthStart) && d.isBefore(monthEnd);
+  });
+
+  let entradas = 0, saidas = 0;
+  inRange.forEach(m => {
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (m.natureza === 'R') entradas += v;
+    else if (m.natureza === 'P') saidas += v;
+  });
+
+  return { entradas, saidas, saldo: entradas - saidas, count: inRange.length };
+}
+
+function renderDfc(data) {
+  const body = document.getElementById('dfcBody');
+  body.innerHTML = '';
+
+  const addRow = (cls, label, val, extraClass) => {
+    const tr = document.createElement('tr');
+    tr.className = cls;
+    const tdL = document.createElement('td');
+    tdL.textContent = label;
+    const tdV = document.createElement('td');
+    tdV.textContent = fmtBRL(val);
+    if (extraClass) tdV.classList.add(extraClass);
+    tr.appendChild(tdL); tr.appendChild(tdV);
+    body.appendChild(tr);
+  };
+
+  if (!data.count) {
+    body.innerHTML = `<tr class="empty-row"><td colspan="2">Nenhum pagamento ou recebimento liquidado neste período. Tente outro mês no seletor acima.</td></tr>`;
+    const el = document.getElementById('sumCaixa');
+    el.textContent = fmtBRL(0);
+    el.className = 'value';
+    return;
+  }
+
+  addRow('group', 'Entradas (recebimentos)', data.entradas, 'pos');
+  addRow('group', 'Saídas (pagamentos)', data.saidas, 'neg');
+  addRow('total result', 'Saldo de caixa do período', data.saldo, data.saldo >= 0 ? 'pos' : 'neg');
+
+  const el = document.getElementById('sumCaixa');
+  el.textContent = fmtBRL(data.saldo);
+  el.className = 'value ' + (data.saldo >= 0 ? 'pos' : 'neg');
+}
+
+function setLoadingState() {
+  document.getElementById('statusDot').classList.remove('bad');
+  document.getElementById('statusText').textContent = 'carregando…';
+  document.getElementById('dreBody').innerHTML = '<tr class="empty-row"><td colspan="2">Carregando dados…</td></tr>';
+  document.getElementById('dfcBody').innerHTML = '<tr class="empty-row"><td colspan="2">Carregando dados…</td></tr>';
+}
+
+async function loadCompanyData() {
+  setLoadingState();
+  const keys = selectedCompanyKeys.length ? selectedCompanyKeys : [currentCompanyKey];
+  const nomes = keys.map(k => COMPANIES[k].label).join(' + ');
+  document.getElementById('companyEyebrow').textContent = keys.length > 1 ? `Consolidado · ${nomes}` : COMPANIES[keys[0]].eyebrow.replace(/<[^>]+>/g, ' ').trim();
+  document.getElementById('footerLeft').textContent = keys.map(k => COMPANIES[k].footerSlug).join(' + ');
+
+  lastFetchHadErrors = false;
+  try {
+    const [categories, movements, receivable, payable] = await Promise.all([
+      sbMulti('dash_categories?select=codigo,descricao,conta_receita,conta_despesa&limit=2000'),
+      sbMulti('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo&limit=10000'),
+      sbMulti('dash_accounts_receivable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento&limit=10000'),
+      sbMulti('dash_accounts_payable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento&limit=10000'),
+    ]);
+
+    // Build unified movements from accounts receivable + payable (more complete than omie_financial_movements)
+    const unifiedMovements = [
+      ...(receivable || []).filter(r => r.status_titulo !== 'CANCELADO').map(r => ({
+        dt_emissao: r.data_emissao,
+        dt_pagamento: r.data_pagamento || r.data_previsao,
+        dt_vencimento: r.data_vencimento,
+        natureza: 'R',
+        val_pago: Number(r.valor_documento || 0),
+        val_liquido: Number(r.valor_documento || 0),
+        cod_categoria: r.codigo_categoria,
+        status: r.status_titulo,
+        observacao: r.observacao,
+        num_titulo: r.numero_documento,
+      })),
+      ...(payable || []).filter(p => p.status_titulo !== 'CANCELADO').map(p => ({
+        dt_emissao: p.data_emissao,
+        dt_pagamento: p.data_pagamento || p.data_previsao,
+        dt_vencimento: p.data_vencimento,
+        natureza: 'P',
+        val_pago: Number(p.valor_documento || 0),
+        val_liquido: Number(p.valor_documento || 0),
+        cod_categoria: p.codigo_categoria,
+        status: p.status_titulo,
+        observacao: p.observacao,
+        num_titulo: p.numero_documento,
+      })),
+    ];
+
+    categoriesCache = categories;
+    movementsCache = unifiedMovements; // para DRE/competência (dt_emissao) — vem de receivable+payable
+    financialMovementsCache = dedupFinancialMovements(movements || []); // para DFC/caixa (dt_pagamento real) — vem de omie_financial_movements, deduplicado (título × baixa real)
+    receivableCache = receivable;
+    payableCache = payable;
+
+    if (lastFetchHadErrors) {
+      document.getElementById('statusDot').classList.add('bad');
+      document.getElementById('statusText').textContent = 'falha ao buscar dados de 1+ empresa — verifique a conexão';
+    } else {
+      document.getElementById('statusDot').classList.remove('bad');
+      document.getElementById('statusText').textContent = 'conectado · dados ao vivo';
+    }
+
+   // Auto-select the most recent month that actually has cash data (evita seção de DFC vazia)
+    const bestMonth = findMostRecentMonthWithData(unifiedMovements, financialMovementsCache);
+    populateMonthSelect(bestMonth);
+    
+    renderForSelectedMonth();
+
+    renderCharts(unifiedMovements, financialMovementsCache);
+    renderStackedExpenses(categories, unifiedMovements);
+    renderInadimplencia(unifiedMovements, receivable);
+    renderForecastFlowChart(receivable, payable);
+    renderForecasts(receivable, payable);
+
+  } catch (err) {
+    document.getElementById('statusDot').classList.add('bad');
+    document.getElementById('statusText').textContent = 'erro de conexão';
+    document.getElementById('dreBody').innerHTML = `<tr class="empty-row"><td colspan="2">Não foi possível carregar os dados: ${err.message}</td></tr>`;
+    document.getElementById('dfcBody').innerHTML = `<tr class="empty-row"><td colspan="2">Não foi possível carregar os dados.</td></tr>`;
+    console.error(err);
+  }
+}
+
+let chartDreInstance = null;
+let chartDfcInstance = null;
+let chartStackedInstance = null;
+let chartDonutInstance = null;
+let chartGaugeInstance = null;
+let chartInOutInstance = null;
+let chartForecastFlowInstance = null;
+
+const CATEGORY_PALETTE = ['#3E89BC', '#C75450', '#3FA66A', '#D7A23E', '#8E6BC0', '#5DA8A0', '#C77E3E', '#7B8FA6'];
+const CHART_COLORS = {
+  green: '#3FA66A',
+  red: '#C75450',
+  blue: '#3E89BC',
+  gridLine: 'rgba(243,239,230,0.08)',
+  tickText: '#C9C2B2',
+};
+
+function lastSixMonthKeys() {
+  const now = dayjs();
+  const keys = [];
+  for (let i = 5; i >= 0; i--) keys.push(now.subtract(i, 'month').format('YYYY-MM'));
+  return keys;
+}
+
+function monthlyTotals(dreMovements, cashMovements) {
+  const catByCode = {};
+  (categoriesCache || []).forEach(c => { catByCode[c.codigo] = c; });
+  const isExcluded = (m) => {
+    const cat = catByCode[m.cod_categoria];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
+    return CATEGORIAS_SEM_CONTA_DRE.has(label);
+  };
+
+  const byMonth = {};
+  // DRE bucket: by emission month — vem de unifiedMovements (receivable+payable), mais completo
+  dreMovements.forEach(m => {
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v || !m.dt_emissao || isExcluded(m)) return;
+    const key = dayjs(m.dt_emissao).format('YYYY-MM');
+    if (!byMonth[key]) byMonth[key] = { receita: 0, despesa: 0, entrada: 0, saida: 0 };
+    if (m.natureza === 'R') byMonth[key].receita += v;
+    else if (m.natureza === 'P') byMonth[key].despesa += v;
+  });
+  // DFC bucket: by REAL payment month — vem de omie_financial_movements (dt_pagamento real)
+  // Nota: categorias em CATEGORIAS_SEM_CONTA_DRE (ex: Simples Nacional Parcelado, Máquinas
+  // e Equipamentos) ficam fora do DRE do Omie, mas TÊM movimento de caixa real (aparecem em
+  // "Impostos e Taxas" / "Investimento" no Fluxo de Caixa) — por isso não são excluídas aqui.
+  cashMovements.forEach(m => {
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v || !m.dt_pagamento) return;
+    const key = dayjs(m.dt_pagamento).format('YYYY-MM');
+    if (!byMonth[key]) byMonth[key] = { receita: 0, despesa: 0, entrada: 0, saida: 0 };
+    if (m.natureza === 'R') byMonth[key].entrada += v;
+    else if (m.natureza === 'P') byMonth[key].saida += v;
+  });
+  return byMonth;
+}
+
+function monthLabel(key) {
+  return dayjs(key + '-01').format('MMM/YY');
+}
+
+function renderCharts(dreMovements, cashMovements) {
+  const keys = lastSixMonthKeys();
+  const totals = monthlyTotals(dreMovements, cashMovements);
+  const labels = keys.map(monthLabel);
+
+  const receitas = keys.map(k => Math.round((totals[k]?.receita) || 0));
+  const despesas = keys.map(k => Math.round((totals[k]?.despesa) || 0));
+  const saldos = keys.map(k => Math.round(((totals[k]?.entrada) || 0) - ((totals[k]?.saida) || 0)));
+
+  if (chartDreInstance) chartDreInstance.destroy();
+  if (chartDfcInstance) chartDfcInstance.destroy();
+
+  chartDreInstance = new Chart(document.getElementById('chartDre'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Receitas', data: receitas, backgroundColor: CHART_COLORS.green, borderRadius: 3, maxBarThickness: 28 },
+        { label: 'Despesas', data: despesas, backgroundColor: CHART_COLORS.red, borderRadius: 3, maxBarThickness: 28 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: CHART_COLORS.tickText, font: { family: 'IBM Plex Mono', size: 11 } }, grid: { display: false } },
+        y: {
+          ticks: {
+            color: CHART_COLORS.tickText, font: { family: 'IBM Plex Mono', size: 10 },
+            callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
+          },
+          grid: { color: CHART_COLORS.gridLine },
+        },
+      },
+    },
+  });
+
+  chartDfcInstance = new Chart(document.getElementById('chartDfc'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [{
+        label: 'Saldo de caixa',
+        data: saldos,
+        borderColor: CHART_COLORS.blue,
+        backgroundColor: 'rgba(62,137,188,0.15)',
+        fill: true,
+        tension: 0.3,
+        pointBackgroundColor: saldos.map(v => v >= 0 ? CHART_COLORS.green : CHART_COLORS.red),
+        pointRadius: 4,
+        pointHoverRadius: 6,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: CHART_COLORS.tickText, font: { family: 'IBM Plex Mono', size: 11 } }, grid: { display: false } },
+        y: {
+          ticks: {
+            color: CHART_COLORS.tickText, font: { family: 'IBM Plex Mono', size: 10 },
+            callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
+          },
+          grid: { color: CHART_COLORS.gridLine },
+        },
+      },
+    },
+  });
+}
+
+function buildLegend(items) {
+  return items.map(it =>
+    `<span style="display:flex;align-items:center;gap:5px;"><span style="width:9px;height:9px;border-radius:2px;background:${it.color};display:inline-block;"></span>${it.label}</span>`
+  ).join('');
+}
+
+function renderStackedExpenses(categories, movements) {
+  const catByCode = {};
+  categories.forEach(c => { catByCode[c.codigo] = c; });
+
+  const keys = lastSixMonthKeys();
+  const labels = keys.map(monthLabel);
+
+  // total despesa by category across the window, to pick the top categories
+  const totalsByCategory = {};
+  movements.forEach(m => {
+    if (m.natureza !== 'P' || !m.dt_emissao || !m.cod_categoria) return;
+    const cat = catByCode[m.cod_categoria];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
+    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return;
+    const key = dayjs(m.dt_emissao).format('YYYY-MM');
+    if (!keys.includes(key)) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v) return;
+    totalsByCategory[m.cod_categoria] = (totalsByCategory[m.cod_categoria] || 0) + v;
+  });
+
+  const topCodes = Object.entries(totalsByCategory)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 6)
+    .map(([code]) => code);
+
+  const byMonthByCat = {};
+  keys.forEach(k => { byMonthByCat[k] = {}; topCodes.forEach(c => byMonthByCat[k][c] = 0); byMonthByCat[k]._outros = 0; });
+
+  movements.forEach(m => {
+    if (m.natureza !== 'P' || !m.dt_emissao || !m.cod_categoria) return;
+    const cat = catByCode[m.cod_categoria];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
+    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return;
+    const key = dayjs(m.dt_emissao).format('YYYY-MM');
+    if (!keys.includes(key)) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v) return;
+    if (topCodes.includes(m.cod_categoria)) byMonthByCat[key][m.cod_categoria] += v;
+    else byMonthByCat[key]._outros += v;
+  });
+
+  const datasets = topCodes.map((code, i) => ({
+    label: catByCode[code] ? decodeHtmlEntities(catByCode[code].descricao) : code,
+    data: keys.map(k => Math.round(byMonthByCat[k][code])),
+    backgroundColor: CATEGORY_PALETTE[i % CATEGORY_PALETTE.length],
+    borderRadius: 2,
+    maxBarThickness: 30,
+  }));
+  datasets.push({
+    label: 'Outras',
+    data: keys.map(k => Math.round(byMonthByCat[k]._outros)),
+    backgroundColor: CHART_COLORS.gridLine,
+    borderRadius: 2,
+    maxBarThickness: 30,
+  });
+
+  const monthTotals = keys.map(k => Object.values(byMonthByCat[k]).reduce((s, v) => s + v, 0));
+  const avg = monthTotals.reduce((s, v) => s + v, 0) / (monthTotals.filter(v => v > 0).length || 1);
+  datasets.push({
+    type: 'line',
+    label: 'Média do período',
+    data: keys.map(() => Math.round(avg)),
+    borderColor: 'rgba(243,239,230,0.45)',
+    borderDash: [4, 4],
+    borderWidth: 1.5,
+    pointRadius: 0,
+    fill: false,
+    order: 0,
+    stack: undefined,
+  });
+
+  if (chartStackedInstance) chartStackedInstance.destroy();
+  chartStackedInstance = new Chart(document.getElementById('chartStacked'), {
+    type: 'bar',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { stacked: true, ticks: { color: CHART_COLORS.tickText, font: { family: 'IBM Plex Mono', size: 11 } }, grid: { display: false } },
+        y: {
+          stacked: true,
+          ticks: {
+            color: CHART_COLORS.tickText, font: { family: 'IBM Plex Mono', size: 10 },
+            callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
+          },
+          grid: { color: CHART_COLORS.gridLine },
+        },
+      },
+    },
+  });
+
+  document.getElementById('legendStacked')?.remove();
+  const legendDiv = document.createElement('div');
+  legendDiv.id = 'legendStacked';
+  legendDiv.style = 'display:flex;flex-wrap:wrap;gap:10px;margin-top:10px;font-size:11px;color:var(--bone-dim);';
+  legendDiv.innerHTML = buildLegend(
+    datasets.filter(d => d.type !== 'line').map(d => ({ label: d.label, color: d.backgroundColor }))
+  );
+  document.getElementById('chartStacked').closest('.chart-card').appendChild(legendDiv);
+}
+
+function renderDonutRevenue(categories, movements, monthStart, monthEnd) {
+  const catByCode = {};
+  categories.forEach(c => { catByCode[c.codigo] = c; });
+
+  // Fixed set of top revenue categories across the last 6 months,
+  // so the chart always shows the same labels — even if a given
+  // category has zero movement in the currently selected month.
+  const windowKeys = lastSixMonthKeys();
+  const historicalTotals = {};
+  movements.forEach(m => {
+    if (m.natureza !== 'R' || !m.dt_emissao || !m.cod_categoria) return;
+    const cat = catByCode[m.cod_categoria];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
+    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return;
+    const key = dayjs(m.dt_emissao).format('YYYY-MM');
+    if (!windowKeys.includes(key)) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v) return;
+    historicalTotals[m.cod_categoria] = (historicalTotals[m.cod_categoria] || 0) + v;
+  });
+  const fixedTopCodes = Object.entries(historicalTotals)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5)
+    .map(([code]) => code);
+
+  // Actual totals for the selected month only — calculation untouched.
+  const totals = {};
+  movements.forEach(m => {
+    if (m.natureza !== 'R' || !m.dt_emissao || !m.cod_categoria) return;
+    const cat = catByCode[m.cod_categoria];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
+    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return;
+    const d = dayjs(m.dt_emissao);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v) return;
+    totals[m.cod_categoria] = (totals[m.cod_categoria] || 0) + v;
+  });
+
+  // Any category with real movement this month, beyond the fixed set.
+  const extraCodesThisMonth = Object.keys(totals).filter(c => !fixedTopCodes.includes(c));
+  const allCodes = [...fixedTopCodes, ...extraCodesThisMonth];
+
+  const sorted = allCodes
+    .map(code => [code, totals[code] || 0])
+    .sort((a, b) => b[1] - a[1]);
+  const top = sorted.slice(0, 5);
+  const outrosTotal = sorted.slice(5).reduce((s, [, v]) => s + v, 0);
+
+  const labels = top.map(([code]) => catByCode[code] ? decodeHtmlEntities(catByCode[code].descricao) : code);
+  const data = top.map(([, v]) => Math.round(v));
+  if (outrosTotal > 0) { labels.push('Outras'); data.push(Math.round(outrosTotal)); }
+
+  const total = data.reduce((s, v) => s + v, 0);
+  const colors = labels.map((_, i) => i === labels.length - 1 && outrosTotal > 0 ? CHART_COLORS.gridLine : CATEGORY_PALETTE[i % CATEGORY_PALETTE.length]);
+
+  if (chartDonutInstance) { chartDonutInstance.destroy(); chartDonutInstance = null; }
+  document.getElementById('legendDonut')?.remove();
+
+  const donutWrap = document.getElementById('chartDonutWrap');
+  if (!fixedTopCodes.length && !total) {
+    if (donutWrap) donutWrap.innerHTML = '<div style="text-align:center;color:var(--bone-dim);font-size:12.5px;">Sem receitas neste mês</div>';
+    return;
+  }
+  if (!document.getElementById('chartDonut')) {
+    donutWrap.innerHTML = '<canvas id="chartDonut" role="img" aria-label="Gráfico de rosca mostrando a distribuição de receitas por categoria no mês selecionado">Distribuição de receitas por categoria.</canvas>';
+  }
+
+  chartDonutInstance = new Chart(document.getElementById('chartDonut'), {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 0 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '68%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.label}: ${fmtBRL(ctx.parsed)}`,
+          },
+        },
+      },
+    },
+    plugins: [{
+      id: 'centerText',
+      beforeDraw(chart) {
+        const { ctx, chartArea } = chart;
+        const cx = (chartArea.left + chartArea.right) / 2;
+        const cy = (chartArea.top + chartArea.bottom) / 2;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#F3EFE6';
+        ctx.font = '600 17px Space Grotesk, sans-serif';
+        ctx.fillText(fmtBRL(total).replace('R$', 'R$ '), cx, cy - 8);
+        ctx.font = '500 10px IBM Plex Mono, monospace';
+        ctx.fillStyle = '#C9C2B2';
+        ctx.fillText('TOTAL', cx, cy + 13);
+        ctx.restore();
+      },
+    }],
+  });
+
+  const legendDiv = document.createElement('div');
+  legendDiv.id = 'legendDonut';
+  legendDiv.style = 'display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;font-size:11px;color:var(--bone-dim);justify-content:center;';
+  legendDiv.innerHTML = buildLegend(labels.map((l, i) => ({ label: l, color: colors[i] })));
+  document.getElementById('chartDonut').closest('.chart-card').appendChild(legendDiv);
+}
+
+function renderInOutDonut(movements, monthStart, monthEnd) {
+  const liquidadoStatuses = ['PAGO', 'RECEBIDO'];
+
+  // Nota: NÃO filtramos CATEGORIAS_SEM_CONTA_DRE aqui — é caixa real (DFC).
+  const inMonth = movements.filter(m => {
+    const ref = m.dt_pagamento || m.dt_emissao;
+    if (!ref) return false;
+    const d = dayjs(ref);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return false;
+    return liquidadoStatuses.includes((m.status || '').toUpperCase());
+  });
+
+  let entradas = 0, saidas = 0;
+  inMonth.forEach(m => {
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (m.natureza === 'R') entradas += v;
+    else if (m.natureza === 'P') saidas += v;
+  });
+
+  const total = entradas + saidas;
+  if (chartInOutInstance) { chartInOutInstance.destroy(); chartInOutInstance = null; }
+  document.getElementById('legendInOut')?.remove();
+
+  const wrap = document.getElementById('chartInOutWrap');
+  if (!total) {
+    if (wrap) wrap.innerHTML = '<div style="font-size:11px;color:var(--bone-dim);">Sem movimentos liquidados</div>';
+    return;
+  }
+
+  // Garante que o canvas existe (pode ter sido substituído por texto numa render anterior sem dados)
+  if (!document.getElementById('chartInOut')) {
+    wrap.innerHTML = '<canvas id="chartInOut" role="img" aria-label="Gráfico de rosca mostrando a proporção entre entradas e saídas liquidadas no mês">Proporção entre entradas e saídas.</canvas>';
+  }
+
+  chartInOutInstance = new Chart(document.getElementById('chartInOut'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Recebimentos', 'Pagamentos'],
+      datasets: [{ data: [Math.round(entradas), Math.round(saidas)], backgroundColor: [CHART_COLORS.green, CHART_COLORS.red], borderWidth: 0 }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '62%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${fmtBRL(ctx.parsed)}` } },
+      },
+    },
+    plugins: [{
+      id: 'inOutCenterText',
+      beforeDraw(chart) {
+        const { ctx, chartArea } = chart;
+        const cx = (chartArea.left + chartArea.right) / 2;
+        const cy = (chartArea.top + chartArea.bottom) / 2;
+        const pctIn = Math.round((entradas / total) * 100);
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#F3EFE6';
+        ctx.font = '600 22px Space Grotesk, sans-serif';
+        ctx.fillText(pctIn + '%', cx, cy - 8);
+        ctx.font = '500 10px IBM Plex Mono, monospace';
+        ctx.fillStyle = '#C9C2B2';
+        ctx.fillText('RECEBIMENTOS', cx, cy + 14);
+        ctx.restore();
+      },
+    }],
+  });
+
+  const legendDiv = document.createElement('div');
+  legendDiv.id = 'legendInOut';
+  legendDiv.style = 'display:flex;justify-content:center;gap:14px;margin-top:8px;font-size:11px;color:var(--bone-dim);';
+  legendDiv.innerHTML = buildLegend([
+    { label: `Recebimentos: ${fmtBRL(entradas)}`, color: CHART_COLORS.green },
+    { label: `Pagamentos: ${fmtBRL(saidas)}`, color: CHART_COLORS.red },
+  ]);
+  document.getElementById('chartInOut').closest('.chart-card').insertBefore(legendDiv, document.getElementById('latestPaidList'));
+}
+
+function renderGaugeLiquidado(movements, monthStart, monthEnd) {
+  const inRange = movements.filter(m => {
+    if (!m.dt_emissao) return false;
+    const d = dayjs(m.dt_emissao);
+    return !d.isBefore(monthStart) && d.isBefore(monthEnd);
+  });
+
+  const liquidadoStatuses = ['PAGO', 'RECEBIDO'];
+  const total = inRange.length;
+  const liquidados = inRange.filter(m => liquidadoStatuses.includes((m.status || '').toUpperCase())).length;
+  const pct = total ? Math.round((liquidados / total) * 100) : 0;
+
+  if (chartGaugeInstance) chartGaugeInstance.destroy();
+
+  const gaugeColor = pct >= 70 ? CHART_COLORS.green : pct >= 40 ? '#D7A23E' : CHART_COLORS.red;
+
+  chartGaugeInstance = new Chart(document.getElementById('chartGauge'), {
+    type: 'doughnut',
+    data: {
+      labels: ['Liquidado', 'Pendente'],
+      datasets: [{
+        data: [pct, 100 - pct],
+        backgroundColor: [gaugeColor, 'rgba(243,239,230,0.08)'],
+        borderWidth: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      circumference: 180,
+      rotation: 270,
+      cutout: '72%',
+      plugins: { legend: { display: false }, tooltip: { enabled: false } },
+    },
+    plugins: [{
+      id: 'gaugeText',
+      beforeDraw(chart) {
+        const { ctx, chartArea } = chart;
+        const cx = (chartArea.left + chartArea.right) / 2;
+        const cy = chartArea.bottom - 6;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillStyle = '#F3EFE6';
+        ctx.font = '600 26px Space Grotesk, sans-serif';
+        ctx.fillText(pct + '%', cx, cy - 18);
+        ctx.font = '500 10px IBM Plex Mono, monospace';
+        ctx.fillStyle = '#C9C2B2';
+        ctx.fillText(`${liquidados} de ${total} contas`, cx, cy + 4);
+        ctx.restore();
+      },
+    }],
+  });
+}
+
+function renderLatestPaid(categories, movements, monthStart, monthEnd) {
+  const catByCode = {};
+  categories.forEach(c => { catByCode[c.codigo] = c; });
+
+  const liquidadoStatuses = ['PAGO', 'RECEBIDO'];
+
+  // Nota: NÃO filtramos CATEGORIAS_SEM_CONTA_DRE aqui — é caixa real (DFC).
+  const inMonth = movements.filter(m => {
+    const ref = m.dt_pagamento || m.dt_emissao;
+    if (!ref) return false;
+    const d = dayjs(ref);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return false;
+    return liquidadoStatuses.includes((m.status || '').toUpperCase());
+  });
+
+  inMonth.sort((a, b) => dayjs(b.dt_pagamento || b.dt_emissao).valueOf() - dayjs(a.dt_pagamento || a.dt_emissao).valueOf());
+  const latest = inMonth.slice(0, 5);
+
+  const list = document.getElementById('latestPaidList');
+  if (!latest.length) {
+    list.innerHTML = '<div style="font-size:11.5px;color:var(--bone-dim);text-align:center;padding:6px 0;">Nenhuma conta liquidada neste mês.</div>';
+    return;
+  }
+
+  list.innerHTML = latest.map(m => {
+    const cat = catByCode[m.cod_categoria];
+    const catLabel = cat ? decodeHtmlEntities(cat.descricao) : null;
+    const obs = decodeHtmlEntities(m.observacao);
+    const desc = catLabel || obs || (m.num_titulo ? `Título ${m.num_titulo}` : 'Lançamento sem categoria');
+    const dateRef = m.dt_pagamento || m.dt_emissao;
+    const tagClass = m.natureza === 'R' ? 'in' : 'out';
+    return `<div class="latest-paid-row">
+      <span style="display:flex;align-items:center;gap:6px;min-width:0;">
+        <span class="tag ${tagClass}"></span>
+        <span class="desc">${desc}</span>
+      </span>
+      <span class="date">${dayjs(dateRef).format('DD/MM')}</span>
+    </div>`;
+  }).join('');
+
+  list.innerHTML += `
+    <div class="latest-paid-legend">
+      <span><span class="tag in"></span>Recebimento</span>
+      <span><span class="tag out"></span>Pagamento</span>
+    </div>`;
+}
+
+function renderDelta(elId, current, previous, invertColor = false) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  if (!previous) { el.textContent = ''; el.className = 'delta'; return; }
+  const diffPct = ((current - previous) / Math.abs(previous)) * 100;
+  if (!Number.isFinite(diffPct) || Math.abs(diffPct) < 0.5) {
+    el.textContent = '· estável'; el.className = 'delta flat'; return;
+  }
+  const up = diffPct > 0;
+  const isGood = invertColor ? !up : up;
+  el.textContent = (up ? '↑ ' : '↓ ') + Math.abs(Math.round(diffPct)) + '%';
+  el.className = 'delta ' + (isGood ? 'good' : 'bad');
+}
+
+function computePeriodTotals(dreMovements, cashMovements, monthStart, monthEnd) {
+  const dre = buildDreRows(categoriesCache, dreMovements, monthStart, monthEnd);
+  const dfc = buildDfc(cashMovements, monthStart, monthEnd);
+  return {
+    receita: dre.totalReceita,
+    despesa: dre.totalDespesa,
+    resultado: dre.totalReceita - dre.totalDespesa,
+    caixa: dfc.saldo,
+  };
+}
+
+function renderInadimplencia(movements, receivable) {
+  const today = dayjs();
+
+  // Use accounts receivable: status "A VENCER" with past due date = overdue
+  const overdue = (receivable || []).filter(m => {
+    if (m.status_titulo !== 'A VENCER') return false;
+    if (!m.data_vencimento) return false;
+    return dayjs(m.data_vencimento).isBefore(today, 'day');
+  });
+
+  const total = overdue.reduce((s, m) => s + Number(m.valor_documento || 0), 0);
+  const valEl = document.getElementById('sumInadimplencia');
+  const subEl = document.getElementById('subInadimplencia');
+  const cardEl = document.getElementById('cardInadimplencia');
+
+  valEl.textContent = fmtBRL(total);
+  subEl.textContent = overdue.length
+    ? `${overdue.length} conta${overdue.length > 1 ? 's' : ''} vencida${overdue.length > 1 ? 's' : ''} e não recebida${overdue.length > 1 ? 's' : ''}`
+    : 'Nenhuma conta vencida em aberto';
+
+  if (total > 0) {
+    cardEl.classList.add('alert');
+    valEl.style.color = CHART_COLORS.red;
+  } else {
+    cardEl.classList.remove('alert');
+    valEl.style.color = '';
+  }
+}
+
+function renderForecastFlowChart(receivable, payable) {
+  const today = dayjs();
+  const days = 60;
+
+  // Filter only pending items with future due dates
+  const pendingRec = (receivable || []).filter(m => {
+    if (m.status_titulo !== 'A VENCER') return false;
+    if (!m.data_vencimento) return false;
+    const d = dayjs(m.data_vencimento);
+    return !d.isBefore(today, 'day') && !d.isAfter(today.add(days, 'day'), 'day');
+  });
+
+  const pendingPay = (payable || []).filter(m => {
+    if (m.status_titulo !== 'A VENCER') return false;
+    if (!m.data_vencimento) return false;
+    const d = dayjs(m.data_vencimento);
+    return !d.isBefore(today, 'day') && !d.isAfter(today.add(days, 'day'), 'day');
+  });
+
+  // Build day-by-day arrays
+  const labels = [];
+  const dailyReceber = [];
+  const dailyPagar = [];
+  const saldoAcumulado = [];
+
+  let acumReceber = 0;
+  let acumPagar = 0;
+
+  for (let i = 0; i <= days; i++) {
+    const d = today.add(i, 'day');
+    const key = d.format('YYYY-MM-DD');
+    labels.push(d.format('DD/MM'));
+
+    let recDia = 0, pagDia = 0;
+    pendingRec.forEach(m => {
+      if (dayjs(m.data_vencimento).format('YYYY-MM-DD') === key)
+        recDia += Number(m.valor_documento || 0);
+    });
+    pendingPay.forEach(m => {
+      if (dayjs(m.data_vencimento).format('YYYY-MM-DD') === key)
+        pagDia += Number(m.valor_documento || 0);
+    });
+
+    acumReceber += recDia;
+    acumPagar += pagDia;
+
+    dailyReceber.push(Math.round(acumReceber));
+    dailyPagar.push(Math.round(acumPagar));
+    saldoAcumulado.push(Math.round(acumReceber - acumPagar));
+  }
+
+  if (chartForecastFlowInstance) chartForecastFlowInstance.destroy();
+
+  chartForecastFlowInstance = new Chart(document.getElementById('chartForecastFlow'), {
+    type: 'line',
+    data: {
+      labels,
+      datasets: [
+        {
+          label: 'Saldo projetado',
+          data: saldoAcumulado,
+          borderColor: CHART_COLORS.blue,
+          backgroundColor: 'rgba(62,137,188,0.10)',
+          fill: true,
+          tension: 0.3,
+          borderWidth: 2.5,
+          pointRadius: 0,
+          pointHoverRadius: 4,
+          order: 0,
+        },
+        {
+          label: 'A receber (acumulado)',
+          data: dailyReceber,
+          borderColor: CHART_COLORS.green,
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          fill: false,
+          order: 1,
+        },
+        {
+          label: 'A pagar (acumulado)',
+          data: dailyPagar,
+          borderColor: CHART_COLORS.red,
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          tension: 0.3,
+          pointRadius: 0,
+          pointHoverRadius: 3,
+          fill: false,
+          order: 2,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: CHART_COLORS.tickText,
+            font: { family: 'IBM Plex Mono', size: 10 },
+            maxTicksLimit: 12,
+          },
+          grid: { display: false },
+        },
+        y: {
+          ticks: {
+            color: CHART_COLORS.tickText,
+            font: { family: 'IBM Plex Mono', size: 10 },
+            callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0) + 'k' : v),
+          },
+          grid: { color: CHART_COLORS.gridLine },
+        },
+      },
+    },
+  });
+
+  // Add legend below the chart
+  document.getElementById('legendForecastFlow')?.remove();
+  const legendDiv = document.createElement('div');
+  legendDiv.id = 'legendForecastFlow';
+  legendDiv.style = 'display:flex;justify-content:center;gap:16px;margin-top:10px;font-size:11px;color:var(--bone-dim);';
+  legendDiv.innerHTML = buildLegend([
+    { label: 'Saldo projetado', color: CHART_COLORS.blue },
+    { label: 'A receber', color: CHART_COLORS.green },
+    { label: 'A pagar', color: CHART_COLORS.red },
+  ]);
+  document.getElementById('chartForecastFlow').closest('.chart-card').appendChild(legendDiv);
+}
+
+function renderForecastTable(bodyId, receivable, payable, fromDate, toDate) {
+  const body = document.getElementById(bodyId);
+  body.innerHTML = '';
+
+  const filterPending = (items, from, to) => (items || []).filter(m => {
+    if (m.status_titulo !== 'A VENCER') return false;
+    if (!m.data_vencimento) return false;
+    const d = dayjs(m.data_vencimento);
+    return !d.isBefore(from, 'day') && !d.isAfter(to, 'day');
+  });
+
+  const pendingRec = filterPending(receivable, fromDate, toDate);
+  const pendingPay = filterPending(payable, fromDate, toDate);
+
+  const aReceber = pendingRec.reduce((s, m) => s + Number(m.valor_documento || 0), 0);
+  const aPagar = pendingPay.reduce((s, m) => s + Number(m.valor_documento || 0), 0);
+  const saldoProjetado = aReceber - aPagar;
+
+  const addRow = (label, val, cls) => {
+    const tr = document.createElement('tr');
+    tr.className = cls || '';
+    const tdL = document.createElement('td');
+    tdL.textContent = label;
+    const tdV = document.createElement('td');
+    tdV.textContent = fmtBRL(val);
+    if (cls === 'total result') tdV.className = saldoProjetado >= 0 ? 'pos' : 'neg';
+    tr.appendChild(tdL); tr.appendChild(tdV);
+    body.appendChild(tr);
+  };
+
+  if (!pendingRec.length && !pendingPay.length) {
+    body.innerHTML = '<tr class="empty-row"><td colspan="2">Nenhum lançamento pendente neste intervalo.</td></tr>';
+    return;
+  }
+
+  addRow('A receber (pendente)', aReceber);
+  addRow('A pagar (pendente)', aPagar);
+  addRow('Saldo projetado', saldoProjetado, 'total result');
+}
+
+function renderForecasts(receivable, payable) {
+  const today = dayjs();
+  renderForecastTable('forecast30Body', receivable, payable, today, today.add(30, 'day'));
+  renderForecastTable('forecast60Body', receivable, payable, today, today.add(60, 'day'));
+}
+
+function renderForSelectedMonth() {
+  if (!categoriesCache || !movementsCache) return;
+  const monthVal = getSelectedMonthValue();
+  const monthStart = dayjs(monthVal + '-01');
+  const monthEnd = monthStart.add(1, 'month');
+
+  const dre = buildDreRows(categoriesCache, movementsCache, monthStart, monthEnd);
+  renderDre(dre);
+
+  const dfc = buildDfc(financialMovementsCache || [], monthStart, monthEnd);
+  renderDfc(dfc);
+
+  const prevStart = monthStart.subtract(1, 'month');
+  const prevEnd = monthStart;
+  const current = { receita: dre.totalReceita, despesa: dre.totalDespesa, resultado: dre.totalReceita - dre.totalDespesa, caixa: dfc.saldo };
+  const previous = computePeriodTotals(movementsCache, financialMovementsCache || [], prevStart, prevEnd);
+  renderDelta('deltaReceitas', current.receita, previous.receita);
+  renderDelta('deltaDespesas', current.despesa, previous.despesa, true);
+  renderDelta('deltaResultado', current.resultado, previous.resultado);
+  renderDelta('deltaCaixa', current.caixa, previous.caixa);
+
+  renderDonutRevenue(categoriesCache, movementsCache, monthStart, monthEnd);
+  renderInOutDonut(financialMovementsCache || [], monthStart, monthEnd);
+  // renderGaugeLiquidado(movementsCache, monthStart, monthEnd); — guardado para projeto futuro
+  renderLatestPaid(categoriesCache, financialMovementsCache || [], monthStart, monthEnd);
+  renderBlocosCategorias(categoriesCache, movementsCache, monthStart, monthEnd);
+
+  document.getElementById('footerRight').textContent = `Atualizado em ${dayjs().format('DD/MM/YYYY HH:mm')}`;
+
+  renderProjections();
+  preencherComparativoAnual(monthStart);
+  renderResumoConsolidado(monthStart, monthEnd);
+}
+
+// Preenche a view "Resumo Consolidado": números de DRE (competência) e DFC (caixa)
+// para o mês selecionado e para o acumulado do ano (01/jan até o fim do mês
+// selecionado), já usando os dados consolidados das empresas selecionadas.
+function renderResumoConsolidado(monthStart, monthEnd) {
+  const gridMes = document.getElementById('resumoMesReceita');
+  if (!gridMes || !movementsCache) return; // view ainda não existe / dados não carregados
+
+  const totalMes = computePeriodTotals(movementsCache, financialMovementsCache || [], monthStart, monthEnd);
+  const dfcMes = buildDfc(financialMovementsCache || [], monthStart, monthEnd);
+
+  document.getElementById('resumoMesReceita').textContent = fmtBRL(totalMes.receita);
+  document.getElementById('resumoMesDespesa').textContent = fmtBRL(totalMes.despesa);
+  document.getElementById('resumoMesResultado').textContent = fmtBRL(totalMes.resultado);
+  document.getElementById('resumoMesEntradas').textContent = fmtBRL(dfcMes.entradas);
+  document.getElementById('resumoMesSaidas').textContent = fmtBRL(dfcMes.saidas);
+  document.getElementById('resumoMesSaldo').textContent = fmtBRL(dfcMes.saldo);
+
+  const inicioAno = monthStart.startOf('year');
+  const totalAno = computePeriodTotals(movementsCache, financialMovementsCache || [], inicioAno, monthEnd);
+  const dfcAno = buildDfc(financialMovementsCache || [], inicioAno, monthEnd);
+
+  document.getElementById('resumoAnoReceita').textContent = fmtBRL(totalAno.receita);
+  document.getElementById('resumoAnoDespesa').textContent = fmtBRL(totalAno.despesa);
+  document.getElementById('resumoAnoResultado').textContent = fmtBRL(totalAno.resultado);
+  document.getElementById('resumoAnoEntradas').textContent = fmtBRL(dfcAno.entradas);
+  document.getElementById('resumoAnoSaidas').textContent = fmtBRL(dfcAno.saidas);
+  document.getElementById('resumoAnoSaldo').textContent = fmtBRL(dfcAno.saldo);
+}
+
+// Preenche "Ano Anterior (R$)" e "Ano Atual (R$)" com a receita acumulada
+// (do dia 01/jan até o fim do mês selecionado), comparando o mesmo período
+// no ano corrente e no ano anterior. Roda automaticamente ao carregar o
+// painel e sempre que o mês selecionado mudar — mas os campos continuam
+// editáveis manualmente caso queira simular outros valores.
+function preencherComparativoAnual(monthStart) {
+  if (!movementsCache || !categoriesCache) return;
+
+  const anoAtualInput = document.getElementById('anoAnterior');
+  const anoAtualEl = document.getElementById('anoAtual');
+  if (!anoAtualInput || !anoAtualEl) return; // bloco só existe quando a aba "Metas & Tendências" está aberta
+
+  const fimPeriodoAtual = monthStart.add(1, 'month'); // fim do mês selecionado (acumulado até aqui)
+  const inicioAnoAtual = monthStart.startOf('year');
+  const inicioAnoAnterior = inicioAnoAtual.subtract(1, 'year');
+  const fimAnoAnterior = inicioAnoAtual; // fecha o ano anterior inteiro (jan → dez)
+
+  const totalAnoAtual = computePeriodTotals(movementsCache, financialMovementsCache || [], inicioAnoAtual, fimPeriodoAtual);
+  const totalAnoAnterior = computePeriodTotals(movementsCache, financialMovementsCache || [], inicioAnoAnterior, fimAnoAnterior);
+
+  document.getElementById('anoAnterior').value = Math.round(totalAnoAnterior.receita || 0);
+  document.getElementById('anoAtual').value = Math.round(totalAnoAtual.receita || 0);
+
+  if (typeof calcularDiferencaAnual === 'function') calcularDiferencaAnual();
+}
+
+document.getElementById('monthOnlySelect').addEventListener('change', renderForSelectedMonth);
+document.getElementById('yearOnlySelect').addEventListener('change', renderForSelectedMonth);
+
+// ===== PROJEÇÃO, TENDÊNCIA E METAS =====
+let projMode = 'estimada'; // 'estimada' | 'manual'
+let chartProjTrend = null;
+
+function switchProjMode(mode) {
+  projMode = mode;
+  document.querySelectorAll('.proj-mode-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.mode === mode);
+  });
+  document.getElementById('projManualPanel').style.display = mode === 'manual' ? '' : 'none';
+  renderProjections();
+}
+
+function getManualGoals() {
+  try {
+    const saved = localStorage.getItem('dashboardManualGoals');
+    return saved ? JSON.parse(saved) : {};
+  } catch (_) { return {}; }
+}
+
+function saveManualGoals() {
+  const goals = {
+    revenue: parseFloat(document.getElementById('projManualRevenue').value.replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+    expense: parseFloat(document.getElementById('projManualExpense').value.replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+    result:  parseFloat(document.getElementById('projManualResult').value.replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+  };
+  localStorage.setItem('dashboardManualGoals', JSON.stringify(goals));
+  const msg = document.getElementById('projSaveMsg');
+  msg.classList.add('show');
+  setTimeout(() => msg.classList.remove('show'), 2500);
+  renderProjections();
+}
+
+function computeYearlyProjectionData() {
+  if (!movementsCache) return null;
+
+  const now = dayjs();
+  const yearStart = dayjs(now.format('YYYY') + '-01-01');
+  const yearEnd = dayjs(now.format('YYYY') + '-12-31');
+
+  // Acumulado mensal do ano corrente
+  const monthlyRevenue = {};
+  const monthlyExpense = {};
+
+  movementsCache.forEach(m => {
+    if (!m.dt_emissao) return;
+    const d = dayjs(m.dt_emissao);
+    if (d.isBefore(yearStart) || d.isAfter(yearEnd)) return;
+    const monthKey = d.format('YYYY-MM');
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v) return;
+    if (m.natureza === 'R') {
+      monthlyRevenue[monthKey] = (monthlyRevenue[monthKey] || 0) + v;
+    } else if (m.natureza === 'P') {
+      monthlyExpense[monthKey] = (monthlyExpense[monthKey] || 0) + v;
+    }
+  });
+
+  // Meses com dados
+  const currentMonth = now.month(); // 0-based
+  const monthsElapsed = currentMonth + 1;
+
+  let accumRevenue = 0, accumExpense = 0;
+  const monthlyRevArr = [];
+  const monthlyExpArr = [];
+
+  for (let i = 0; i < 12; i++) {
+    const mk = yearStart.add(i, 'month').format('YYYY-MM');
+    const rev = monthlyRevenue[mk] || 0;
+    const exp = monthlyExpense[mk] || 0;
+    monthlyRevArr.push(rev);
+    monthlyExpArr.push(exp);
+    if (i < monthsElapsed) {
+      accumRevenue += rev;
+      accumExpense += exp;
+    }
+  }
+
+  // Média mensal baseada nos meses com dados reais
+  const monthsWithData = Object.keys(monthlyRevenue).length || 1;
+  const avgMonthlyRevenue = accumRevenue / monthsWithData;
+  const avgMonthlyExpense = accumExpense / monthsWithData;
+
+  // Meses restantes no ano
+  const monthsRemaining = 12 - monthsElapsed;
+
+  // Projeção anual (realizado + média * restante)
+  const projectedRevenue = accumRevenue + (avgMonthlyRevenue * monthsRemaining);
+  const projectedExpense = accumExpense + (avgMonthlyExpense * monthsRemaining);
+  const projectedResult = projectedRevenue - projectedExpense;
+
+  // Meta estimada: projeção + 10% de crescimento
+  const estimatedGoalRevenue = projectedRevenue * 1.10;
+  const estimatedGoalExpense = projectedExpense * 0.95; // 5% menos despesas
+  const estimatedGoalResult = estimatedGoalRevenue - estimatedGoalExpense;
+
+  return {
+    accumRevenue, accumExpense,
+    projectedRevenue, projectedExpense, projectedResult,
+    estimatedGoalRevenue, estimatedGoalExpense, estimatedGoalResult,
+    monthlyRevArr, monthlyExpArr,
+    monthsElapsed, monthsRemaining, avgMonthlyRevenue, avgMonthlyExpense,
+    yearLabel: now.format('YYYY'),
+  };
+}
+
+function renderProjections() {
+  const data = computeYearlyProjectionData();
+  if (!data) return;
+
+  const manualGoals = getManualGoals();
+  const isManual = projMode === 'manual';
+
+  // Preencher inputs manuais se existirem
+  if (manualGoals.revenue) document.getElementById('projManualRevenue').value = manualGoals.revenue;
+  if (manualGoals.expense) document.getElementById('projManualExpense').value = manualGoals.expense;
+  if (manualGoals.result)  document.getElementById('projManualResult').value  = manualGoals.result;
+
+  // Definir metas ativas
+  const goalRevenue = isManual && manualGoals.revenue ? manualGoals.revenue : data.estimatedGoalRevenue;
+  const goalExpense = isManual && manualGoals.expense ? manualGoals.expense : data.estimatedGoalExpense;
+  const goalResult  = isManual && manualGoals.result  ? manualGoals.result  : data.estimatedGoalResult;
+
+  // Card 1: Receita acumulada
+  document.getElementById('projAccumRevenue').textContent = fmtBRL(data.accumRevenue);
+  document.getElementById('projAccumRevenueSub').textContent =
+    `${data.monthsElapsed} ${data.monthsElapsed === 1 ? 'mês' : 'meses'} · média ${fmtBRL(data.avgMonthlyRevenue)}/mês`;
+
+  // Card 2: Meta anual
+  const goalSuffix = isManual ? ' (manual)' : ' (estimada +10%)';
+  document.getElementById('projGoalRevenue').textContent = fmtBRL(goalRevenue);
+  document.getElementById('projGoalRevenueSub').textContent = `Meta de receita ${data.yearLabel}${goalSuffix}`;
+
+  // Card 3: Projeção p/ fim do ano
+  const projEl = document.getElementById('projForecastRevenue');
+  projEl.textContent = fmtBRL(data.projectedRevenue);
+  const willHit = data.projectedRevenue >= goalRevenue;
+  projEl.className = 'proj-value ' + (willHit ? 'pos' : 'neg');
+  document.getElementById('projForecastRevenueSub').textContent = willHit
+    ? `Tendência positiva · deve atingir a meta`
+    : `Abaixo da meta · faltam ${fmtBRL(goalRevenue - data.projectedRevenue)}`;
+
+  // Barra de progresso
+  const pctDone = goalRevenue > 0 ? (data.accumRevenue / goalRevenue) * 100 : 0;
+  const pctYear = (data.monthsElapsed / 12) * 100;
+  const barFill = document.getElementById('projBarFill');
+  barFill.style.width = Math.min(pctDone, 100) + '%';
+  barFill.className = 'proj-bar-fill ' + (pctDone >= pctYear ? 'on-track' : 'behind');
+  document.getElementById('projBarMarker').style.left = pctYear + '%';
+  document.getElementById('projBarMarker').title = `Posição esperada no ano (${pctYear.toFixed(0)}%)`;
+  document.getElementById('projProgressPct').textContent = pctDone.toFixed(1) + '%';
+  document.getElementById('projProgressPct').className = 'proj-pct ' + (pctDone >= pctYear ? 'pos' : 'neg');
+  document.getElementById('projLegendLeft').textContent = `Jan ${data.yearLabel}`;
+  document.getElementById('projLegendCenter').textContent = `Realizado: ${fmtBRL(data.accumRevenue)} / Meta: ${fmtBRL(goalRevenue)}`;
+  document.getElementById('projLegendRight').textContent = `Dez ${data.yearLabel}`;
+
+  // Gráfico de tendência
+  renderProjTrendChart(data, goalRevenue);
+}
+
+function renderProjTrendChart(data, goalRevenue) {
+  const ctx = document.getElementById('chartProjTrend');
+  if (!ctx) return;
+
+  const months = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+
+  // Acumulado real
+  const accumReal = [];
+  let runningTotal = 0;
+  for (let i = 0; i < 12; i++) {
+    if (i < data.monthsElapsed) {
+      runningTotal += data.monthlyRevArr[i];
+      accumReal.push(runningTotal);
+    } else {
+      accumReal.push(null);
+    }
+  }
+
+  // Projeção (continua do último ponto real)
+  const projLine = [];
+  let projRunning = runningTotal;
+  for (let i = 0; i < 12; i++) {
+    if (i < data.monthsElapsed - 1) {
+      projLine.push(null);
+    } else if (i === data.monthsElapsed - 1) {
+      projLine.push(runningTotal);
+    } else {
+      projRunning += data.avgMonthlyRevenue;
+      projLine.push(projRunning);
+    }
+  }
+
+  // Meta linear (distribuída igualmente nos 12 meses)
+  const goalLine = months.map((_, i) => (goalRevenue / 12) * (i + 1));
+
+  if (chartProjTrend) chartProjTrend.destroy();
+  chartProjTrend = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: months,
+      datasets: [
+        {
+          label: 'Realizado acumulado',
+          data: accumReal,
+          borderColor: CHART_COLORS.green,
+          backgroundColor: CHART_COLORS.green + '22',
+          borderWidth: 2.5,
+          tension: 0.3,
+          fill: true,
+          pointRadius: 3,
+          spanGaps: false,
+        },
+        {
+          label: 'Projeção (tendência)',
+          data: projLine,
+          borderColor: CHART_COLORS.blue,
+          borderWidth: 2,
+          borderDash: [6, 4],
+          tension: 0.3,
+          pointRadius: 0,
+          fill: false,
+          spanGaps: false,
+        },
+        {
+          label: 'Meta anual',
+          data: goalLine,
+          borderColor: '#F59E0B',
+          borderWidth: 2,
+          borderDash: [3, 3],
+          tension: 0,
+          pointRadius: 0,
+          fill: false,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: {
+          display: true,
+          position: 'bottom',
+          labels: {
+            color: CHART_COLORS.tickText,
+            font: { family: 'IBM Plex Mono', size: 10 },
+            boxWidth: 14,
+            padding: 16,
+          },
+        },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}`,
+          },
+        },
+      },
+      scales: {
+        x: {
+          ticks: {
+            color: CHART_COLORS.tickText,
+            font: { family: 'IBM Plex Mono', size: 10 },
+          },
+          grid: { display: false },
+        },
+        y: {
+          ticks: {
+            color: CHART_COLORS.tickText,
+            font: { family: 'IBM Plex Mono', size: 10 },
+            callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
+          },
+          grid: { color: CHART_COLORS.gridLine },
+        },
+      },
+    },
+  });
+}
+
+// ===== SISTEMA DE MENU LATERAL (SIDEBAR) =====
+const SIDEBAR_BLOCKS = [
+  { group: 'Seções Principais' },
+  { id: 'sectionBlocos',    label: 'Categorias por Bloco' },
+  { id: 'summaryGrid',      label: 'Cards de Resumo (Receitas, Despesas, etc)' },
+  { id: 'cardInadimplencia', label: 'Card de Inadimplência' },
+  { id: 'sectionDre',       label: 'Tabela DRE' },
+  { id: 'sectionDfc',       label: 'Tabela DFC' },
+  { id: 'sectionForecast',  label: 'Previsão de Caixa (30/60 dias)' },
+  { id: 'sectionProjections', label: 'Projeção, Tendência e Metas' },
+  { group: 'Gráficos' },
+  { id: 'chartCardDre',     label: 'Gráfico DRE — Receitas x Despesas' },
+  { id: 'chartCardDfc',     label: 'Gráfico DFC — Saldo de Caixa' },
+  { id: 'chartCardStacked', label: 'Despesas por Categoria (empilhado)' },
+  { id: 'chartCardDonut',   label: 'Receitas por Categoria (donut)' },
+  { id: 'chartCardInOut',   label: 'Entradas x Saídas (donut + últimas)' },
+  { id: 'chartCardForecast',label: 'Fluxo de Caixa Futuro (60 dias)' },
+];
+
+function loadSidebarPrefs() {
+  try {
+    const saved = localStorage.getItem('dashboardBlockPrefs');
+    return saved ? JSON.parse(saved) : {};
+  } catch (_) { return {}; }
+}
+
+function saveSidebarPrefs(prefs) {
+  localStorage.setItem('dashboardBlockPrefs', JSON.stringify(prefs));
+}
+
+function applySidebarPrefs() {
+  const prefs = loadSidebarPrefs();
+  SIDEBAR_BLOCKS.forEach(item => {
+    if (item.group) return;
+    const el = document.getElementById(item.id);
+    if (!el) return;
+    const visible = prefs[item.id] !== false; // default = visible
+    el.classList.toggle('hidden-block', !visible);
+  });
+}
+
+function renderSidebarBody() {
+  const body = document.getElementById('sidebarBody');
+  const prefs = loadSidebarPrefs();
+  body.innerHTML = '';
+
+  SIDEBAR_BLOCKS.forEach(item => {
+    if (item.group) {
+      const title = document.createElement('div');
+      title.className = 'sidebar-group-title';
+      title.textContent = item.group;
+      body.appendChild(title);
+      return;
+    }
+
+    const visible = prefs[item.id] !== false;
+    const row = document.createElement('label');
+    row.className = 'sidebar-item' + (visible ? '' : ' off');
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.checked = visible;
+    cb.dataset.blockId = item.id;
+    cb.addEventListener('change', function() {
+      const p = loadSidebarPrefs();
+      p[item.id] = this.checked;
+      saveSidebarPrefs(p);
+      const el = document.getElementById(item.id);
+      if (el) el.classList.toggle('hidden-block', !this.checked);
+      row.classList.toggle('off', !this.checked);
+    });
+
+    const lbl = document.createElement('span');
+    lbl.className = 'sidebar-item-label';
+    lbl.textContent = item.label;
+
+    row.appendChild(cb);
+    row.appendChild(lbl);
+    body.appendChild(row);
+  });
+
+  // === Blocos de Categorias individuais ===
+  if (window._renderedBlocos && window._renderedBlocos.length) {
+    const title = document.createElement('div');
+    title.className = 'sidebar-group-title';
+    title.textContent = 'Blocos de Categorias';
+    body.appendChild(title);
+
+    window._renderedBlocos.forEach(bloco => {
+      const visible = prefs[bloco.id] !== false;
+      const row = document.createElement('label');
+      row.className = 'sidebar-item' + (visible ? '' : ' off');
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = visible;
+      cb.dataset.blockId = bloco.id;
+      cb.addEventListener('change', function() {
+        const p = loadSidebarPrefs();
+        p[bloco.id] = this.checked;
+        saveSidebarPrefs(p);
+        const el = document.getElementById(bloco.id);
+        if (el) el.classList.toggle('hidden-block', !this.checked);
+        row.classList.toggle('off', !this.checked);
+      });
+
+      const lbl = document.createElement('span');
+      lbl.className = 'sidebar-item-label';
+      lbl.textContent = bloco.label;
+
+      row.appendChild(cb);
+      row.appendChild(lbl);
+      body.appendChild(row);
+    });
+  }
+}
+
+// Sidebar open/close
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebarOverlay').classList.add('open');
+  renderSidebarBody(); // refresh state every time it opens
+}
+
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('open');
+}
+
+document.getElementById('sidebarFab').addEventListener('click', openSidebar);
+document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
+document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
+
+// Aplicar preferências salvas ao carregar a página (chamado após login)
+const _origShowDashboard = showDashboard;
+showDashboard = function() {
+  _origShowDashboard();
+  applySidebarPrefs();
+};
+
+// Start with auth check
+initAuth();
+</script>
+<script>
+    function calcularDiferencaAnual() {
+        const anoAnterior = parseFloat(document.getElementById('anoAnterior').value) || 0;
+        const anoAtual = parseFloat(document.getElementById('anoAtual').value) || 0;
+
+        const difAbsoluta = anoAtual - anoAnterior;
+
+        let difPorcentagem = 0;
+        if (anoAnterior !== 0) {
+            difPorcentagem = (difAbsoluta / anoAnterior) * 100;
+        }
+
+        document.getElementById('resAbsoluto').innerText = difAbsoluta.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        
+        const sinal = difPorcentagem > 0 ? "+" : "";
+        const elementoPercentual = document.getElementById('resPorcentagem');
+        const elementoAbsoluto = document.getElementById('resAbsoluto');
+        
+        elementoPercentual.innerText = sinal + difPorcentagem.toFixed(2) + "%";
+
+        if (difAbsoluta >= 0) {
+            elementoAbsoluto.style.color = "var(--green)";
+            elementoPercentual.style.color = "var(--green)";
+        } else {
+            elementoAbsoluto.style.color = "var(--red)";
+            elementoPercentual.style.color = "var(--red)";
+        }
+    }
+
+    // Executa uma vez ao carregar para iniciar os valores
+    setTimeout(calcularDiferencaAnual, 1000);
+  </script>
+</body>
+</html>
