@@ -409,8 +409,12 @@
   .blocos-grid {
     display: grid;
     grid-template-columns: repeat(3, 300px);
-    justify-content: start;
+    justify-content: center;
     gap: 18px;
+  }
+  .blocks-inner {
+    max-width: 936px;
+    margin: 0 auto;
   }
   .bloco-card {
     background: var(--navy-2);
@@ -1510,28 +1514,22 @@
     </div>
 </div>
 
-<div class="proj-chart-wrap">
-        <div class="chart-card-title">Tendência de Receita — Acumulado vs Meta (ano corrente)</div>
-        <div style="position: relative; height: 260px;">
-          <canvas id="chartProjTrend" role="img" aria-label="Gráfico de tendência anual de receita vs meta">Tendência de receita.</canvas>
-        </div>
-      </div>
-    </div>
-
   </div>
 
   <!-- ===== VIEW: CATEGORIAS POR BLOCO ===== -->
   <div id="viewBlocks" class="view-container">
-    <div class="btn-back-container">
-      <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
-    </div>
-
-    <div class="section" id="sectionBlocos">
-      <div class="section-head">
-        <h2>Categorias por bloco <span style="font-size: 13px; font-weight: 400; color: var(--bone-dim);">(protótipo)</span></h2>
-        <div class="desc">Cada bloco agrupa as categorias do Omie do mesmo grupo. Ranking do maior para o menor valor, com % do bloco ao lado do nome.</div>
+    <div class="blocks-inner">
+      <div class="btn-back-container">
+        <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
       </div>
-      <div class="blocos-grid" id="blocosGrid"></div>
+
+      <div class="section" id="sectionBlocos">
+        <div class="section-head">
+          <h2>Categorias por bloco <span style="font-size: 13px; font-weight: 400; color: var(--bone-dim);">(protótipo)</span></h2>
+          <div class="desc">Cada bloco agrupa as categorias do Omie do mesmo grupo. Ranking do maior para o menor valor, com % do bloco ao lado do nome.</div>
+        </div>
+        <div class="blocos-grid" id="blocosGrid"></div>
+      </div>
     </div>
 
   </div>
@@ -1545,7 +1543,9 @@
 
 <script>
   // Função responsável por alternar as secções do Dashboard de forma fluida
-function switchView(viewId) {
+function switchView(viewId, options = {}) {
+  const { fromPopState = false } = options;
+
   // 1. Esconde todas as views ativas
   document.querySelectorAll('.view-container').forEach(view => {
     view.classList.remove('active');
@@ -1570,6 +1570,29 @@ function switchView(viewId) {
   
   // 4. Faz scroll suave para o topo da página para dar conforto ao utilizador
   window.scrollTo({ top: 0, behavior: 'smooth' });
+
+  // 5. Integração com a seta nativa de "voltar"/"avançar" do navegador:
+  // cada troca de view fica registada no histórico do browser, para que o botão
+  // "voltar" navegue entre as views do dashboard em vez de sair/fechar a aba.
+  if (!fromPopState) {
+    // Em file:// o Chrome bloqueia troca de URL entre "origens" locais únicas,
+    // por isso só passamos a URL com hash quando a página está hospedada (http/https).
+    const url = (location.protocol === 'file:') ? undefined : ('#' + viewId);
+    history.pushState({ view: viewId }, '', url);
+  }
+}
+
+// Reage ao botão "voltar"/"avançar" nativo do navegador
+window.addEventListener('popstate', (event) => {
+  const viewId = (event.state && event.state.view) || 'viewMenu';
+  switchView(viewId, { fromPopState: true });
+});
+
+// Garante que o estado inicial (menu) fica registado no histórico assim que a página
+// carrega, para que o primeiro "voltar" já tenha para onde ir em vez de fechar a aba.
+if (!history.state) {
+  const initUrl = (location.protocol === 'file:') ? undefined : '#viewMenu';
+  history.replaceState({ view: 'viewMenu' }, '', initUrl);
 }
 // ─── Supabase Auth ─────────────────────────────────────────
 const DASHBOARD = {
