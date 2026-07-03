@@ -2205,7 +2205,6 @@ function onCompanyCheckboxChange(checkbox) {
   if (checkbox.checked) {
     if (!selectedCompanyKeys.includes(key)) selectedCompanyKeys.push(key);
   } else {
-    // impede ficar sem nenhuma empresa selecionada
     if (selectedCompanyKeys.length === 1) {
       checkbox.checked = true;
       return;
@@ -2671,6 +2670,7 @@ function setLoadingState() {
 
 async function loadCompanyData() {
   setLoadingState();
+  document.body.style.cursor = 'wait';
   const keys = selectedCompanyKeys.length ? selectedCompanyKeys : [currentCompanyKey];
   const nomes = keys.map(k => COMPANIES[k].label).join(' + ');
   document.getElementById('companyEyebrow').textContent = keys.length > 1 ? `Consolidado · ${nomes}` : COMPANIES[keys[0]].eyebrow.replace(/<[^>]+>/g, ' ').trim();
@@ -2747,6 +2747,8 @@ try {
     document.getElementById('dreBody').innerHTML = `<tr class="empty-row"><td colspan="2">Não foi possível carregar os dados: ${err.message}</td></tr>`;
     document.getElementById('dfcBody').innerHTML = `<tr class="empty-row"><td colspan="2">Não foi possível carregar os dados.</td></tr>`;
     console.error(err);
+  } finally {
+    document.body.style.cursor = 'default';
   }
 }
 
