@@ -10,6 +10,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dayjs/1.11.10/dayjs.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
 <style>
   :root {
     --navy:      #0E1E2B;
@@ -698,6 +701,58 @@
     letter-spacing: 0.04em;
   }
   .btn-logout:hover { background: rgba(243,239,230,0.06); color: var(--bone); }
+  .btn-export {
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    color: var(--bone-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 6px 11px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.03em;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .btn-export:hover { background: rgba(122,201,138,0.10); color: var(--bone); border-color: rgba(122,201,138,0.35); }
+  .btn-export:disabled { opacity: 0.5; cursor: not-allowed; }
+  .section-head-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .inad-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    max-height: 420px;
+    overflow-y: auto;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: var(--navy-2);
+  }
+  .inad-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--line);
+    font-size: 12.5px;
+  }
+  .inad-row:last-child { border-bottom: none; }
+  .inad-row-main { display: flex; align-items: center; gap: 8px; min-width: 0; }
+  .inad-cliente { color: var(--bone); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 320px; }
+  .inad-empresa {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--bone-dim);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 6px;
+    flex-shrink: 0;
+  }
+  .inad-row-meta { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+  .inad-dias { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--red); white-space: nowrap; }
+  .inad-valor { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--bone); font-weight: 600; white-space: nowrap; }
   .user-info {
     font-family: 'IBM Plex Mono', monospace;
     font-size: 11px;
@@ -1356,9 +1411,25 @@
       </div>
     </div>
 
+    <div class="section" id="sectionInadimplenciaDetalhe">
+      <div class="section-head">
+        <div class="section-head-title">
+          <h2>⚠ Contas Vencidas</h2>
+        </div>
+        <div class="desc">Títulos a receber com vencimento já ultrapassado e ainda não recebidos.</div>
+      </div>
+      <div id="inadimplenciaList" class="inad-list">
+        <div style="font-size:11.5px;color:var(--bone-dim);text-align:center;padding:10px 0;">Carregando…</div>
+      </div>
+    </div>
+
     <div class="section" id="sectionDre">
       <div class="section-head">
-        <h2>DRE — Demonstração do Resultado</h2>
+        <div class="section-head-title">
+          <h2>DRE — Demonstração do Resultado</h2>
+          <button type="button" class="btn-export" id="btnExportDre" onclick="exportDreToExcel()">⬇ Exportar Excel</button>
+          <button type="button" class="btn-export" id="btnExportDrePdf" onclick="exportDreToPdf()">⬇ Exportar PDF</button>
+        </div>
         <div class="desc">Receitas e despesas por categoria, pela data de emissão do lançamento (regime de competência).</div>
       </div>
       <table id="dreTable">
@@ -1735,6 +1806,7 @@ let movementsCache = null; // unifiedMovements (receivable+payable) — usar SOM
 let financialMovementsCache = null; // omie_financial_movements puro — usar para DFC/caixa (dt_pagamento real)
 let receivableCache = null;
 let payableCache = null;
+let clientsCache = null;
 
 // Categorias ativas no Omie que NÃO têm "Conta do DRE" vinculada no cadastro.
 // O relatório DRE/Fluxo de Caixa nativo do Omie ignora essas categorias mesmo
@@ -1982,6 +2054,35 @@ async function sb(path, empresaId) {
   return res.json();
 }
 
+// O Supabase/PostgREST limita a 1000 linhas por resposta por padrão,
+// independente do "limit" na query string. Para tabelas que podem ter mais
+// de 1000 linhas por empresa (ex: dash_clients), é preciso paginar de
+// verdade usando o header Range. Sem isso, o fetch trunca silenciosamente
+// (sem erro) e resultados dependentes de linhas "de trás" somem sem aviso.
+async function sbPaged(path, empresaId, pageSize = 1000) {
+  const sep = path.includes('?') ? '&' : '?';
+  const url = `${DASHBOARD.url}/rest/v1/${path}${sep}empresa_id=eq.${empresaId}`;
+  const token = currentSession?.access_token || DASHBOARD.anonKey;
+  const all = [];
+  let offset = 0;
+  while (true) {
+    const res = await fetch(url, {
+      headers: {
+        'apikey': DASHBOARD.anonKey,
+        'Authorization': `Bearer ${token}`,
+        'Range-Unit': 'items',
+        'Range': `${offset}-${offset + pageSize - 1}`,
+      }
+    });
+    if (!res.ok) throw new Error(`Supabase ${res.status} (${empresaId}): ${await res.text()}`);
+    const page = await res.json();
+    all.push(...page);
+    if (page.length < pageSize) break; // última página
+    offset += pageSize;
+  }
+  return all;
+}
+
 // Busca o mesmo path em todas as empresas selecionadas em paralelo,
 // e devolve a junção dos arrays — cada linha recebe _empresa.
 let lastFetchHadErrors = false;
@@ -1990,6 +2091,22 @@ async function sbMulti(path) {
   const keys = selectedCompanyKeys.length ? selectedCompanyKeys : [currentCompanyKey];
   const results = await Promise.all(keys.map(k => sb(path, k).catch(err => {
     console.error(`Falha ao buscar de ${k}:`, err);
+    lastFetchHadErrors = true;
+    return [];
+  })));
+  const merged = [];
+  results.forEach((rows, idx) => {
+    (rows || []).forEach(r => merged.push({ ...r, _empresa: keys[idx] }));
+  });
+  return merged;
+}
+
+// Igual a sbMulti, mas pagina de verdade cada empresa (ver sbPaged acima).
+// Usar para tabelas que podem ter mais de 1000 linhas por empresa.
+async function sbMultiPaged(path) {
+  const keys = selectedCompanyKeys.length ? selectedCompanyKeys : [currentCompanyKey];
+  const results = await Promise.all(keys.map(k => sbPaged(path, k).catch(err => {
+    console.error(`Falha ao buscar (paginado) de ${k}:`, err);
     lastFetchHadErrors = true;
     return [];
   })));
@@ -2032,7 +2149,7 @@ function dedupFinancialMovements(movements) {
   movements.forEach((m) => {
     if (ORIGENS_TRANSFERENCIA.has(m.origem)) return; // transferência interna entre contas: fora do DFC operacional
     if (!m.cod_titulo) { noTitulo.push(m); return; } // cod_titulo ausente/zero: nunca agrupar, dedup não é seguro aqui
-    const key = [m.cod_titulo, m.natureza].join('|');
+    const key = [m._empresa, m.cod_titulo, m.natureza].join('|');
     if (!byTitulo.has(key)) byTitulo.set(key, []);
     byTitulo.get(key).push(m);
   });
@@ -2317,6 +2434,234 @@ function renderDfc(data) {
   el.className = 'value ' + (data.saldo >= 0 ? 'pos' : 'neg');
 }
 
+// Exporta o DRE do mês selecionado (mesma lógica de buildDreRows já usada
+// na tela — categorias, exclusões de CATEGORIAS_SEM_CONTA_DRE e filtro de
+// CANCELADO idênticos) para um arquivo .xlsx, baixado direto no browser.
+function exportDreToExcel() {
+  const btn = document.getElementById('btnExportDre');
+  if (!categoriesCache || !movementsCache) {
+    alert('Os dados ainda estão carregando. Aguarde um instante e tente novamente.');
+    return;
+  }
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '⬇ Gerando…'; }
+
+    const monthVal = getSelectedMonthValue();
+    const monthStart = dayjs(monthVal + '-01');
+    const monthEnd = monthStart.add(1, 'month');
+    const dre = buildDreRows(categoriesCache, movementsCache, monthStart, monthEnd);
+
+    const empresaLabel = selectedCompanyKeys.length === Object.keys(COMPANIES).length
+      ? 'Todas as empresas'
+      : selectedCompanyKeys.map(k => COMPANIES[k]?.label || k).join(' + ');
+    const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    const mesLabel = `${MESES_PT[monthStart.month()]} de ${monthStart.year()}`;
+
+    // Monta as linhas da planilha: cabeçalho de contexto, depois Receitas
+    // (com cada categoria), total de Receitas, Despesas (com cada
+    // categoria), total de Despesas, e Resultado do período.
+    const rows = [];
+    rows.push(['Painel Financeiro — DRE (Demonstração do Resultado)']);
+    rows.push([`Empresa(s): ${empresaLabel}`]);
+    rows.push([`Período: ${mesLabel}`]);
+    rows.push([`Gerado em: ${dayjs().format('DD/MM/YYYY HH:mm')}`]);
+    rows.push([]);
+    rows.push(['Categoria', 'Valor (R$)']);
+
+    rows.push(['Receitas', dre.totalReceita]);
+    dre.receitaRows.forEach(r => rows.push([`  ${r.label}`, r.val]));
+
+    rows.push(['Despesas', dre.totalDespesa]);
+    dre.despesaRows.forEach(r => rows.push([`  ${r.label}`, r.val]));
+
+    const resultado = dre.totalReceita - dre.totalDespesa;
+    rows.push(['Resultado do período', resultado]);
+
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 44 }, { wch: 16 }];
+    // Formata a coluna de valores como moeda BRL nas linhas de dado (a partir da linha 7, 0-indexed = 6)
+    for (let i = 6; i < rows.length; i++) {
+      const cellRef = XLSX.utils.encode_cell({ r: i, c: 1 });
+      if (ws[cellRef] && typeof ws[cellRef].v === 'number') {
+        ws[cellRef].z = '#,##0.00';
+      }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'DRE');
+
+    const fileEmpresa = selectedCompanyKeys.length === Object.keys(COMPANIES).length
+      ? 'Consolidado'
+      : selectedCompanyKeys.join('-');
+    const fileName = `DRE_${fileEmpresa}_${monthVal}.xlsx`;
+    XLSX.writeFile(wb, fileName);
+  } catch (err) {
+    console.error('Falha ao exportar DRE para Excel:', err);
+    alert('Não foi possível gerar o Excel. Verifique o console para detalhes.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ Exportar Excel'; }
+  }
+}
+
+// Exporta o resumo financeiro do mês selecionado para PDF: DRE detalhado
+// por categoria, DFC (fluxo de caixa) do período, e comparação com o mês
+// anterior (deltas). Mesma fonte de dados que já alimenta a tela
+// (buildDreRows, buildDfc, computePeriodTotals) — sem recalcular nada, só
+// formatando o que já está validado.
+function exportDreToPdf() {
+  const btn = document.getElementById('btnExportDrePdf');
+  if (!categoriesCache || !movementsCache) {
+    alert('Os dados ainda estão carregando. Aguarde um instante e tente novamente.');
+    return;
+  }
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    alert('Biblioteca de PDF ainda não carregou. Aguarde alguns segundos e tente novamente.');
+    return;
+  }
+
+  try {
+    if (btn) { btn.disabled = true; btn.textContent = '⬇ Gerando…'; }
+
+    const monthVal = getSelectedMonthValue();
+    const monthStart = dayjs(monthVal + '-01');
+    const monthEnd = monthStart.add(1, 'month');
+    const prevStart = monthStart.subtract(1, 'month');
+    const prevEnd = monthStart;
+
+    const dre = buildDreRows(categoriesCache, movementsCache, monthStart, monthEnd);
+    const dfc = buildDfc(financialMovementsCache || [], monthStart, monthEnd);
+    const current = { receita: dre.totalReceita, despesa: dre.totalDespesa, resultado: dre.totalReceita - dre.totalDespesa, caixa: dfc.saldo };
+    const previous = computePeriodTotals(movementsCache, financialMovementsCache || [], prevStart, prevEnd);
+
+    const empresaLabel = selectedCompanyKeys.length === Object.keys(COMPANIES).length
+      ? 'Todas as empresas'
+      : selectedCompanyKeys.map(k => COMPANIES[k]?.label || k).join(' + ');
+    const MESES_PT = ['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+    const mesLabel = `${MESES_PT[monthStart.month()]} de ${monthStart.year()}`;
+    const mesAnteriorLabel = `${MESES_PT[prevStart.month()]} de ${prevStart.year()}`;
+
+    // Formata delta percentual como texto: "↑ 12,3%", "↓ 8,0%" ou "— (sem dado anterior)"
+    function deltaText(curr, prev) {
+      if (prev === undefined || prev === null || Math.abs(prev) < 0.005) return '—';
+      const pct = ((curr - prev) / Math.abs(prev)) * 100;
+      if (!Number.isFinite(pct)) return '—';
+      if (Math.abs(pct) < 0.5) return 'estável';
+      const seta = pct > 0 ? '↑' : '↓';
+      return `${seta} ${Math.abs(pct).toFixed(1)}%`;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const margin = 40;
+
+    // Cabeçalho
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.text('Painel Financeiro — Resumo do Período', margin, 50);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.setTextColor(90);
+    doc.text(`Empresa(s): ${empresaLabel}`, margin, 70);
+    doc.text(`Período: ${mesLabel}`, margin, 85);
+    doc.text(`Gerado em: ${dayjs().format('DD/MM/YYYY HH:mm')}`, margin, 100);
+    doc.setTextColor(0);
+
+    // Bloco de comparação vs mês anterior (resumo executivo no topo)
+    const deltaBody = [
+      ['Receitas', fmtBRL(current.receita), fmtBRL(previous.receita), deltaText(current.receita, previous.receita)],
+      ['Despesas', fmtBRL(current.despesa), fmtBRL(previous.despesa), deltaText(current.despesa, previous.despesa)],
+      ['Resultado (DRE)', fmtBRL(current.resultado), fmtBRL(previous.resultado), deltaText(current.resultado, previous.resultado)],
+      ['Saldo de Caixa (DFC)', fmtBRL(current.caixa), fmtBRL(previous.caixa), deltaText(current.caixa, previous.caixa)],
+    ];
+    doc.autoTable({
+      startY: 118,
+      head: [['Indicador', mesLabel, mesAnteriorLabel, 'Variação']],
+      body: deltaBody,
+      margin: { left: margin, right: margin },
+      styles: { font: 'helvetica', fontSize: 9.5, cellPadding: 6 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' },
+      },
+    });
+
+    // DRE detalhado por categoria
+    const dreBody = [];
+    dreBody.push([{ content: 'Receitas', styles: { fontStyle: 'bold' } },
+                   { content: fmtBRL(dre.totalReceita), styles: { fontStyle: 'bold', halign: 'right' } }]);
+    dre.receitaRows.forEach(r => {
+      dreBody.push([`   ${r.label}`, { content: fmtBRL(r.val), styles: { halign: 'right' } }]);
+    });
+    dreBody.push([{ content: 'Despesas', styles: { fontStyle: 'bold' } },
+                   { content: fmtBRL(dre.totalDespesa), styles: { fontStyle: 'bold', halign: 'right' } }]);
+    dre.despesaRows.forEach(r => {
+      dreBody.push([`   ${r.label}`, { content: fmtBRL(r.val), styles: { halign: 'right' } }]);
+    });
+    dreBody.push([
+      { content: 'Resultado do período', styles: { fontStyle: 'bold', fillColor: [230, 230, 230] } },
+      { content: fmtBRL(current.resultado), styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 230, 230] } },
+    ]);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('DRE — Demonstração do Resultado (regime de competência)', margin, doc.lastAutoTable.finalY + 26);
+
+    doc.autoTable({
+      startY: doc.lastAutoTable.finalY + 36,
+      head: [['Categoria', 'Valor']],
+      body: dreBody,
+      margin: { left: margin, right: margin },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right', cellWidth: 120 } },
+    });
+
+    // DFC — fluxo de caixa do período (regime de caixa)
+    const dfcBody = [
+      [{ content: 'Entradas (recebimentos)', styles: { fontStyle: 'bold' } },
+       { content: fmtBRL(dfc.entradas), styles: { fontStyle: 'bold', halign: 'right' } }],
+      [{ content: 'Saídas (pagamentos)', styles: { fontStyle: 'bold' } },
+       { content: fmtBRL(dfc.saidas), styles: { fontStyle: 'bold', halign: 'right' } }],
+      [{ content: 'Saldo de caixa do período', styles: { fontStyle: 'bold', fillColor: [230, 230, 230] } },
+       { content: fmtBRL(dfc.saldo), styles: { fontStyle: 'bold', halign: 'right', fillColor: [230, 230, 230] } }],
+    ];
+
+    // Checa se cabe na página atual; se não, quebra para a próxima antes do título.
+    const pageHeight = doc.internal.pageSize.getHeight();
+    let dfcTitleY = doc.lastAutoTable.finalY + 26;
+    if (dfcTitleY + 140 > pageHeight - margin) {
+      doc.addPage();
+      dfcTitleY = 50;
+    }
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(12);
+    doc.text('DFC — Fluxo de Caixa (regime de caixa, pagamentos liquidados)', margin, dfcTitleY);
+
+    doc.autoTable({
+      startY: dfcTitleY + 10,
+      head: [['Movimento', 'Valor']],
+      body: dfcBody,
+      margin: { left: margin, right: margin },
+      styles: { font: 'helvetica', fontSize: 10, cellPadding: 6 },
+      headStyles: { fillColor: [30, 41, 59], textColor: 255, fontStyle: 'bold' },
+      columnStyles: { 1: { halign: 'right', cellWidth: 120 } },
+    });
+
+    const fileEmpresa = selectedCompanyKeys.length === Object.keys(COMPANIES).length
+      ? 'Consolidado'
+      : selectedCompanyKeys.join('-');
+    doc.save(`Resumo_${fileEmpresa}_${monthVal}.pdf`);
+  } catch (err) {
+    console.error('Falha ao exportar resumo para PDF:', err);
+    alert('Não foi possível gerar o PDF. Verifique o console para detalhes.');
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '⬇ Exportar PDF'; }
+  }
+}
+
 function setLoadingState() {
   document.getElementById('statusDot').classList.remove('bad');
   document.getElementById('statusText').textContent = 'carregando…';
@@ -2331,14 +2676,16 @@ async function loadCompanyData() {
   document.getElementById('companyEyebrow').textContent = keys.length > 1 ? `Consolidado · ${nomes}` : COMPANIES[keys[0]].eyebrow.replace(/<[^>]+>/g, ' ').trim();
   document.getElementById('footerLeft').textContent = keys.map(k => COMPANIES[k].footerSlug).join(' + ');
 
-  lastFetchHadErrors = false;
-  try {
-    const [categories, movements, receivable, payable] = await Promise.all([
-      sbMulti('dash_categories?select=codigo,descricao,conta_receita,conta_despesa&limit=2000'),
-      sbMulti('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo&limit=10000'),
-      sbMulti('dash_accounts_receivable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento&limit=10000'),
-      sbMulti('dash_accounts_payable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento&limit=10000'),
-    ]);
+lastFetchHadErrors = false;
+try {
+  const [categories, movements, receivable, payable, clients] = await Promise.all([
+    sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa'),
+    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo'),
+    sbMultiPaged('dash_accounts_receivable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
+    sbMultiPaged('dash_accounts_payable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento'),
+    sbMultiPaged('dash_clients?select=codigo_cliente_omie,nome_fantasia,razao_social'),
+  ]);
+  clientsCache = clients;
 
     // Build unified movements from accounts receivable + payable (more complete than omie_financial_movements)
     const unifiedMovements = [
@@ -2992,6 +3339,50 @@ function renderInadimplencia(movements, receivable) {
     cardEl.classList.remove('alert');
     valEl.style.color = '';
   }
+
+  renderInadimplenciaList(overdue, today);
+}
+
+// Monta a lista detalhada de contas vencidas: cliente, valor, dias em
+// atraso e empresa (quando mais de uma selecionada). Clientes são
+// resolvidos via clientsCache, casando por (codigo_cliente_omie, empresa_id)
+// — dash_clients tem uma linha por empresa para o mesmo cliente, então o
+// join precisa considerar as duas chaves (mesmo cuidado de dash_categories).
+function renderInadimplenciaList(overdue, today) {
+  const listEl = document.getElementById('inadimplenciaList');
+  if (!listEl) return; // elemento ainda não existe nesta view
+
+  if (!overdue.length) {
+    listEl.innerHTML = '<div style="font-size:11.5px;color:var(--bone-dim);text-align:center;padding:10px 0;">Nenhuma conta vencida em aberto.</div>';
+    return;
+  }
+
+  const clientByKey = {};
+  (clientsCache || []).forEach(c => {
+    clientByKey[`${c._empresa}|${c.codigo_cliente_omie}`] = c.nome_fantasia || c.razao_social;
+  });
+
+  const sorted = overdue.slice().sort((a, b) => dayjs(a.data_vencimento).valueOf() - dayjs(b.data_vencimento).valueOf());
+
+  const showEmpresa = new Set(sorted.map(m => m._empresa)).size > 1;
+
+  listEl.innerHTML = sorted.map(m => {
+    const dias = today.diff(dayjs(m.data_vencimento), 'day');
+    const nome = clientByKey[`${m._empresa}|${m.codigo_cliente_fornecedor}`]
+      || m.observacao
+      || (m.numero_documento ? `Documento ${m.numero_documento}` : 'Cliente não identificado');
+    const empresaTag = showEmpresa ? `<span class="inad-empresa">${m._empresa}</span>` : '';
+    return `<div class="inad-row">
+      <div class="inad-row-main">
+        <span class="inad-cliente">${decodeHtmlEntities(nome)}</span>
+        ${empresaTag}
+      </div>
+      <div class="inad-row-meta">
+        <span class="inad-dias">${dias} dia${dias === 1 ? '' : 's'} em atraso</span>
+        <span class="inad-valor">${fmtBRL(Number(m.valor_documento || 0))}</span>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 function renderForecastFlowChart(receivable, payable) {
