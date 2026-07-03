@@ -701,6 +701,319 @@
     letter-spacing: 0.04em;
   }
   .btn-logout:hover { background: rgba(243,239,230,0.06); color: var(--bone); }
+
+  /* ---------- solicitar acesso ---------- */
+  .login-request-link {
+    display: block;
+    text-align: center;
+    margin-top: 20px;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px;
+    color: var(--blue-belt-light);
+    cursor: pointer;
+    text-decoration: none;
+    background: none;
+    border: none;
+    width: 100%;
+  }
+  .login-request-link:hover { text-decoration: underline; }
+
+  .request-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    background: rgba(4,10,15,0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .request-overlay.hidden { display: none; }
+  .request-box {
+    width: 100%;
+    max-width: 440px;
+    max-height: 88vh;
+    overflow-y: auto;
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 36px 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .request-box h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 6px;
+  }
+  .request-box .login-sub { font-size: 13px; color: var(--bone-dim); margin-bottom: 24px; }
+  .request-box label {
+    display: block;
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--bone-dim);
+    margin-bottom: 6px;
+    margin-top: 16px;
+  }
+  .request-box label:first-of-type { margin-top: 0; }
+  .request-box input[type="text"],
+  .request-box input[type="email"],
+  .request-box textarea {
+    width: 100%;
+    padding: 10px 14px;
+    background: rgba(14,30,43,0.6);
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    outline: none;
+    resize: vertical;
+  }
+  .request-box input:focus, .request-box textarea:focus {
+    border-color: var(--blue-belt-light);
+    box-shadow: 0 0 0 3px rgba(28,93,140,0.25);
+  }
+  .request-box .company-check-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  .request-box .company-check-opt {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .request-box .company-check-opt input { accent-color: var(--blue-belt-light); cursor: pointer; }
+  .request-box .req-error, .request-box .req-success {
+    font-size: 13px;
+    padding: 10px 14px;
+    border-radius: 6px;
+    margin-top: 16px;
+    display: none;
+  }
+  .request-box .req-error {
+    background: rgba(199,84,80,0.12);
+    border: 1px solid rgba(199,84,80,0.35);
+    color: var(--red);
+  }
+  .request-box .req-success {
+    background: rgba(63,166,106,0.12);
+    border: 1px solid rgba(63,166,106,0.35);
+    color: var(--green);
+  }
+  .request-box .req-error.show, .request-box .req-success.show { display: block; }
+  .request-box .req-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 24px;
+  }
+  .request-box button[type="submit"] {
+    flex: 1;
+    padding: 12px;
+    background: var(--blue-belt);
+    border: none;
+    border-radius: 6px;
+    color: var(--bone);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .request-box button[type="submit"]:hover { background: var(--blue-belt-light); }
+  .request-box button[type="submit"]:disabled { opacity: 0.6; cursor: not-allowed; }
+  .request-box .req-cancel {
+    padding: 12px 18px;
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    color: var(--bone-dim);
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  .request-box .req-cancel:hover { background: rgba(243,239,230,0.05); color: var(--bone); }
+
+  /* ---------- admin: solicitações pendentes ---------- */
+  .btn-requests {
+    position: relative;
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    color: var(--bone-dim);
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    padding: 7px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    letter-spacing: 0.04em;
+  }
+  .btn-requests:hover { background: rgba(243,239,230,0.06); color: var(--bone); }
+  .btn-requests .req-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    margin-left: 6px;
+    border-radius: 100px;
+    background: var(--red);
+    color: var(--bone);
+    font-size: 10px;
+    font-weight: 600;
+  }
+  .btn-requests.hidden { display: none; }
+
+  .requests-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 110;
+    background: rgba(4,10,15,0.72);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .requests-overlay.hidden { display: none; }
+  .requests-box {
+    width: 100%;
+    max-width: 640px;
+    max-height: 84vh;
+    overflow-y: auto;
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 32px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .requests-box-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .requests-box h2 {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 20px;
+    font-weight: 600;
+  }
+  .requests-box .req-close {
+    background: none;
+    border: none;
+    color: var(--bone-dim);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+    padding: 4px 8px;
+  }
+  .requests-box .req-close:hover { color: var(--bone); }
+  .requests-empty {
+    color: var(--bone-dim);
+    font-size: 13.5px;
+    text-align: center;
+    padding: 32px 0;
+  }
+  .request-item {
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 18px;
+    margin-bottom: 12px;
+  }
+  .request-item .req-item-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 8px;
+  }
+  .request-item .req-name {
+    font-weight: 600;
+    font-size: 14.5px;
+  }
+  .request-item .req-email {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11.5px;
+    color: var(--bone-dim);
+    margin-top: 2px;
+  }
+  .request-item .req-date {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--bone-dim);
+    white-space: nowrap;
+  }
+  .request-item .req-companies {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+  .request-item .req-company-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    padding: 3px 9px;
+    border-radius: 100px;
+    border: 1px solid var(--blue-belt-light);
+    color: var(--blue-belt-light);
+  }
+  .request-item .req-motivo {
+    font-size: 13px;
+    color: var(--bone-dim);
+    margin-bottom: 12px;
+    line-height: 1.5;
+  }
+  .request-item .req-actions {
+    display: flex;
+    gap: 8px;
+  }
+  .request-item .req-approve, .request-item .req-reject {
+    flex: 1;
+    padding: 9px;
+    border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+  }
+  .request-item .req-approve { background: var(--green); color: var(--navy); }
+  .request-item .req-approve:hover { opacity: 0.88; }
+  .request-item .req-reject { background: transparent; border: 1px solid var(--red); color: var(--red); }
+  .request-item .req-reject:hover { background: rgba(199,84,80,0.1); }
+  .request-item .req-approve:disabled, .request-item .req-reject:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .request-item .req-result {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    display: none;
+  }
+  .request-item .req-result.show { display: block; }
+  .request-item .req-result.ok {
+    background: rgba(63,166,106,0.12);
+    border: 1px solid rgba(63,166,106,0.35);
+    color: var(--green);
+  }
+  .request-item .req-result.err {
+    background: rgba(199,84,80,0.12);
+    border: 1px solid rgba(199,84,80,0.35);
+    color: var(--red);
+  }
+  .request-item .req-result code {
+    font-family: 'IBM Plex Mono', monospace;
+    background: rgba(0,0,0,0.25);
+    padding: 1px 5px;
+    border-radius: 4px;
+  }
   .btn-export {
     background: var(--navy-2);
     border: 1px solid var(--line);
@@ -1212,6 +1525,51 @@
       <input type="password" id="loginPassword" autocomplete="current-password" required>
       <button type="submit" id="loginBtn">Entrar</button>
     </form>
+    <button type="button" class="login-request-link" onclick="openRequestModal()">Ainda não tenho acesso — solicitar conta</button>
+  </div>
+</div>
+
+<div class="request-overlay hidden" id="requestOverlay">
+  <div class="request-box">
+    <div class="eyebrow">BPO Financeiro</div>
+    <h2>Solicitar acesso</h2>
+    <div class="login-sub">Preencha os dados abaixo. Sua solicitação será analisada e você receberá as credenciais por e-mail se aprovada.</div>
+    <div class="req-error" id="reqError"></div>
+    <div class="req-success" id="reqSuccess"></div>
+    <form id="requestForm" onsubmit="return handleAccessRequest(event)">
+      <label for="reqNome">Nome completo</label>
+      <input type="text" id="reqNome" required>
+
+      <label for="reqEmail">E-mail</label>
+      <input type="email" id="reqEmail" required>
+
+      <label>Empresa(s) que deseja acessar</label>
+      <div class="company-check-row" id="reqCompanyRow">
+        <label class="company-check-opt"><input type="checkbox" value="RT"> RT · Esportes e Eventos</label>
+        <label class="company-check-opt"><input type="checkbox" value="KMNO"> KMNO Sports</label>
+        <label class="company-check-opt"><input type="checkbox" value="BLUELINE"> Blue Line</label>
+      </div>
+
+      <label for="reqMotivo">Motivo / justificativa</label>
+      <textarea id="reqMotivo" rows="3" placeholder="Ex: preciso acompanhar o financeiro da unidade X..." required></textarea>
+
+      <div class="req-actions">
+        <button type="button" class="req-cancel" onclick="closeRequestModal()">Cancelar</button>
+        <button type="submit" id="reqSubmitBtn">Enviar solicitação</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="requests-overlay hidden" id="requestsOverlay">
+  <div class="requests-box">
+    <div class="requests-box-header">
+      <h2>Solicitações de acesso</h2>
+      <button type="button" class="req-close" onclick="closeRequestsPanel()">&times;</button>
+    </div>
+    <div id="requestsList">
+      <div class="requests-empty">Carregando…</div>
+    </div>
   </div>
 </div>
 
@@ -1219,11 +1577,12 @@
 
   <header>
     <div>
-      <div class="eyebrow" id="companyEyebrow">RT &middot; Gracie Barra</div>
+      <div class="eyebrow" id="companyEyebrow">RT &middot; Esportes e Eventos</div>
       <h1>Painel Financeiro</h1>
     </div>
     <div style="display:flex; align-items:center; gap:14px; flex-wrap: wrap;">
       <div class="user-info" id="userInfo"></div>
+      <button type="button" class="btn-requests hidden" id="btnRequests" onclick="openRequestsPanel()">🔔 Solicitações<span class="req-badge hidden" id="requestsBadge">0</span></button>
       <button type="button" class="btn-logout" id="btnLogout" onclick="handleLogout()">⎋ Sair</button>
       <span class="status-pill"><span class="status-dot" id="statusDot"></span><span id="statusText">conectando…</span></span>
       <div class="period-controls">
@@ -1753,6 +2112,66 @@ function showLogin() {
   document.getElementById('dashboardWrap').classList.add('hidden');
 }
 
+// ─── Solicitação de acesso ─────────────────────────────────
+function openRequestModal() {
+  document.getElementById('requestOverlay').classList.remove('hidden');
+  document.getElementById('reqError').classList.remove('show');
+  document.getElementById('reqSuccess').classList.remove('show');
+}
+
+function closeRequestModal() {
+  document.getElementById('requestOverlay').classList.add('hidden');
+  document.getElementById('requestForm').reset();
+}
+
+async function handleAccessRequest(e) {
+  e.preventDefault();
+  const nome = document.getElementById('reqNome').value.trim();
+  const email = document.getElementById('reqEmail').value.trim();
+  const motivo = document.getElementById('reqMotivo').value.trim();
+  const empresas = Array.from(document.querySelectorAll('#reqCompanyRow input:checked')).map(cb => cb.value);
+
+  const errEl = document.getElementById('reqError');
+  const okEl = document.getElementById('reqSuccess');
+  const btn = document.getElementById('reqSubmitBtn');
+
+  errEl.classList.remove('show');
+  okEl.classList.remove('show');
+
+  if (empresas.length === 0) {
+    errEl.textContent = 'Selecione ao menos uma empresa.';
+    errEl.classList.add('show');
+    return false;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  const { error } = await supabaseClient.from('solicitacoes_acesso').insert({
+    nome,
+    email,
+    empresas_solicitadas: empresas,
+    motivo,
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Enviar solicitação';
+
+  if (error) {
+    errEl.textContent = error.code === '23505'
+      ? 'Já existe uma solicitação pendente para este e-mail.'
+      : ('Não foi possível enviar: ' + error.message);
+    errEl.classList.add('show');
+    return false;
+  }
+
+  okEl.textContent = 'Solicitação enviada! Você será avisado por e-mail se aprovada.';
+  okEl.classList.add('show');
+  document.getElementById('requestForm').reset();
+  setTimeout(closeRequestModal, 2500);
+  return false;
+}
+
 function showDashboard() {
   document.getElementById('loginOverlay').classList.add('hidden');
   document.getElementById('dashboardWrap').classList.remove('hidden');
@@ -1778,13 +2197,185 @@ function showDashboard() {
   populateCompanyMultiselect();
   setupCompanyMultiselectToggle();
   loadCompanyData();
+
+  // Botão de solicitações pendentes — só visível para admin
+  const btnReq = document.getElementById('btnRequests');
+  if (currentProfile && currentProfile.role === 'admin') {
+    btnReq.classList.remove('hidden');
+    refreshRequestsBadge();
+  } else {
+    btnReq.classList.add('hidden');
+  }
+}
+
+// ─── Admin: gerenciar solicitações de acesso ───────────────
+async function refreshRequestsBadge() {
+  try {
+    const { count } = await supabaseClient
+      .from('solicitacoes_acesso')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pendente');
+    const badge = document.getElementById('requestsBadge');
+    if (count && count > 0) {
+      badge.textContent = count;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch (e) {
+    console.error('Erro ao buscar contagem de solicitações:', e);
+  }
+}
+
+async function openRequestsPanel() {
+  document.getElementById('requestsOverlay').classList.remove('hidden');
+  await renderRequestsList();
+}
+
+function closeRequestsPanel() {
+  document.getElementById('requestsOverlay').classList.add('hidden');
+}
+
+function fmtReqDate(iso) {
+  try {
+    return dayjs(iso).format('DD/MM/YYYY HH:mm');
+  } catch (_) {
+    return iso;
+  }
+}
+
+const COMPANY_LABELS_REQ = { RT: 'RT · Esportes e Eventos', KMNO: 'KMNO Sports', BLUELINE: 'Blue Line' };
+
+async function renderRequestsList() {
+  const listEl = document.getElementById('requestsList');
+  listEl.innerHTML = '<div class="requests-empty">Carregando…</div>';
+
+  const { data, error } = await supabaseClient
+    .from('solicitacoes_acesso')
+    .select('*')
+    .eq('status', 'pendente')
+    .order('criado_em', { ascending: true });
+
+  if (error) {
+    listEl.innerHTML = `<div class="requests-empty">Erro ao carregar: ${error.message}</div>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<div class="requests-empty">Nenhuma solicitação pendente.</div>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+  data.forEach((sol) => {
+    const item = document.createElement('div');
+    item.className = 'request-item';
+    item.dataset.id = sol.id;
+
+    const companiesHtml = (sol.empresas_solicitadas || [])
+      .map(k => `<span class="req-company-tag">${COMPANY_LABELS_REQ[k] || k}</span>`)
+      .join('');
+
+    item.innerHTML = `
+      <div class="req-item-top">
+        <div>
+          <div class="req-name">${sol.nome}</div>
+          <div class="req-email">${sol.email}</div>
+        </div>
+        <div class="req-date">${fmtReqDate(sol.criado_em)}</div>
+      </div>
+      <div class="req-companies">${companiesHtml}</div>
+      <div class="req-motivo">${sol.motivo || '<em>Sem motivo informado.</em>'}</div>
+      <div class="req-actions">
+        <button type="button" class="req-approve" onclick="approveRequest('${sol.id}', this)">✓ Aprovar e criar conta</button>
+        <button type="button" class="req-reject" onclick="rejectRequest('${sol.id}', this)">✕ Rejeitar</button>
+      </div>
+      <div class="req-result" id="req-result-${sol.id}"></div>
+    `;
+    listEl.appendChild(item);
+  });
+}
+
+async function rejectRequest(id, btn) {
+  const item = btn.closest('.request-item');
+  item.querySelectorAll('button').forEach(b => b.disabled = true);
+
+  const { error } = await supabaseClient
+    .from('solicitacoes_acesso')
+    .update({ status: 'rejeitado', decidido_em: new Date().toISOString(), decidido_por: currentSession.user.id })
+    .eq('id', id);
+
+  const resultEl = document.getElementById(`req-result-${id}`);
+  if (error) {
+    resultEl.className = 'req-result err show';
+    resultEl.textContent = 'Erro ao rejeitar: ' + error.message;
+    item.querySelectorAll('button').forEach(b => b.disabled = false);
+    return;
+  }
+
+  resultEl.className = 'req-result ok show';
+  resultEl.textContent = 'Solicitação rejeitada.';
+  setTimeout(() => { renderRequestsList(); refreshRequestsBadge(); }, 1200);
+}
+
+async function approveRequest(id, btn) {
+  const item = btn.closest('.request-item');
+  item.querySelectorAll('button').forEach(b => b.disabled = true);
+  btn.textContent = 'Aprovando…';
+
+  const resultEl = document.getElementById(`req-result-${id}`);
+
+  // 1) marca como aprovado
+  const { error: updErr } = await supabaseClient
+    .from('solicitacoes_acesso')
+    .update({ status: 'aprovado' })
+    .eq('id', id);
+
+  if (updErr) {
+    resultEl.className = 'req-result err show';
+    resultEl.textContent = 'Erro ao aprovar: ' + updErr.message;
+    item.querySelectorAll('button').forEach(b => b.disabled = false);
+    btn.textContent = '✓ Aprovar e criar conta';
+    return;
+  }
+
+  // 2) chama a Edge Function pra criar Auth + profile
+  try {
+    const res = await fetch(`${DASHBOARD.url}/functions/v1/approve-access-request`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${currentSession.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ solicitacao_id: id }),
+    });
+    const json = await res.json();
+
+    if (!res.ok || json.error) {
+      resultEl.className = 'req-result err show';
+      resultEl.textContent = 'Erro ao criar a conta: ' + (json.error || res.statusText);
+      item.querySelectorAll('button').forEach(b => b.disabled = false);
+      btn.textContent = '✓ Aprovar e criar conta';
+      return;
+    }
+
+    resultEl.className = 'req-result ok show';
+    resultEl.innerHTML = `Conta criada! E-mail: <code>${json.email}</code> · Senha temporária: <code>${json.senha_temporaria}</code><br>Repasse essas credenciais ao visitante com segurança.`;
+    btn.textContent = 'Aprovado ✓';
+    refreshRequestsBadge();
+  } catch (e) {
+    resultEl.className = 'req-result err show';
+    resultEl.textContent = 'Falha de conexão ao criar a conta: ' + String(e);
+    item.querySelectorAll('button').forEach(b => b.disabled = false);
+    btn.textContent = '✓ Aprovar e criar conta';
+  }
 }
 
 // Metadados visuais de cada empresa (labels, eyebrow, etc)
 const COMPANIES = {
   RT: {
     label: 'RT',
-    eyebrow: 'RT · Gracie Barra',
+    eyebrow: 'RT · Esportes e Eventos',
     footerSlug: 'omie-sync-rt',
   },
   KMNO: {
