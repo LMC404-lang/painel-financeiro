@@ -647,7 +647,13 @@
     border-radius: 10px;
     background: var(--navy-2);
     margin-bottom: 28px;
+    scrollbar-width: thin;
+    scrollbar-color: var(--blue-belt-light) var(--navy-2);
   }
+  .dre-tbl-wrap::-webkit-scrollbar { height: 8px; }
+  .dre-tbl-wrap::-webkit-scrollbar-track { background: var(--navy-2); border-radius: 10px; }
+  .dre-tbl-wrap::-webkit-scrollbar-thumb { background: var(--blue-belt-light); border-radius: 10px; }
+  .dre-tbl-wrap::-webkit-scrollbar-thumb:hover { background: var(--blue-belt); }
   /* Barra de cabeçalho única (meses/Total/Média), fixa logo abaixo do
      <header> do app — o "top" exato é calculado em JS (altura real do
      header), ver ajustarStickyHeaderTabela(). Some quando não há
@@ -688,7 +694,7 @@
     font-size: 11.5px;
   }
   .dre-tbl th, .dre-tbl td {
-    padding: 7px 10px;
+    padding: 7px 7px;
     text-align: right;
     white-space: nowrap;
     border-bottom: 1px solid var(--line-soft);
@@ -720,8 +726,8 @@
     font-family: 'Space Grotesk', sans-serif;
     font-size: 12px;
     color: var(--bone-dim);
-    min-width: 220px;
-    max-width: 320px;
+    min-width: 260px;
+    max-width: 380px;
     white-space: normal;
   }
   .dre-tbl th.dre-tbl-sticky { color: var(--bone-dim); z-index: 4; }
@@ -2469,7 +2475,7 @@
         <div class="bloco-card">
           <div class="bloco-head"><div class="bloco-titulo">Estoque por Peça</div></div>
           <div class="bloco-body">
-            <div class="dre-tbl-wrap" style="overflow-x:auto;">
+            <div class="dre-tbl-wrap">
               <table class="fin-tbl">
                 <tr>
                   <th>Item</th>
@@ -2497,7 +2503,7 @@
         <div class="bloco-card" style="margin-top:16px;">
           <div class="bloco-head"><div class="bloco-titulo">Caixa por Peça</div></div>
           <div class="bloco-body">
-            <div class="dre-tbl-wrap" style="overflow-x:auto;">
+            <div class="dre-tbl-wrap">
               <table class="fin-tbl">
                 <tr>
                   <th>Item</th>
@@ -2528,7 +2534,7 @@
         </div>
         <div class="bloco-card">
           <div class="bloco-body">
-            <div class="dre-tbl-wrap" style="overflow-x:auto;">
+            <div class="dre-tbl-wrap">
               <table class="fin-tbl">
                 <tr><th colspan="2">DFC (Caixa)</th><th class="num">JAN</th></tr>
                 <tr class="dfc-linha-pai"><td colspan="2" style="font-weight:700;">RECEBIMENTO</td><td class="num" style="font-weight:700;">R$ 0</td></tr>
@@ -7113,7 +7119,7 @@ function renderVendasFaturamento() {
     <div class="bloco-card">
       <div class="bloco-head"><div class="bloco-titulo">Vendas (Receita Bruta) x Faturamento (Resultado Líquido)</div></div>
       <div class="bloco-body">
-        <div class="dre-tbl-wrap" style="overflow-x:auto;">
+        <div class="dre-tbl-wrap">
           <table class="fin-tbl">
             <tr><th></th>${headerMeses}</tr>
             <tr><th>Empresa</th>${headerSub}</tr>
