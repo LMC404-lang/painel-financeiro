@@ -694,7 +694,7 @@
     font-size: 11.5px;
   }
   .dre-tbl th, .dre-tbl td {
-    padding: 7px 7px;
+    padding: 7px 10px;
     text-align: right;
     white-space: nowrap;
     border-bottom: 1px solid var(--line-soft);
@@ -726,8 +726,8 @@
     font-family: 'Space Grotesk', sans-serif;
     font-size: 12px;
     color: var(--bone-dim);
-    min-width: 260px;
-    max-width: 380px;
+    min-width: 220px;
+    max-width: 320px;
     white-space: normal;
   }
   .dre-tbl th.dre-tbl-sticky { color: var(--bone-dim); z-index: 4; }
@@ -2631,6 +2631,26 @@ function switchView(viewId, options = {}) {
     }, 60);
   }
 
+  // DRE por Bloco: mesmo problema do Chart.js acima — a tabela é
+  // renderizada em segundo plano assim que os dados chegam (mesmo com
+  // a view ainda escondida), mas medir largura de coluna via
+  // getBoundingClientRect() em elemento com display:none sempre
+  // retorna 0. Resultado: colunas Total/Média/AV apareciam
+  // desalinhadas na primeira visita à tela, só corrigindo quando o
+  // usuário forçava um novo render trocando de aba de empresa. Agora,
+  // toda vez que essa view é aberta, refaz o cálculo com a tabela já
+  // visível (setTimeout garante que a classe .active já aplicou o
+  // display:block antes de medir).
+  if (viewId === 'viewBlocks') {
+    setTimeout(() => {
+      const root = document.getElementById('sectionBlocos');
+      if (!root) return;
+      try { if (typeof alinharLargurasColunas === 'function') alinharLargurasColunas(root); } catch (e) { console.error('alinharLargurasColunas (switchView) falhou:', e); }
+      try { if (typeof ajustarStickyTotalMedia === 'function') ajustarStickyTotalMedia(root); } catch (e) { console.error('ajustarStickyTotalMedia (switchView) falhou:', e); }
+      try { if (typeof ajustarStickyHeaderTabela === 'function') ajustarStickyHeaderTabela(root); } catch (e) { console.error('ajustarStickyHeaderTabela (switchView) falhou:', e); }
+    }, 60);
+  }
+
   // Saldo dos Bancos: busca dado real (dash_contas_correntes) toda vez
   // que a view abre — se a tabela ainda não existir ou estiver vazia,
   // renderSaldoBancos() mantém o placeholder "R$ -----" que já está no HTML.
@@ -4508,14 +4528,20 @@ const DRE_ARVORE_BLOCOS = {
           "naoConfirmado": true
         },
         {
-          "nome": "Maquinas e Equipamentos",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Aquisição de Máquinas e Equipamentos",
+          "natureza": "P"
         },
         {
-          "nome": "Móveis",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Móveis e Utensílios",
+          "natureza": "P"
+        },
+        {
+          "nome": "Manutenção de Máquinas",
+          "natureza": "P"
+        },
+        {
+          "nome": "Manutenção do Imóvel",
+          "natureza": "P"
         }
       ]
     }
@@ -4551,7 +4577,8 @@ const DRE_ARVORE_BLOCOS = {
       "itens": [
         {
           "nome": "Simples Nacional",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         }
       ]
     },
@@ -4573,19 +4600,23 @@ const DRE_ARVORE_BLOCOS = {
       "itens": [
         {
           "nome": "Tecido 1",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "Tecido 2",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "Carpet",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "Mão de Obra Costura",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         }
       ]
     },
@@ -4596,15 +4627,18 @@ const DRE_ARVORE_BLOCOS = {
       "itens": [
         {
           "nome": "FGTS Sobre Aviso Prévio",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "GPS Sobre Aviso Prévio",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "Multa FGTS",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         }
       ]
     },
@@ -4627,7 +4661,8 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "Despesas documentais",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "Despesas de Software",
@@ -4635,7 +4670,8 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "Levits BPO",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         }
       ]
     },
@@ -4652,7 +4688,8 @@ const DRE_ARVORE_BLOCOS = {
       "itens": [
         {
           "nome": "Pro Labore Sócio",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         }
       ]
     },
@@ -4663,35 +4700,43 @@ const DRE_ARVORE_BLOCOS = {
       "itens": [
         {
           "nome": "(-)Manutenção de Contas Bancárias",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "(-)Tarifas de TED/DOC",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "(-)Tarifa de Boletos",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "(-) Juros Emprestimos",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "(-) Outras despesas financeiras",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "(-) IOF",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "(+)Juros Recebidos",
-          "natureza": "R"
+          "natureza": "R",
+          "naoConfirmado": true
         },
         {
           "nome": "(+)Descontos Recebidos",
-          "natureza": "R"
+          "natureza": "R",
+          "naoConfirmado": true
         }
       ]
     },
@@ -4702,19 +4747,23 @@ const DRE_ARVORE_BLOCOS = {
       "itens": [
         {
           "nome": "REFIS 1",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "REFIS 2",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "REFIS 3",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         },
         {
           "nome": "REFIS 4",
-          "natureza": "P"
+          "natureza": "P",
+          "naoConfirmado": true
         }
       ]
     }
@@ -6694,9 +6743,11 @@ async function renderDreArvore(categoriesParam, movementsParam, monthStart, mont
   // Se a empresa atualmente selecionada na árvore não está mais entre as
   // abas visíveis (ex: usuário desmarcou essa empresa no seletor do topo),
   // cai pra primeira aba disponível — nunca deixa a árvore "presa" numa
-  // empresa que não está mais marcada.
+  // empresa que não está mais marcada. Preferência de abertura padrão:
+  // "Todas as Empresas" quando disponível (visão consolidada primeiro,
+  // usuário troca pra uma empresa específica se quiser).
   if (!dreArvoreEmpresaAtual || !tabsDisponiveis.includes(dreArvoreEmpresaAtual)) {
-    dreArvoreEmpresaAtual = tabsDisponiveis.includes(currentCompanyKey) ? currentCompanyKey : tabsDisponiveis[0];
+    dreArvoreEmpresaAtual = tabsDisponiveis.includes('TODAS') ? 'TODAS' : tabsDisponiveis[0];
   }
   const empresa = dreArvoreEmpresaAtual;
 
@@ -6834,17 +6885,31 @@ async function renderDreArvore(categoriesParam, movementsParam, monthStart, mont
   renderFinanciamentosInadimplencia(empresa);
   renderVendasFaturamento();
 
-  // Precisa rodar depois que tudo já está no DOM (mede largura real das
-  // colunas) — um tick de setTimeout garante que o layout já assentou.
-  // Cada chamada isolada em try/catch: se uma falhar, não trava as outras
-  // (antes, uma exceção em alinharLargurasColunas travava tudo depois
-  // dela silenciosamente, incluindo o sticky de Total/Média/AV).
-  setTimeout(() => {
-    const root = document.getElementById('sectionBlocos');
-    try { alinharLargurasColunas(root); } catch (e) { console.error('alinharLargurasColunas falhou:', e); }
-    try { ajustarStickyTotalMedia(root); } catch (e) { console.error('ajustarStickyTotalMedia falhou:', e); }
-    try { ajustarStickyHeaderTabela(root); } catch (e) { console.error('ajustarStickyHeaderTabela falhou:', e); }
-  }, 0);
+  // Precisa rodar depois que tudo já está no DOM, as FONTES já
+  // carregaram (Space Grotesk/IBM Plex Mono vêm com font-display:swap —
+  // o texto aparece primeiro com fonte fallback e só troca de verdade
+  // quando o arquivo da fonte termina de baixar; medir largura antes
+  // disso desalinha tudo assim que a fonte troca, e só corrige quando
+  // o usuário força um novo render trocando de aba) E o navegador já
+  // terminou de calcular o layout (mede largura real das colunas).
+  // Cada chamada isolada em try/catch: se uma falhar, não trava as
+  // outras (antes, uma exceção em alinharLargurasColunas travava tudo
+  // depois dela silenciosamente, incluindo o sticky de Total/Média/AV).
+  const executarAjustesLargura = () => {
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const root = document.getElementById('sectionBlocos');
+        try { alinharLargurasColunas(root); } catch (e) { console.error('alinharLargurasColunas falhou:', e); }
+        try { ajustarStickyTotalMedia(root); } catch (e) { console.error('ajustarStickyTotalMedia falhou:', e); }
+        try { ajustarStickyHeaderTabela(root); } catch (e) { console.error('ajustarStickyHeaderTabela falhou:', e); }
+      });
+    });
+  };
+  if (document.fonts && document.fonts.ready) {
+    document.fonts.ready.then(executarAjustesLargura);
+  } else {
+    executarAjustesLargura(); // navegador sem suporte a document.fonts — segue sem esperar
+  }
 }
 
 // ===================================================================
