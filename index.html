@@ -412,8 +412,13 @@
   .blocos-grid {
     display: flex;
     flex-direction: column;
-    gap: 18px;
+    gap: 0;
   }
+  .bloco-linha-wrap {
+    border-bottom: 1px solid var(--line);
+    padding: 4px 0;
+  }
+  .bloco-linha-wrap:last-child { border-bottom: none; }
   .fin-inad-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -440,6 +445,85 @@
     border-radius: 10px;
     padding: 18px 20px;
   }
+  .grupo-dfc-cards {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 14px;
+  }
+  .grupo-dfc-card {
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+  .grupo-dfc-card-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--bone-dim); margin-bottom: 8px;
+  }
+  .grupo-dfc-card-val {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 22px; font-weight: 700; color: var(--bone);
+  }
+  .grupo-dfc-tabelas-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 18px;
+    margin-bottom: 18px;
+  }
+  @media (max-width: 900px) {
+    .grupo-dfc-cards { grid-template-columns: repeat(2, 1fr); }
+    .grupo-dfc-tabelas-row { grid-template-columns: 1fr; }
+  }
+
+  .outros-pendentes-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .outros-pendentes-bloco-header {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase;
+    color: var(--bone-dim);
+    margin: 18px 0 6px 0;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--line);
+  }
+  .outros-pendentes-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    background: var(--navy-2);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .outros-pendentes-item-nome {
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    color: var(--bone);
+  }
+  .outros-pendentes-item-bloco {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10.5px;
+    color: var(--bone-dim);
+    margin-top: 2px;
+  }
+  .company-tag {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase;
+    padding: 3px 9px;
+    border-radius: 999px;
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+  .company-tag-KMNO { background: rgba(94, 158, 255, 0.15); color: #7db2ff; border: 1px solid rgba(94, 158, 255, 0.35); }
+  .company-tag-BLUELINE { background: rgba(94, 255, 209, 0.15); color: #6df0c9; border: 1px solid rgba(94, 255, 209, 0.35); }
+  .company-tag-RT { background: rgba(255, 176, 94, 0.15); color: #ffbf7d; border: 1px solid rgba(255, 176, 94, 0.35); }
+
   .bloco-head {
     display: flex;
     align-items: baseline;
@@ -1873,6 +1957,30 @@
 }
 .notes-panel-close:hover { color: var(--bone); background: rgba(243,239,230,0.06); }
 
+.notes-panel-tabs {
+  display: flex; flex-wrap: wrap; gap: 6px;
+  padding: 10px 16px; border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.notes-panel-tab {
+  background: var(--navy-2);
+  border: 1px solid var(--line);
+  color: var(--bone-dim);
+  cursor: pointer;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 11px;
+  border-radius: 7px;
+  transition: all 0.15s;
+}
+.notes-panel-tab:hover { color: var(--bone); border-color: var(--blue-belt-light); }
+.notes-panel-tab.active {
+  background: var(--blue-belt-light);
+  color: var(--navy);
+  border-color: var(--blue-belt-light);
+}
+
 .notes-panel-body {
   flex: 1; overflow-y: auto; padding: 14px 16px 20px;
 }
@@ -1955,16 +2063,21 @@
 <!-- ===== BOTÃO FLUTUANTE — SALDO DOS BANCOS ===== -->
 <button class="sticky-note-trigger saldo-bancos-trigger" id="saldoBancosFab" title="Saldo dos Bancos" onclick="switchView('viewSaldoBancos')">🏦</button>
 
-<!-- ===== BLOCO DE NOTAS (privado por usuário, vinculado à empresa) ===== -->
+<!-- ===== BLOCO DE NOTAS (privado por usuário, com abas próprias por empresa — independentes do filtro global do topo da página) ===== -->
 <button class="sticky-note-trigger" id="notesFab" title="Bloco de notas">📝</button>
 <div class="notes-overlay" id="notesOverlay"></div>
 <aside class="notes-panel" id="notesPanel">
   <div class="notes-panel-header">
     <div>
       <div class="notes-panel-title">Bloco de Notas</div>
-      <div class="notes-panel-sub" id="notesPanelEmpresa">—</div>
     </div>
     <button class="notes-panel-close" id="notesPanelClose" title="Fechar">✕</button>
+  </div>
+  <div class="notes-panel-tabs" id="notesPanelTabs">
+    <button type="button" class="notes-panel-tab" data-empresa="RT" onclick="selecionarEmpresaNotas('RT')">RT</button>
+    <button type="button" class="notes-panel-tab" data-empresa="KMNO" onclick="selecionarEmpresaNotas('KMNO')">KMNO</button>
+    <button type="button" class="notes-panel-tab" data-empresa="BLUELINE" onclick="selecionarEmpresaNotas('BLUELINE')">Blue Line/Novah</button>
+    <button type="button" class="notes-panel-tab" data-empresa="TODAS" onclick="selecionarEmpresaNotas('TODAS')">Todas as Empresas</button>
   </div>
   <div class="notes-panel-body" id="notesPanelBody">
     <!-- Preenchido por JS -->
@@ -2009,7 +2122,7 @@
       <div class="company-check-row" id="reqCompanyRow">
         <label class="company-check-opt"><input type="checkbox" value="RT"> RT · Esportes e Eventos</label>
         <label class="company-check-opt"><input type="checkbox" value="KMNO"> KMNO Sports</label>
-        <label class="company-check-opt"><input type="checkbox" value="BLUELINE"> Blue Line</label>
+        <label class="company-check-opt"><input type="checkbox" value="BLUELINE"> Blue Line/Novah</label>
       </div>
 
       <label for="reqMotivo">Motivo / justificativa</label>
@@ -2063,8 +2176,78 @@
     </div>
   </header>
 
-  <!-- ===== MENU PRINCIPAL (3 CARDS) ===== -->
+  <!-- ===== MENU PRINCIPAL ===== -->
   <div id="viewMenu" class="view-container active">
+
+    <!-- Resumo executivo do Grupo (ex-tela "Grupo DFC", agora fixo no
+         topo da página principal — os cards de navegação ficam logo
+         abaixo. Conteúdo idêntico ao que já existia, só mudou de lugar. -->
+    <div class="section" id="sectionGrupoDfc">
+      <div class="section-head">
+        <h2>Grupo DFC — Dashboard Financeiro</h2>
+        <div class="desc">Fluxo de caixa consolidado (KMNO + Blue Line/Novah + RT), para o período De/Até selecionado no topo. Valores em R$.</div>
+      </div>
+
+      <!-- Cards de resumo -->
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Receita Bruta (Recebimento)</div><div class="grupo-dfc-card-val" id="grupoDfcReceitaBruta">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Receita Líquida</div><div class="grupo-dfc-card-val" id="grupoDfcReceitaLiquida">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">CMV</div><div class="grupo-dfc-card-val" id="grupoDfcCmv">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Margem de Contribuição</div><div class="grupo-dfc-card-val" id="grupoDfcMargem">R$ 0</div></div>
+      </div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">EBITDA</div><div class="grupo-dfc-card-val" id="grupoDfcEbitda">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Lucro Líquido</div><div class="grupo-dfc-card-val" id="grupoDfcLucroLiquido">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Líquido</div><div class="grupo-dfc-card-val" id="grupoDfcSaldoLiquido">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Geração de Caixa (Acum.)</div><div class="grupo-dfc-card-val" id="grupoDfcCaixaAcumulado">R$ 0</div></div>
+      </div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Geração de Caixa (Período)</div><div class="grupo-dfc-card-val" id="grupoDfcCaixaPeriodo">R$ 0</div></div>
+      </div>
+
+      <div class="grupo-dfc-tabelas-row">
+        <!-- Margens & Indicadores -->
+        <div class="bloco-card">
+          <div class="bloco-head"><div class="bloco-titulo">Margens & Indicadores (% s/ Receita)</div></div>
+          <div class="bloco-body">
+            <table class="fin-tbl">
+              <tr><th>Indicador</th><th class="num">Valor (R$)</th><th class="num">% Receita</th></tr>
+              <tbody id="grupoDfcMargensBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Comparativo KMNO x Blue Line/Novah x RT -->
+        <div class="bloco-card">
+          <div class="bloco-head"><div class="bloco-titulo">KMNO x Blue Line/Novah x RT (período)</div></div>
+          <div class="bloco-body">
+            <table class="fin-tbl">
+              <tr><th>Métrica</th><th class="num">KMNO</th><th class="num">Blue Line/Novah</th><th class="num">RT</th><th class="num">Grupo</th></tr>
+              <tbody id="grupoDfcComparativoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Evolução Mensal -->
+      <div class="bloco-card">
+        <div class="bloco-head"><div class="bloco-titulo">Evolução Mensal — Grupo (R$)</div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="grupoDfcEvolucaoHeader"><th>Métrica</th></tr>
+              <tbody id="grupoDfcEvolucaoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card-title" style="margin-top:18px;">Evolução Mensal — Grupo (R$)</div>
+      <div style="position: relative; height: 320px;">
+        <canvas id="chartGrupoDfc" role="img" aria-label="Gráfico de evolução mensal do Grupo: Receita Bruta, EBITDA, Lucro Líquido e Geração de Caixa">Evolução mensal do grupo.</canvas>
+      </div>
+    </div>
+
     <div class="nav-menu-grid">
 
       <div class="nav-card" onclick="switchView('viewCharts')">
@@ -2084,14 +2267,28 @@
       <div class="nav-card" onclick="switchView('viewBlocks')">
         <div>
           <div class="nav-card-title">DRE por Bloco</div>
-          <div class="nav-card-desc">Árvore de contas completa por empresa (RT, KMNO, Blue Line), com ranking de categorias dentro de cada bloco.</div>
+          <div class="nav-card-desc">Árvore de contas completa por empresa (RT, KMNO, Blue Line/Novah), com ranking de categorias dentro de cada bloco.</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="switchView('viewDfcArvore')">
+        <div>
+          <div class="nav-card-title">DFC por Bloco</div>
+          <div class="nav-card-desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie: Saldo Inicial, Transferências, Receitas, Despesas, Resultado e Limite de Crédito.</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="switchView('viewOutrosPendentes')">
+        <div>
+          <div class="nav-card-title">Validação de Categorias</div>
+          <div class="nav-card-desc">Categorias ainda não confirmadas contra o Omie, das 3 empresas, reunidas num só lugar até serem validadas.</div>
         </div>
       </div>
 
       <div class="nav-card" onclick="switchView('viewExtras')">
         <div>
-          <div class="nav-card-title">Estoque, Caixa por Peça & Outros</div>
-          <div class="nav-card-desc">Estoque por peça, caixa por peça, Vendas x Faturamento e Financiamentos & Inadimplência — agrupados aqui por enquanto, ainda a organizar.</div>
+          <div class="nav-card-title">Operacional & Estoque</div>
+          <div class="nav-card-desc">Estoque por peça, caixa por peça e Financiamentos & Inadimplência.</div>
         </div>
       </div>
 
@@ -2426,6 +2623,18 @@
           <h2>DRE por bloco</h2>
           <div class="desc">Árvore de contas por empresa (mesma estrutura da DRE gerencial), com valores ao vivo. Usa o mesmo período De/Até selecionado no topo da página. Ranking do maior para o menor valor dentro de cada bloco.</div>
         </div>
+
+        <!-- Vendas x Faturamento: visão rápida comparando as 3 empresas
+             lado a lado (Receita Bruta x Resultado Líquido, mês a mês)
+             antes de entrar na aba de uma empresa específica abaixo.
+             Migrou de "Operacional & Estoque" pra cá — mesma
+             família de dado (DRE), fazia mais sentido junto. -->
+        <div class="section-head" style="margin-top:22px;">
+          <h2 style="font-size:18px;">Vendas x Faturamento</h2>
+          <div class="desc">Receita bruta (Vendas) comparada ao Resultado Líquido (Faturamento) de cada empresa, mês a mês.</div>
+        </div>
+        <div id="vendasFaturamentoWrap"></div>
+
         <div class="dre-empresa-tabs" id="dreEmpresaTabs"></div>
         <!-- Barra de cabeçalho única (meses/Total/Média), fixa logo
              abaixo do menu do app — compartilhada por TODAS as tabelas
@@ -2444,11 +2653,57 @@
 
   </div>
 
+  <!-- ===== VIEW: DFC POR BLOCO (Fluxo de Caixa por Categoria — mesma
+       estrutura do relatório nativo do Omie). Ao contrário da árvore de
+       DRE, não tem multi-mês nem orçado — é o mês/período selecionado no
+       topo, ao vivo. O bloco "Despesas" ainda não tem subdivisão por
+       subgrupo (falta o de-para de categoria→subgrupo por empresa). ===== -->
+  <div id="viewDfcArvore" class="view-container">
+    <div class="blocks-inner">
+      <div class="btn-back-container">
+        <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+      </div>
+
+      <div class="section" id="sectionDfcArvore">
+        <div class="section-head">
+          <h2>DFC por Bloco</h2>
+          <div class="desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie. Usa o mesmo período De/Até selecionado no topo da página. Saldo Inicial e Resultado Acumulado são aproximados por rollback a partir do saldo de hoje (sem histórico diário de saldo por conta) — Receitas, Despesas e Resultado do período vêm direto dos lançamentos e não sofrem essa aproximação.</div>
+        </div>
+
+        <div class="dre-empresa-tabs" id="dfcEmpresaTabs"></div>
+        <div id="dfcArvoreBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW "OUTROS — PENDENTES" — reúne num só lugar todos os
+       itens da árvore DRE (das 3 empresas) que ainda não bateram com
+       nenhuma categoria confirmada no Omie (naoConfirmado: true).
+       Antes ficavam espalhados dentro de cada bloco/empresa mostrando
+       "R$ ---"; aqui aparecem juntos, agrupados por bloco de origem,
+       cada um com uma tag indicando de qual empresa é. ===== -->
+  <div id="viewOutrosPendentes" class="view-container">
+    <div class="blocks-inner">
+      <div class="btn-back-container">
+        <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+      </div>
+
+      <div class="section" id="sectionOutrosPendentes">
+        <div class="section-head">
+          <h2>Validação de Categorias</h2>
+          <div class="desc">Itens das árvores de contas das 3 empresas que ainda não têm categoria confirmada contra o Omie real. Aparecem como "R$ ---" nas telas de origem até serem validados — aqui ficam listados juntos, com a tag da empresa, pra facilitar a revisão.</div>
+        </div>
+        <div id="outrosPendentesConteudo" class="outros-pendentes-lista"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== VIEW "EXTRAS" — catch-all temporário. Estoque, Caixa por
-       Peça, Vendas x Faturamento e Financiamentos & Inadimplência saíram
-       do card "DRE por bloco" (não misturar DRE/DFC/outras seções no
-       mesmo card) e ficam aqui por enquanto, até serem organizados em
-       cards definitivos. ===== -->
+       Peça e Financiamentos & Inadimplência saíram do card "DRE por
+       bloco" (não misturar DRE/DFC/outras seções no mesmo card) e
+       ficam aqui por enquanto, até serem organizados em cards
+       definitivos. (Vendas x Faturamento voltou pra "DRE por Bloco" —
+       é da mesma família de dado, fazia mais sentido lá.) ===== -->
   <div id="viewExtras" class="view-container">
     <div class="blocks-inner">
       <div class="btn-back-container">
@@ -2461,12 +2716,6 @@
           <div class="desc">Contratos de longo prazo (consórcios, empréstimos) e clientes inadimplentes — dados operacionais, sem recorrência mensal, por isso fora da grade de blocos acima.</div>
         </div>
         <div class="fin-inad-grid" id="finInadGrid"></div>
-
-        <div class="section-head" style="margin-top:28px;">
-          <h2>Vendas x Faturamento</h2>
-          <div class="desc">Receita bruta (Vendas) comparada ao Resultado Líquido (Faturamento) de cada empresa, mês a mês.</div>
-        </div>
-        <div id="vendasFaturamentoWrap"></div>
 
         <div class="section-head" style="margin-top:28px;">
           <h2>Estoque</h2>
@@ -2631,6 +2880,12 @@ function switchView(viewId, options = {}) {
     }, 60);
   }
 
+  // Validação de Categorias: lê direto de DRE_ARVORE_BLOCOS (estático, já
+  // carregado desde o início), não precisa esperar cache nenhum.
+  if (viewId === 'viewOutrosPendentes') {
+    try { renderOutrosPendentes(); } catch (e) { console.error('renderOutrosPendentes falhou:', e); }
+  }
+
   // DRE por Bloco: mesmo problema do Chart.js acima — a tabela é
   // renderizada em segundo plano assim que os dados chegam (mesmo com
   // a view ainda escondida), mas medir largura de coluna via
@@ -2656,6 +2911,12 @@ function switchView(viewId, options = {}) {
   // renderSaldoBancos() mantém o placeholder "R$ -----" que já está no HTML.
   if (viewId === 'viewSaldoBancos') {
     renderSaldoBancos();
+  }
+
+  // DFC por Bloco: recalcula ao abrir a view (garante dado fresco mesmo
+  // se algo mudou enquanto a view estava escondida).
+  if (viewId === 'viewDfcArvore') {
+    try { renderDfcArvore(); } catch (e) { console.error('renderDfcArvore (switchView) falhou:', e); }
   }
   
   // 4. Faz scroll suave para o topo da página para dar conforto ao utilizador
@@ -2913,7 +3174,7 @@ function fmtReqDate(iso) {
   }
 }
 
-const COMPANY_LABELS_REQ = { RT: 'RT · Esportes e Eventos', KMNO: 'KMNO Sports', BLUELINE: 'Blue Line' };
+const COMPANY_LABELS_REQ = { RT: 'RT · Esportes e Eventos', KMNO: 'KMNO Sports', BLUELINE: 'Blue Line/Novah' };
 
 async function renderRequestsList() {
   const listEl = document.getElementById('requestsList');
@@ -3053,8 +3314,8 @@ const COMPANIES = {
     footerSlug: 'omie-sync-kmno',
   },
   BLUELINE: {
-    label: 'Blue Line',
-    eyebrow: 'Blue Line',
+    label: 'Blue Line/Novah',
+    eyebrow: 'Blue Line/Novah',
     footerSlug: 'omie-sync-blueline',
   },
 };
@@ -3083,6 +3344,9 @@ let dreArvoreFinanciamentosCache = null;
 let dreArvoreParcelasCache = null;
 let dreArvoreInadimplenciaCache = null;
 let clientsCache = null;
+let contasCorrentesCache = null; // dash_contas_correntes — saldo_inicial/saldo_atual/valor_limite por conta, para o DFC por Bloco
+let transferenciasCache = null; // movimentos TRAR/TRAP (transferência entre contas) — bloco "Transferências e Ajustes de Saldo" do DFC
+let dfcArvoreEmpresaAtual = null;
 
 // Categorias ativas no Omie que NÃO têm "Conta do DRE" vinculada no cadastro.
 // O relatório DRE/Fluxo de Caixa nativo do Omie ignora essas categorias mesmo
@@ -3095,6 +3359,315 @@ const CATEGORIAS_SEM_CONTA_DRE = new Set([
   'Remessa Industrialização',
   'Máquinas e Equipamentos',
 ]);
+
+// ===================================================================
+// Flags reais do Omie (ListarCategorias) para exclusão de relatórios —
+// substituem a dependência exclusiva da lista manual acima.
+//   - naoExibirDRE (sincronizada como omie_categories.nao_exibir): categoria
+//     não aparece no DRE nativo do Omie, mesmo tendo movimento real.
+//   - nao_fluxo (sincronizada como omie_categories.nao_fluxo): categoria não
+//     aparece no Fluxo de Caixa (DFC) nativo do Omie.
+// A lista CATEGORIAS_SEM_CONTA_DRE é mantida como rede de segurança (OR),
+// caso alguma categoria ainda não tenha a flag populada corretamente.
+// ===================================================================
+function isExcludedFromDre(cat, label) {
+  if (cat && cat.nao_exibir) return true;
+  return CATEGORIAS_SEM_CONTA_DRE.has(label);
+}
+
+function isExcludedFromDfc(cat) {
+  return !!(cat && cat.nao_fluxo);
+}
+
+// Monta um mapa "empresa|codigo" -> categoria. Necessário porque cada
+// empresa tem seu próprio cadastro de categorias no Omie, com códigos
+// numéricos que podem SE REPETIR entre empresas diferentes — usar só
+// "codigo" como chave (como era feito antes) causa colisão/sobrescrita
+// quando mais de uma empresa está selecionada ao mesmo tempo.
+function buildCatByEmpresaCodigo(categories) {
+  const m = {};
+  (categories || []).forEach(c => { m[`${c._empresa}|${c.codigo}`] = c; });
+  return m;
+}
+
+// ===================================================================
+// DFC POR BLOCO — espelha a estrutura do relatório nativo "Fluxo de Caixa
+// por Categoria" do Omie: Saldo Inicial, Transferências e Ajustes de
+// Saldo, Receitas, Despesas, Resultado, Resultado Acumulado, Limite de
+// Crédito e Limite Disponível. Ao contrário da árvore de DRE (que usa uma
+// planilha de referência estática), aqui todos os valores vêm ao vivo do
+// Supabase — não há "orçado" nesse card. O bloco 4 (Despesas) ainda mostra
+// só o total, sem os subgrupos numerados do Omie (03. Custo Produtos, 04.
+// Custo Mão de Obra etc.) — falta o de-para de categoria→subgrupo por
+// empresa, pendente de confirmação.
+// ===================================================================
+
+// Contas com fluxo_caixa=true de uma empresa (ou 'TODAS'), usadas pro
+// Saldo Inicial e Limite de Crédito — contas que não entram no fluxo de
+// caixa (fluxo_caixa=false) ficam de fora, igual o Omie nativo faz.
+function contasFluxoCaixa(contas, empresa) {
+  return (contas || []).filter(c => c.fluxo_caixa && (empresa === 'TODAS' || c._empresa === empresa));
+}
+
+// Soma das transferências internas entre contas (TRAR/TRAP) no período,
+// por empresa — ficam FORA de Receitas/Despesas no DFC nativo do Omie,
+// já que são só dinheiro mudando de conta, sem efeito líquido no caixa.
+function calcTransferenciasPeriodo(transferencias, empresa, monthStart, monthEnd) {
+  let total = 0;
+  (transferencias || []).forEach(m => {
+    if (empresa !== 'TODAS' && m._empresa !== empresa) return;
+    if (!m.dt_pagamento) return;
+    const d = dayjs(m.dt_pagamento);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (m.natureza === 'R') total += v;
+    else if (m.natureza === 'P') total -= v;
+  });
+  return total;
+}
+
+// Saldo Inicial Realizado no início do período selecionado. Não temos um
+// snapshot histórico diário de saldo por conta — a aproximação usada é
+// "rollback": parte do saldo ATUAL de hoje de cada conta e desfaz (subtrai)
+// os movimentos de caixa (mesmo filtro do DFC: exclui nao_fluxo e
+// transferências) ocorridos entre o início do período e hoje. Quanto mais
+// próximo de hoje for o período selecionado, mais precisa a aproximação.
+function calcSaldoInicialRealizado(contas, categories, cashMovements, empresa, monthStart) {
+  const contasCaixa = contasFluxoCaixa(contas, empresa);
+  const saldoAtualTotal = contasCaixa.reduce((s, c) => s + Number(c.saldo_atual || 0), 0);
+
+  const catByKey = buildCatByEmpresaCodigo(categories);
+  const amanha = dayjs().add(1, 'day');
+  let movimentosDesdeInicio = 0;
+  (cashMovements || []).forEach(m => {
+    if (empresa !== 'TODAS' && m._empresa !== empresa) return;
+    if (!m.dt_pagamento) return;
+    const d = dayjs(m.dt_pagamento);
+    if (d.isBefore(monthStart) || !d.isBefore(amanha)) return;
+    if (m.cod_categoria) {
+      const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
+      if (isExcludedFromDfc(cat)) return;
+    }
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (m.natureza === 'R') movimentosDesdeInicio += v;
+    else if (m.natureza === 'P') movimentosDesdeInicio -= v;
+  });
+
+  return saldoAtualTotal - movimentosDesdeInicio;
+}
+
+function calcLimiteCredito(contas, empresa) {
+  return contasFluxoCaixa(contas, empresa).reduce((s, c) => s + Number(c.valor_limite || 0), 0);
+}
+
+// Monta as 8 linhas do DFC nativo pra uma empresa (ou 'TODAS'), no período
+// selecionado (monthStart inclusivo, monthEnd exclusivo — mesma convenção
+// de buildDreRows/buildDfc).
+function buildDfcArvoreBlocos(empresa, categories, cashMovements, transferencias, contas, monthStart, monthEnd) {
+  const categoriesEmpresa = empresa === 'TODAS' ? categories : (categories || []).filter(c => c._empresa === empresa);
+  const movementsEmpresa = empresa === 'TODAS' ? cashMovements : (cashMovements || []).filter(m => m._empresa === empresa);
+
+  const saldoInicial = calcSaldoInicialRealizado(contas, categories, cashMovements, empresa, monthStart);
+  const transferenciasPeriodo = calcTransferenciasPeriodo(transferencias, empresa, monthStart, monthEnd);
+  const dfc = buildDfc(categoriesEmpresa, movementsEmpresa, monthStart, monthEnd);
+  const resultado = dfc.entradas - dfc.saidas;
+  const resultadoAcumulado = saldoInicial + transferenciasPeriodo + resultado;
+  const limiteCredito = calcLimiteCredito(contas, empresa);
+  const limiteDisponivel = resultadoAcumulado + limiteCredito;
+
+  // Detalhamento (filhos) por bloco — mesma lógica de "clique pra ver os
+  // itens" já usada na árvore de DRE (toggleItensBloco). Cada filho tem
+  // {label, val}; blocos sem detalhamento real (transferência, resultado,
+  // resultado acumulado, limite disponível) não recebem "filhos".
+  const contasCaixa = contasFluxoCaixa(contas, empresa);
+
+  const filhosSaldoInicial = contasCaixa
+    .map(c => ({ label: `${c.descricao || 'Conta ' + c.n_cod_cc} (saldo atual)`, val: Number(c.saldo_atual || 0) }))
+    .filter(f => f.val !== 0)
+    .sort((a, b) => b.val - a.val);
+
+  const filhosLimiteCredito = contasCaixa
+    .map(c => ({ label: c.descricao || `Conta ${c.n_cod_cc}`, val: Number(c.valor_limite || 0) }))
+    .filter(f => f.val !== 0)
+    .sort((a, b) => b.val - a.val);
+
+  const filhosReceitas = buildDfcDetalheCategoriaAgrupado('R', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd);
+  const filhosDespesasBruto = buildDfcDetalheCategoriaAgrupado('P', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd);
+  const filhosDespesas = filhosDespesasBruto.map(g => ({
+    label: g.label,
+    val: -g.val, // despesa aparece negativa, igual a linha-pai
+    itens: g.itens.map(it => ({ label: it.label, val: -it.val })),
+  }));
+
+  return [
+    { label: '1. Saldo Inicial Realizado', val: saldoInicial, cls: 'total', filhos: filhosSaldoInicial },
+    { label: '2. Transferências e Ajustes de Saldo', val: transferenciasPeriodo, cls: 'item', filhos: null },
+    { label: '3. Receitas Realizadas', val: dfc.entradas, cls: 'item receita', filhos: filhosReceitas },
+    { label: '4. Despesas Realizadas', val: -dfc.saidas, cls: 'item despesa', filhos: filhosDespesas },
+    { label: '5. Resultado Realizado', val: resultado, cls: 'total', filhos: null },
+    { label: '6. Resultado Acumulado Realizado', val: resultadoAcumulado, cls: 'total', filhos: null },
+    { label: '7. Limite de Crédito', val: limiteCredito, cls: 'item', filhos: filhosLimiteCredito },
+    { label: '8. Limite Disponível Realizado', val: limiteDisponivel, cls: 'total', filhos: null },
+  ];
+}
+
+// Sobe na hierarquia real do Omie (categoria_superior) a partir de uma
+// categoria-folha até achar o "grupo" — o nó cujo PAI é a raiz (código
+// sem ponto, ex: "1" ou "2"). Esse grupo é exatamente o mesmo nível que
+// aparece no relatório nativo do Omie (ex: "03. CUSTO PRODUTOS - MATÉRIA
+// PRIMA", "5. DESPESAS ADMINISTRATIVAS") — confirmado comparando com o
+// print do usuário. Sem isso, teríamos que curar esse de-para à mão.
+function encontrarGrupoCategoria(cat, catByKey) {
+  if (!cat) return null;
+  let atual = cat;
+  let guard = 0;
+  while (atual && guard < 12) {
+    const sup = atual.categoria_superior;
+    if (!sup || !String(sup).includes('.')) return atual; // pai é raiz (ou não tem pai) => atual É o grupo
+    const proximo = catByKey[`${atual._empresa}|${sup}`];
+    if (!proximo) return atual; // pai não encontrado no cache — para aqui, com o que se tem
+    atual = proximo;
+    guard++;
+  }
+  return atual;
+}
+
+// Ranking de categorias (natureza R ou P) no período, já excluindo
+// nao_fluxo, AGRUPADO pelo grupo nativo do Omie (categoria_superior) —
+// usado como detalhamento (filhos, com um 2º nível de itens dentro de
+// cada grupo) dos blocos de Receitas e Despesas do DFC.
+function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, monthStart, monthEnd) {
+  const catByKey = buildCatByEmpresaCodigo(categories);
+  const porCategoria = {}; // "empresa|codigo" -> { val, cat, empresa, codigo }
+
+  (movements || []).forEach(m => {
+    if (m.natureza !== natureza || !m.dt_pagamento || !m.cod_categoria) return;
+    const d = dayjs(m.dt_pagamento);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
+    const key = `${m._empresa}|${m.cod_categoria}`;
+    const cat = catByKey[key];
+    if (isExcludedFromDfc(cat)) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v) return;
+    if (!porCategoria[key]) porCategoria[key] = { val: 0, cat, empresa: m._empresa, codigo: m.cod_categoria };
+    porCategoria[key].val += v;
+  });
+
+  const grupos = {}; // "empresa|codigoGrupo" -> { label, val, itens: [] }
+
+  Object.values(porCategoria).forEach(({ val, cat, empresa, codigo }) => {
+    const grupoCat = encontrarGrupoCategoria(cat, catByKey);
+    const grupoCodigo = grupoCat ? grupoCat.codigo : codigo;
+    const grupoLabel = grupoCat ? decodeHtmlEntities(grupoCat.descricao) : (cat ? decodeHtmlEntities(cat.descricao) : codigo);
+    const grupoKey = `${empresa}|${grupoCodigo}`;
+    const itemLabel = cat ? decodeHtmlEntities(cat.descricao) : codigo;
+
+    if (!grupos[grupoKey]) grupos[grupoKey] = { label: grupoLabel, val: 0, itens: [] };
+    grupos[grupoKey].val += val;
+    // Só entra como item-filho se não for a própria categoria de grupo
+    // (evita duplicar quando o lançamento já está direto na categoria-grupo).
+    if (!grupoCat || grupoCat.codigo !== codigo) {
+      grupos[grupoKey].itens.push({ label: itemLabel, val });
+    }
+  });
+
+  return Object.values(grupos)
+    .map(g => ({ ...g, itens: g.itens.sort((a, b) => b.val - a.val) }))
+    .sort((a, b) => b.val - a.val);
+}
+
+const DFC_ARVORE_EMPRESAS = ['RT', 'KMNO', 'BLUELINE', 'TODAS'];
+
+function selecionarEmpresaDfcArvore(key) {
+  dfcArvoreEmpresaAtual = key;
+  renderDfcArvore();
+}
+
+function renderDfcArvoreTabs() {
+  const wrap = document.getElementById('dfcEmpresaTabs');
+  if (!wrap) return;
+  if (!dfcArvoreEmpresaAtual) dfcArvoreEmpresaAtual = 'TODAS';
+  wrap.innerHTML = DFC_ARVORE_EMPRESAS.map(key => {
+    const label = key === 'TODAS' ? 'Todas as Empresas' : (COMPANIES[key]?.label || key);
+    const active = key === dfcArvoreEmpresaAtual ? ' active' : '';
+    return `<button type="button" class="dre-empresa-tab${active}" data-empresa="${key}" onclick="selecionarEmpresaDfcArvore('${key}')">${label}</button>`;
+  }).join('');
+}
+
+// Mesmo padrão pai/filho +/- da árvore de DRE (ver toggleItensBloco):
+// linha do bloco sempre visível, com um <tbody> de filhos escondido por
+// padrão (display:none via .dre-tbl-itens) que abre ao clicar. Blocos sem
+// "filhos" (null) não recebem seta nem ficam clicáveis.
+function renderDfcArvoreTabela() {
+  const body = document.getElementById('dfcArvoreBody');
+  if (!body) return;
+  if (!categoriesCache || !financialMovementsCache || !contasCorrentesCache) {
+    body.innerHTML = '<div style="padding:20px;color:var(--bone-dim);">Carregando dados…</div>';
+    return;
+  }
+
+  const { de: rangeDe, ate: rangeAteInicio } = getSelectedPeriodRange();
+  const monthStart = rangeDe;
+  const monthEnd = rangeAteInicio.add(1, 'month');
+  const empresa = dfcArvoreEmpresaAtual || 'TODAS';
+
+  const linhas = buildDfcArvoreBlocos(empresa, categoriesCache, financialMovementsCache, transferenciasCache || [], contasCorrentesCache, monthStart, monthEnd);
+
+  const linhaValorTd = (val, negrito) => {
+    const corClasse = val >= 0 ? 'pos' : 'neg';
+    return `<td class="${corClasse}" style="text-align:right;${negrito ? 'font-weight:700;' : ''}">${fmtBRL(val)}</td>`;
+  };
+
+  const rows = linhas.map((l, i) => {
+    const negrito = l.cls === 'total';
+    const temFilhos = Array.isArray(l.filhos) && l.filhos.length > 0;
+    const blocoId = `dfc-bloco-${i}`;
+
+    if (!temFilhos) {
+      return `<tr class="dre-tbl-row"><td class="dre-tbl-sticky" style="${negrito ? 'font-weight:700;' : ''}">${l.label}</td>${linhaValorTd(l.val, negrito)}</tr>`;
+    }
+
+    const paiHtml = `<tr class="dre-tbl-row colapsavel" onclick="toggleItensBloco('${blocoId}')" title="Clique para ver os itens deste bloco">
+      <td class="dre-tbl-sticky" style="${negrito ? 'font-weight:700;' : ''}"><span class="dre-tbl-toggle-icon" id="icon-${blocoId}">+</span>${l.label}</td>
+      ${linhaValorTd(l.val, negrito)}
+    </tr>`;
+    // Filho com "itens" próprios (grupo do Omie, ex: Receitas/Despesas por
+    // categoria_superior) ganha seu próprio +/- de 2º nível; filho simples
+    // (ex: conta bancária em Saldo Inicial/Limite de Crédito) fica só como
+    // linha, sem seta. Importante: <tbody> não pode conter outro <tbody>
+    // (HTML inválido), então o 2º nível usa o mecanismo de linha pai/filho
+    // (data-grupo-pai/data-grupo-filho + classe linha-oculta), já usado em
+    // renderTabelaResumo/toggleLinhaGrupo — não tbody aninhado.
+    const filhosHtml = l.filhos.map((f, j) => {
+      const temNetos = Array.isArray(f.itens) && f.itens.length > 0;
+      if (!temNetos) {
+        return `<tr class="dre-tbl-row"><td class="dre-tbl-sticky" style="padding-left:28px;color:var(--bone-dim);">${f.label}</td>${linhaValorTd(f.val, false)}</tr>`;
+      }
+      const grupoId = `${blocoId}-grupo-${j}`;
+      const grupoPaiHtml = `<tr class="dre-tbl-row colapsavel" data-grupo-pai="${grupoId}" onclick="event.stopPropagation(); toggleLinhaGrupo('${grupoId}')" title="Clique para ver as categorias deste grupo">
+        <td class="dre-tbl-sticky" style="padding-left:28px;"><span class="dre-tbl-toggle-icon" id="icon-${grupoId}">+</span>${f.label}</td>
+        ${linhaValorTd(f.val, false)}
+      </tr>`;
+      const netosHtml = f.itens.map(it => `<tr class="dre-tbl-row linha-oculta" data-grupo-filho="${grupoId}"><td class="dre-tbl-sticky" style="padding-left:48px;color:var(--bone-dim);">${it.label}</td>${linhaValorTd(it.val, false)}</tr>`).join('');
+      return grupoPaiHtml + netosHtml;
+    }).join('');
+
+    return paiHtml + `<tbody class="dre-tbl-itens" id="itens-${blocoId}">${filhosHtml}</tbody>`;
+  }).join('');
+
+  body.innerHTML = `<div class="dre-tbl-wrap"><table class="dre-tbl"><tbody>${rows}</tbody></table></div>`;
+}
+
+// Aviso de limitação: sem snapshot histórico diário de saldo por conta,
+// Saldo Inicial/Resultado Acumulado são aproximados por rollback a partir
+// do saldo de hoje — quanto mais distante do presente for o período
+// selecionado, menos precisos ficam (não afeta Receitas/Despesas/Resultado
+// do período, que vêm direto dos lançamentos).
+function renderDfcArvore() {
+  if (!document.getElementById('dfcEmpresaTabs')) return; // view ainda não existe no DOM
+  renderDfcArvoreTabs();
+  renderDfcArvoreTabela();
+}
 
 // Mapeamento de código de grupo Omie (2 primeiros segmentos do código da
 // categoria, ex: "2.06") para o nome do bloco. Fonte: ListarCategorias
@@ -3422,8 +3995,7 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "Plano Odontológico/Saúde",
-          "natureza": "P",
-          "naoConfirmado": true
+          "natureza": "P"
         },
         {
           "nome": "Embalagem Comercial",
@@ -4119,33 +4691,28 @@ const DRE_ARVORE_BLOCOS = {
           "naoConfirmado": true
         },
         {
-          "nome": "Horas Extras",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Horas Extras Indústria",
+          "natureza": "P"
         },
         {
-          "nome": "Free Lancers",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Free Lance  Industria",
+          "natureza": "P"
         },
         {
           "nome": "Premio Produtividade",
           "natureza": "P"
         },
         {
-          "nome": "FGTS",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "FGTS Indústria",
+          "natureza": "P"
         },
         {
-          "nome": "GPS (INSS)",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "GPS (INSS) Indústria",
+          "natureza": "P"
         },
         {
-          "nome": "Férias",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Férias Indústria",
+          "natureza": "P"
         },
         {
           "nome": "1/3 sobre férias",
@@ -4162,9 +4729,8 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "13 salário",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "13ª Salário Indústria",
+          "natureza": "P"
         },
         {
           "nome": "FGTS Sobre 13",
@@ -4179,19 +4745,16 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "FGTS Sobre Aviso Prévio",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "FGTS Sobre Aviso",
+          "natureza": "P"
         },
         {
-          "nome": "GPS Sobre Aviso Prévio",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "GPS Sobre Aviso",
+          "natureza": "P"
         },
         {
-          "nome": "Multa FGTS",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Multa FGTS Indústria",
+          "natureza": "P"
         }
       ]
     },
@@ -4239,9 +4802,8 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Manutenção do Imovel",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Manutenção do Imóvel",
+          "natureza": "P"
         },
         {
           "nome": "Contabilidade",
@@ -4264,14 +4826,12 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Equipamentos de Informatica",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Equipamentos de Informática",
+          "natureza": "P"
         },
         {
-          "nome": "Manutenção de Informatica",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Manutenção de Informática",
+          "natureza": "P"
         },
         {
           "nome": "Telefone Celular",
@@ -4295,9 +4855,8 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Manutenção Maquinas",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Manutenção de Máquinas",
+          "natureza": "P"
         },
         {
           "nome": "Incentivos",
@@ -4472,13 +5031,11 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "(-)Tarifas de TED/DOC",
-          "natureza": "P",
-          "naoConfirmado": true
+          "natureza": "P"
         },
         {
           "nome": "(-)Tarifa de Boletos",
-          "natureza": "P",
-          "naoConfirmado": true
+          "natureza": "P"
         },
         {
           "nome": "(-) Juros Emprestimos",
@@ -4492,8 +5049,7 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "(-) IOF",
-          "natureza": "P",
-          "naoConfirmado": true
+          "natureza": "P"
         },
         {
           "nome": "(-) Devoluções de Produtos",
@@ -4576,9 +5132,8 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "Simples Nacional",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Simples Nacional (DAS)",
+          "natureza": "P"
         }
       ]
     },
@@ -4725,8 +5280,7 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "(-) IOF",
-          "natureza": "P",
-          "naoConfirmado": true
+          "natureza": "P"
         },
         {
           "nome": "(+)Juros Recebidos",
@@ -4737,6 +5291,21 @@ const DRE_ARVORE_BLOCOS = {
           "nome": "(+)Descontos Recebidos",
           "natureza": "R",
           "naoConfirmado": true
+        }
+      ]
+    },
+    {
+      "id": "investimentos",
+      "nome": "Investimentos",
+      "natureza": "P",
+      "itens": [
+        {
+          "nome": "Máquinas e Equipamentos",
+          "natureza": "P"
+        },
+        {
+          "nome": "Manutenção de Imobilizado",
+          "natureza": "P"
         }
       ]
     },
@@ -4769,7 +5338,6 @@ const DRE_ARVORE_BLOCOS = {
     }
   ]
 };
-
 const DRE_ORCADO_ESTATICO = {
   "KMNO": {
     "faturamento": {
@@ -6154,7 +6722,11 @@ function buildBlocoArvore(blocoDef, totalPorLabel) {
       // visualmente de uma categoria real que só está zerada no período.
       return { nome: item.nome, natureza: item.natureza, val: 0, naoConfirmado: true };
     }
-    const key = normalizarLabelCategoria(item.nome);
+    // Remove prefixos de sinal "(-)"/"(+)" (usados só pra indicar entrada/
+    // saída na exibição) antes de comparar com o nome real da categoria no
+    // Omie — sem isso, um item como "(-) IOF" nunca bate com a categoria
+    // "IOF" mesmo quando o nome de verdade é idêntico.
+    const key = normalizarLabelCategoria(item.nome.replace(/^\(([+-])\)\s*/, ''));
     const val = totalPorLabel[key] || 0;
     return { nome: item.nome, natureza: item.natureza, val };
   });
@@ -6365,8 +6937,9 @@ function buildResumoRT(B) {
   const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
   const despFinanceiras = B.despesas_financeiras.total;
   const resultadoLiquido = lucroBrutoDepreciacao - despFinanceiras;
+  const investimentos = B.investimentos.total;
   const outros = B.outros.total;
-  const resultadoFinal = resultadoLiquido - outros;
+  const resultadoFinal = resultadoLiquido - investimentos - outros;
   return [
     { label: 'Total de Receita Bruta', val: receitaBruta, cls: 'total' },
     { label: '(-) Total de Impostos', val: impostos, cls: 'item' },
@@ -6383,12 +6956,77 @@ function buildResumoRT(B) {
     { label: '(=) Lucro Bruto - Depreciação', val: lucroBrutoDepreciacao, cls: 'total' },
     { label: '(-) Despesas Financeiras', val: despFinanceiras, cls: 'item' },
     { label: '(=) Resultado Líquido', val: resultadoLiquido, cls: 'total', destaque: true },
+    { label: '(-) Investimentos', val: investimentos, cls: 'item' },
     { label: '(-) Outros', val: outros, cls: 'item' },
     { label: '(=) Resultado Final', val: resultadoFinal, cls: 'total', destaque: true },
   ];
 }
 
 const DRE_ARVORE_RESUMO_BUILDERS = { KMNO: buildResumoKMNO, BLUELINE: buildResumoBlueline, RT: buildResumoRT };
+
+// ===================================================================
+// GRUPO DFC — extrai as métricas-chave (Receita Bruta, Receita Líquida,
+// CMV, Margem de Contribuição, EBITDA, Lucro Líquido, Saldo Líquido) do
+// resumo waterfall de uma empresa. Cada empresa tem labels ligeiramente
+// diferentes no waterfall (ex: KMNO usa "Total de Recebimentos", RT/BL
+// usam "Total de Receita Bruta"), então localizamos por PADRÃO no label
+// (contém "Receita" ou "Recebimentos" no início, "Margem de
+// Contribuição", "Resultado Operacional" = EBITDA antes da depreciação
+// não é o EBITDA de verdade — EBITDA aqui é "Resultado Operacional
+// (Lucro Bruto)", que já é o resultado antes de juros/impostos/
+// depreciação/amortização, batendo com a definição financeira padrão)
+// e a última linha do array = Saldo Líquido (resultado final da empresa,
+// já descontado CAPEX/Investimentos/Distribuição/Outros).
+// ===================================================================
+function extrairMetricasResumo(rows) {
+  const acha = (padrao) => {
+    const row = rows.find(r => padrao.test(r.label));
+    return row ? row.val : null;
+  };
+  const receitaLiquida = acha(/Receita Líquida/) || 0;
+  const margemContribuicao = acha(/Margem de Contribuição/) || 0;
+  // KMNO tem uma linha "CMV" explícita no waterfall. Blue Line e RT não —
+  // o custo direto delas fica em "Uso e Consumo"/"Despesas Industriais",
+  // sem uma única linha rotulada "CMV". Nesses casos, CMV equivalente é
+  // a diferença entre Receita Líquida e Margem de Contribuição (mesma
+  // definição: tudo que foi descontado entre as duas linhas é custo direto).
+  const cmvExplicito = acha(/^\(-\) CMV/);
+  const cmv = cmvExplicito !== null ? cmvExplicito : (receitaLiquida - margemContribuicao);
+  const ebitda = acha(/Resultado Operacional \(Lucro Bruto\)/) || 0;
+  // Despesas Financeiras: linha isolada e com o MESMO rótulo nas 3
+  // empresas — extração direta, sem precisar de fallback.
+  const despesasFinanceiras = acha(/^\(-\) Despesas Financeiras/) || 0;
+  // Custos Fixos (ADM + Pessoal + Comercial + Industrial): cada empresa
+  // detalha isso em linhas diferentes no waterfall (KMNO junta tudo numa
+  // linha só; Blue Line/RT abrem em várias). Em vez de tentar casar um
+  // rótulo comum que não existe nas 3, usamos a MESMA lógica de fallback
+  // do CMV acima: é sempre a diferença entre Margem de Contribuição e o
+  // Resultado Operacional (EBITDA), não importa quantas linhas internas
+  // cada empresa usa pra chegar lá.
+  const custosFixos = margemContribuicao - ebitda;
+  return {
+    receitaBruta: acha(/^Total de (Receita Bruta|Recebimentos)/) || 0,
+    receitaLiquida,
+    cmv,
+    margemContribuicao,
+    custosFixos,
+    ebitda,
+    despesasFinanceiras,
+    lucroLiquido: acha(/^\(=\) Resultado Líquido/) || 0,
+    saldoLiquido: rows.length ? rows[rows.length - 1].val : 0, // última linha = resultado final/distribuição
+  };
+}
+
+// Monta o resumo executivo (métricas-chave) de uma empresa para um
+// período (mês ou intervalo). Reaproveita buildTodosBlocosRealizado +
+// o builder de resumo waterfall já existente de cada empresa — não
+// duplica nenhuma fórmula de cálculo.
+function buildMetricasGrupoDfc(empresa, categories, movements, monthStart, monthEnd) {
+  const B = buildTodosBlocosRealizado(empresa, categories, movements, monthStart, monthEnd);
+  const builder = DRE_ARVORE_RESUMO_BUILDERS[empresa];
+  const rows = builder(B);
+  return extrairMetricasResumo(rows);
+}
 
 // Resumo consolidado: soma o resultado das 3 empresas linha a linha. Como
 // cada empresa tem uma árvore de contas diferente, aqui não dá pra somar
@@ -7138,13 +7776,6 @@ function renderVendasFaturamento() {
     });
   });
 
-  const fmtDiffPct = (vendas, faturamento) => {
-    if (!vendas) return '—';
-    const pct = ((faturamento - vendas) / Math.abs(vendas)) * 100;
-    const sinal = pct >= 0 ? '+' : '';
-    return `${sinal}${pct.toFixed(1).replace('.', ',')}%`;
-  };
-
   const linhaEmpresa = (label, dados) => {
     const cells = dados.map(({ vendas, faturamento }) => {
       const diff = faturamento - vendas;
@@ -7152,19 +7783,20 @@ function renderVendasFaturamento() {
       return `
         <td class="num">${fmtBRL(vendas)}</td>
         <td class="num">${fmtBRL(faturamento)}</td>
-        <td class="num ${diffCls}">${fmtBRL(diff)}</td>
-        <td class="num ${diffCls}">${fmtDiffPct(vendas, faturamento)}</td>`;
+        <td class="num ${diffCls}">${fmtBRL(diff)}</td>`;
     }).join('');
     return `<tr><td>${label}</td>${cells}</tr>`;
   };
 
-  // Cabeçalho: um grupo de 4 colunas (Vendas/Faturamento/Dif R$/Dif %) por mês.
-  const headerMeses = meses.map(m => `<th colspan="4" style="text-align:center;">${m.nome}</th>`).join('');
+  // Cabeçalho: um grupo de 3 colunas (Vendas/Faturamento/Dif R$) por mês.
+  // (Coluna "Dif. %" removida — com Vendas frequentemente zerado em meses
+  // futuros ainda sem venda emitida, a % sempre dava divisão por zero e
+  // só aparecia "—", sem nenhuma informação real pro usuário.)
+  const headerMeses = meses.map(m => `<th colspan="3" style="text-align:center;">${m.nome}</th>`).join('');
   const headerSub = meses.map(() => `
     <th class="num">Vendas</th>
     <th class="num">Faturamento</th>
-    <th class="num">Dif. R$</th>
-    <th class="num">Dif. %</th>`).join('');
+    <th class="num">Dif. R$</th>`).join('');
 
   const linhasEmpresas = EMPRESAS.map(emp => linhaEmpresa(COMPANIES[emp].label, porEmpresa[emp])).join('');
   const linhaTotal = `<tr style="font-weight:600;border-top:2px solid var(--line);">
@@ -7175,8 +7807,7 @@ function renderVendasFaturamento() {
       return `
         <td class="num">${fmtBRL(vendas)}</td>
         <td class="num">${fmtBRL(faturamento)}</td>
-        <td class="num ${diffCls}">${fmtBRL(diff)}</td>
-        <td class="num ${diffCls}">${fmtDiffPct(vendas, faturamento)}</td>`;
+        <td class="num ${diffCls}">${fmtBRL(diff)}</td>`;
     }).join('')}
   </tr>`;
 
@@ -7291,7 +7922,6 @@ const BLOCOS_UNIDADE = new Set(['faturamento_unidades']);
 // sem toggle) misturados com blocos com Total em cima (colapsado).
 
 function renderTabelaBloco(bloco, colunas) {
-  const corClasse = bloco.natureza === 'R' ? 'receita' : 'despesa';
   // idPrefix: só usado quando a mesma página mostra os blocos de mais de
   // uma empresa ao mesmo tempo (aba "Todas as Empresas") — sem isso,
   // blocos com nome igual em empresas diferentes (ex: "Despesas
@@ -7346,16 +7976,7 @@ function renderTabelaBloco(bloco, colunas) {
     ? `<table class="dre-tbl"><tbody>${totalRow}</tbody><tbody class="dre-tbl-itens" id="itens-${blocoId}">${body}</tbody></table>`
     : `<table class="dre-tbl">${body}${totalRow}</table>`;
 
-  return `
-    <div class="bloco-card" id="${blocoId}">
-      <div class="bloco-head">
-        <button type="button" class="bloco-toggle" onclick="event.stopPropagation(); toggleBloco('${blocoId}')" title="Esconder bloco" aria-label="Esconder bloco">✕</button>
-        <div class="bloco-titulo ${corClasse}">${bloco.nome}</div>
-      </div>
-      <div class="bloco-body" id="body-${blocoId}">
-        <div class="dre-tbl-wrap">${tabelaHtml}</div>
-      </div>
-    </div>`;
+  return `<div class="bloco-linha-wrap" id="${blocoId}"><div class="dre-tbl-wrap">${tabelaHtml}</div></div>`;
 }
 
 // Abre/fecha os itens de um bloco colapsável (pai/filho). Independente
@@ -7597,27 +8218,61 @@ async function sb(path, empresaId) {
 // de 1000 linhas por empresa (ex: dash_clients), é preciso paginar de
 // verdade usando o header Range. Sem isso, o fetch trunca silenciosamente
 // (sem erro) e resultados dependentes de linhas "de trás" somem sem aviso.
+//
+// Otimização de velocidade: a 1ª página já pede o total via
+// "Prefer: count=exact" (o PostgREST devolve isso no header Content-Range,
+// ex: "0-999/9875"). Com o total em mãos, as páginas restantes são
+// buscadas TODAS DE UMA VEZ (Promise.all) em vez de uma atrás da outra —
+// antes eram N idas-e-voltas sequenciais ao servidor (uma tabela com
+// ~9.875 linhas levava ~10 requisições em série); agora é só 1 requisição
+// pra descobrir o total + todas as demais em paralelo, o que reduz o
+// tempo total de N × latência pra ~2 × latência.
 async function sbPaged(path, empresaId, pageSize = 1000) {
   const sep = path.includes('?') ? '&' : '?';
   const url = `${DASHBOARD.url}/rest/v1/${path}${sep}empresa_id=eq.${empresaId}`;
   const token = currentSession?.access_token || DASHBOARD.anonKey;
-  const all = [];
-  let offset = 0;
-  while (true) {
+
+  const fetchPage = async (offset) => {
     const res = await fetch(url, {
       headers: {
         'apikey': DASHBOARD.anonKey,
         'Authorization': `Bearer ${token}`,
         'Range-Unit': 'items',
         'Range': `${offset}-${offset + pageSize - 1}`,
+        'Prefer': 'count=exact',
       }
     });
     if (!res.ok) throw new Error(`Supabase ${res.status} (${empresaId}): ${await res.text()}`);
     const page = await res.json();
-    all.push(...page);
-    if (page.length < pageSize) break; // última página
-    offset += pageSize;
+    const contentRange = res.headers.get('content-range'); // formato "0-999/9875" ou "0-999/*"
+    const total = contentRange && contentRange.includes('/') && contentRange.split('/')[1] !== '*'
+      ? parseInt(contentRange.split('/')[1], 10)
+      : null;
+    return { page, total };
+  };
+
+  const first = await fetchPage(0);
+  const all = [...first.page];
+
+  if (first.total && first.total > pageSize) {
+    // Sabemos o total: dispara todas as páginas restantes em paralelo.
+    const offsets = [];
+    for (let offset = pageSize; offset < first.total; offset += pageSize) offsets.push(offset);
+    const restos = await Promise.all(offsets.map(offset => fetchPage(offset)));
+    restos.forEach(r => all.push(...r.page));
+  } else if (!first.total && first.page.length === pageSize) {
+    // Salvaguarda: se por algum motivo o total não veio no header (ex:
+    // count=exact desabilitado no projeto), cai pro loop sequencial
+    // antigo, mais lento porém sempre correto.
+    let offset = pageSize;
+    while (true) {
+      const r = await fetchPage(offset);
+      all.push(...r.page);
+      if (r.page.length < pageSize) break;
+      offset += pageSize;
+    }
   }
+
   return all;
 }
 
@@ -7930,8 +8585,7 @@ function findMostRecentMonthWithData(dreMovements, cashMovements) {
 }
 
 function buildDreRows(categories, movements, monthStart, monthEnd) {
-  const catByCode = {};
-  categories.forEach(c => { catByCode[c.codigo] = c; });
+  const catByKey = buildCatByEmpresaCodigo(categories);
 
   const inRange = movements.filter(m => {
     if (!m.dt_emissao) return false;
@@ -7939,25 +8593,31 @@ function buildDreRows(categories, movements, monthStart, monthEnd) {
     return !d.isBefore(monthStart) && d.isBefore(monthEnd);
   });
 
-  const totals = {};
+  // Agrupa por label (nome da categoria), consolidando entre empresas quando
+  // várias estão selecionadas — mas a checagem de exclusão é feita por
+  // empresa+código, pra não aplicar a flag errada de uma categoria de outra
+  // empresa que coincida em código numérico.
+  const totalsByLabel = {};
+
   inRange.forEach(m => {
     const code = m.cod_categoria;
     if (!code) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
-    const key = m.natureza + ':' + code;
-    totals[key] = (totals[key] || { natureza: m.natureza, code, val: 0 });
-    totals[key].val += v;
+    if (!v) return;
+    const cat = catByKey[`${m._empresa}|${code}`];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : code;
+    if (isExcludedFromDre(cat, label)) return; // naoExibirDRE (ou exceção manual) — não entra no DRE, mas pode aparecer no DFC
+    const key = m.natureza + '|' + label;
+    totalsByLabel[key] = (totalsByLabel[key] || { natureza: m.natureza, label, val: 0 });
+    totalsByLabel[key].val += v;
   });
 
   const receitaRows = [];
   const despesaRows = [];
   let totalReceita = 0, totalDespesa = 0;
 
-  Object.values(totals).forEach(({ natureza, code, val }) => {
+  Object.values(totalsByLabel).forEach(({ natureza, label, val }) => {
     if (!val) return;
-    const cat = catByCode[code];
-    const label = cat ? decodeHtmlEntities(cat.descricao) : code;
-    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return; // categoria sem "Conta do DRE" no Omie — não entra no DRE (mas tem movimento de caixa real, aparece no DFC)
     if (natureza === 'R') {
       receitaRows.push({ label, val });
       totalReceita += val;
@@ -7995,14 +8655,23 @@ function renderDre(data, hasAnyDataEver) {
   resEl.className = 'value ' + (resultado >= 0 ? 'pos' : 'neg');
 }
 
-function buildDfc(movements, monthStart, monthEnd) {
-  // Nota: NÃO filtramos CATEGORIAS_SEM_CONTA_DRE aqui — essas categorias (ex: Simples
-  // Nacional Parcelado, Máquinas e Equipamentos) ficam fora do DRE do Omie, mas têm
-  // movimento de caixa real e aparecem normalmente no Fluxo de Caixa nativo.
+function buildDfc(categories, movements, monthStart, monthEnd) {
+  // Nota: continuamos NÃO usando CATEGORIAS_SEM_CONTA_DRE/naoExibirDRE aqui —
+  // categorias fora do DRE (ex: Simples Nacional Parcelado, Máquinas e
+  // Equipamentos) têm movimento de caixa real e aparecem normalmente no Fluxo
+  // de Caixa nativo. A exclusão aqui usa a flag PRÓPRIA do DFC (nao_fluxo),
+  // que é um campo diferente do naoExibirDRE.
+  const catByKey = buildCatByEmpresaCodigo(categories);
+
   const inRange = movements.filter(m => {
     if (!m.dt_pagamento) return false;
     const d = dayjs(m.dt_pagamento);
-    return !d.isBefore(monthStart) && d.isBefore(monthEnd);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return false;
+    if (m.cod_categoria) {
+      const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
+      if (isExcludedFromDfc(cat)) return false;
+    }
+    return true;
   });
 
   let entradas = 0, saidas = 0;
@@ -8061,7 +8730,7 @@ function exportResumoPeriodoToPdf() {
     const prevEnd = monthStart;
 
     const dre = buildDreRows(categoriesCache, movementsCache, monthStart, monthEnd);
-    const dfc = buildDfc(financialMovementsCache || [], monthStart, monthEnd);
+    const dfc = buildDfc(categoriesCache || [], financialMovementsCache || [], monthStart, monthEnd);
     const current = { receita: dre.totalReceita, despesa: dre.totalDespesa, resultado: dre.totalReceita - dre.totalDespesa, caixa: dfc.saldo };
     const previous = computePeriodTotals(movementsCache, financialMovementsCache || [], prevStart, prevEnd);
 
@@ -8208,14 +8877,16 @@ async function loadCompanyData() {
 
 lastFetchHadErrors = false;
 try {
-  const [categories, movements, receivable, payable, clients] = await Promise.all([
-    sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa'),
+  const [categories, movements, receivable, payable, clients, contasCorrentes] = await Promise.all([
+    sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa,natureza,transferencia,nao_exibir,nao_fluxo,categoria_superior'),
     sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo'),
     sbMultiPaged('dash_accounts_receivable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_accounts_payable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_clients?select=codigo_cliente_omie,nome_fantasia,razao_social'),
+    sbMultiPaged('dash_contas_correntes?select=n_cod_cc,descricao,fluxo_caixa,saldo_inicial,saldo_data,valor_limite,saldo_atual'),
   ]);
   clientsCache = clients;
+  contasCorrentesCache = contasCorrentes;
 
     // Build unified movements from accounts receivable + payable (more complete than omie_financial_movements)
     const unifiedMovements = [
@@ -8250,6 +8921,7 @@ try {
     categoriesCache = categories;
     movementsCache = unifiedMovements; // para DRE/competência (dt_emissao) — vem de receivable+payable
     financialMovementsCache = dedupFinancialMovements(movements || []); // para DFC/caixa (dt_pagamento real) — vem de omie_financial_movements, deduplicado (título × baixa real)
+    transferenciasCache = (movements || []).filter(m => ORIGENS_TRANSFERENCIA.has(m.origem)); // TRAR/TRAP — vão à parte no DFC ("Transferências e Ajustes de Saldo"), fora de Receitas/Despesas
     receivableCache = receivable;
     payableCache = payable;
 
@@ -8307,31 +8979,32 @@ function lastSixMonthKeys() {
 }
 
 function monthlyTotals(dreMovements, cashMovements) {
-  const catByCode = {};
-  (categoriesCache || []).forEach(c => { catByCode[c.codigo] = c; });
-  const isExcluded = (m) => {
-    const cat = catByCode[m.cod_categoria];
+  const catByKey = buildCatByEmpresaCodigo(categoriesCache);
+  const isExcludedDre = (m) => {
+    const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
     const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
-    return CATEGORIAS_SEM_CONTA_DRE.has(label);
+    return isExcludedFromDre(cat, label);
+  };
+  const isExcludedDfc = (m) => {
+    const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
+    return isExcludedFromDfc(cat);
   };
 
   const byMonth = {};
   // DRE bucket: by emission month — vem de unifiedMovements (receivable+payable), mais completo
   dreMovements.forEach(m => {
     const v = Number(m.val_pago || m.val_liquido || 0);
-    if (!v || !m.dt_emissao || isExcluded(m)) return;
+    if (!v || !m.dt_emissao || isExcludedDre(m)) return;
     const key = dayjs(m.dt_emissao).format('YYYY-MM');
     if (!byMonth[key]) byMonth[key] = { receita: 0, despesa: 0, entrada: 0, saida: 0 };
     if (m.natureza === 'R') byMonth[key].receita += v;
     else if (m.natureza === 'P') byMonth[key].despesa += v;
   });
-  // DFC bucket: by REAL payment month — vem de omie_financial_movements (dt_pagamento real)
-  // Nota: categorias em CATEGORIAS_SEM_CONTA_DRE (ex: Simples Nacional Parcelado, Máquinas
-  // e Equipamentos) ficam fora do DRE do Omie, mas TÊM movimento de caixa real (aparecem em
-  // "Impostos e Taxas" / "Investimento" no Fluxo de Caixa) — por isso não são excluídas aqui.
+  // DFC bucket: by REAL payment month — vem de omie_financial_movements (dt_pagamento real).
+  // Exclusão aqui usa nao_fluxo (flag própria do DFC), diferente do naoExibirDRE usado acima.
   cashMovements.forEach(m => {
     const v = Number(m.val_pago || m.val_liquido || 0);
-    if (!v || !m.dt_pagamento) return;
+    if (!v || !m.dt_pagamento || isExcludedDfc(m)) return;
     const key = dayjs(m.dt_pagamento).format('YYYY-MM');
     if (!byMonth[key]) byMonth[key] = { receita: 0, despesa: 0, entrada: 0, saida: 0 };
     if (m.natureza === 'R') byMonth[key].entrada += v;
@@ -8423,63 +9096,65 @@ function buildLegend(items) {
 }
 
 function renderStackedExpenses(categories, movements) {
-  const catByCode = {};
-  categories.forEach(c => { catByCode[c.codigo] = c; });
+  const catByKey = buildCatByEmpresaCodigo(categories);
+  const catInfo = (m) => {
+    const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
+    return { cat, label };
+  };
 
   const keys = lastSixMonthKeys();
   const labels = keys.map(monthLabel);
 
-  // total despesa by category across the window, to pick the top categories
-  const totalsByCategory = {};
+  // total despesa por label (nome da categoria), consolidando entre empresas, para escolher as top categorias
+  const totalsByLabel = {};
   movements.forEach(m => {
     if (m.natureza !== 'P' || !m.dt_emissao || !m.cod_categoria) return;
-    const cat = catByCode[m.cod_categoria];
-    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
-    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return;
+    const { cat, label } = catInfo(m);
+    if (isExcludedFromDre(cat, label)) return;
     const key = dayjs(m.dt_emissao).format('YYYY-MM');
     if (!keys.includes(key)) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
-    totalsByCategory[m.cod_categoria] = (totalsByCategory[m.cod_categoria] || 0) + v;
+    totalsByLabel[label] = (totalsByLabel[label] || 0) + v;
   });
 
-  const topCodes = Object.entries(totalsByCategory)
+  const topLabels = Object.entries(totalsByLabel)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 6)
-    .map(([code]) => code);
+    .map(([label]) => label);
 
-  const byMonthByCat = {};
-  keys.forEach(k => { byMonthByCat[k] = {}; topCodes.forEach(c => byMonthByCat[k][c] = 0); byMonthByCat[k]._outros = 0; });
+  const byMonthByLabel = {};
+  keys.forEach(k => { byMonthByLabel[k] = {}; topLabels.forEach(l => byMonthByLabel[k][l] = 0); byMonthByLabel[k]._outros = 0; });
 
   movements.forEach(m => {
     if (m.natureza !== 'P' || !m.dt_emissao || !m.cod_categoria) return;
-    const cat = catByCode[m.cod_categoria];
-    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
-    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return;
+    const { cat, label } = catInfo(m);
+    if (isExcludedFromDre(cat, label)) return;
     const key = dayjs(m.dt_emissao).format('YYYY-MM');
     if (!keys.includes(key)) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
-    if (topCodes.includes(m.cod_categoria)) byMonthByCat[key][m.cod_categoria] += v;
-    else byMonthByCat[key]._outros += v;
+    if (topLabels.includes(label)) byMonthByLabel[key][label] += v;
+    else byMonthByLabel[key]._outros += v;
   });
 
-  const datasets = topCodes.map((code, i) => ({
-    label: catByCode[code] ? decodeHtmlEntities(catByCode[code].descricao) : code,
-    data: keys.map(k => Math.round(byMonthByCat[k][code])),
+  const datasets = topLabels.map((label, i) => ({
+    label,
+    data: keys.map(k => Math.round(byMonthByLabel[k][label])),
     backgroundColor: CATEGORY_PALETTE[i % CATEGORY_PALETTE.length],
     borderRadius: 2,
     maxBarThickness: 30,
   }));
   datasets.push({
     label: 'Outras',
-    data: keys.map(k => Math.round(byMonthByCat[k]._outros)),
+    data: keys.map(k => Math.round(byMonthByLabel[k]._outros)),
     backgroundColor: CHART_COLORS.gridLine,
     borderRadius: 2,
     maxBarThickness: 30,
   });
 
-  const monthTotals = keys.map(k => Object.values(byMonthByCat[k]).reduce((s, v) => s + v, 0));
+  const monthTotals = keys.map(k => Object.values(byMonthByLabel[k]).reduce((s, v) => s + v, 0));
   const avg = monthTotals.reduce((s, v) => s + v, 0) / (monthTotals.filter(v => v > 0).length || 1);
   datasets.push({
     type: 'line',
@@ -8527,8 +9202,12 @@ function renderStackedExpenses(categories, movements) {
 }
 
 function renderDonutRevenue(categories, movements, monthStart, monthEnd) {
-  const catByCode = {};
-  categories.forEach(c => { catByCode[c.codigo] = c; });
+  const catByKey = buildCatByEmpresaCodigo(categories);
+  const catInfo = (m) => {
+    const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
+    return { cat, label };
+  };
 
   // Fixed set of top revenue categories across the last 6 months,
   // so the chart always shows the same labels — even if a given
@@ -8537,45 +9216,43 @@ function renderDonutRevenue(categories, movements, monthStart, monthEnd) {
   const historicalTotals = {};
   movements.forEach(m => {
     if (m.natureza !== 'R' || !m.dt_emissao || !m.cod_categoria) return;
-    const cat = catByCode[m.cod_categoria];
-    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
-    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return;
+    const { cat, label } = catInfo(m);
+    if (isExcludedFromDre(cat, label)) return;
     const key = dayjs(m.dt_emissao).format('YYYY-MM');
     if (!windowKeys.includes(key)) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
-    historicalTotals[m.cod_categoria] = (historicalTotals[m.cod_categoria] || 0) + v;
+    historicalTotals[label] = (historicalTotals[label] || 0) + v;
   });
-  const fixedTopCodes = Object.entries(historicalTotals)
+  const fixedTopLabels = Object.entries(historicalTotals)
     .sort((a, b) => b[1] - a[1])
     .slice(0, 5)
-    .map(([code]) => code);
+    .map(([label]) => label);
 
   // Actual totals for the selected month only — calculation untouched.
   const totals = {};
   movements.forEach(m => {
     if (m.natureza !== 'R' || !m.dt_emissao || !m.cod_categoria) return;
-    const cat = catByCode[m.cod_categoria];
-    const label = cat ? decodeHtmlEntities(cat.descricao) : m.cod_categoria;
-    if (CATEGORIAS_SEM_CONTA_DRE.has(label)) return;
+    const { cat, label } = catInfo(m);
+    if (isExcludedFromDre(cat, label)) return;
     const d = dayjs(m.dt_emissao);
     if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
-    totals[m.cod_categoria] = (totals[m.cod_categoria] || 0) + v;
+    totals[label] = (totals[label] || 0) + v;
   });
 
   // Any category with real movement this month, beyond the fixed set.
-  const extraCodesThisMonth = Object.keys(totals).filter(c => !fixedTopCodes.includes(c));
-  const allCodes = [...fixedTopCodes, ...extraCodesThisMonth];
+  const extraLabelsThisMonth = Object.keys(totals).filter(l => !fixedTopLabels.includes(l));
+  const allLabels = [...fixedTopLabels, ...extraLabelsThisMonth];
 
-  const sorted = allCodes
-    .map(code => [code, totals[code] || 0])
+  const sorted = allLabels
+    .map(label => [label, totals[label] || 0])
     .sort((a, b) => b[1] - a[1]);
   const top = sorted.slice(0, 5);
   const outrosTotal = sorted.slice(5).reduce((s, [, v]) => s + v, 0);
 
-  const labels = top.map(([code]) => catByCode[code] ? decodeHtmlEntities(catByCode[code].descricao) : code);
+  const labels = top.map(([label]) => label);
   const data = top.map(([, v]) => Math.round(v));
   if (outrosTotal > 0) { labels.push('Outras'); data.push(Math.round(outrosTotal)); }
 
@@ -8586,7 +9263,7 @@ function renderDonutRevenue(categories, movements, monthStart, monthEnd) {
   document.getElementById('legendDonut')?.remove();
 
   const donutWrap = document.getElementById('chartDonutWrap');
-  if (!fixedTopCodes.length && !total) {
+  if (!fixedTopLabels.length && !total) {
     if (donutWrap) donutWrap.innerHTML = '<div style="text-align:center;color:var(--bone-dim);font-size:12.5px;">Sem receitas neste mês</div>';
     return;
   }
@@ -8773,12 +9450,11 @@ function renderGaugeLiquidado(movements, monthStart, monthEnd) {
 }
 
 function renderLatestPaid(categories, movements, monthStart, monthEnd) {
-  const catByCode = {};
-  categories.forEach(c => { catByCode[c.codigo] = c; });
+  const catByKey = buildCatByEmpresaCodigo(categories);
 
   const liquidadoStatuses = ['PAGO', 'RECEBIDO'];
 
-  // Nota: NÃO filtramos CATEGORIAS_SEM_CONTA_DRE aqui — é caixa real (DFC).
+  // Nota: NÃO filtramos naoExibirDRE/nao_fluxo aqui — é caixa real (DFC), lista de últimos pagos.
   const inMonth = movements.filter(m => {
     const ref = m.dt_pagamento || m.dt_emissao;
     if (!ref) return false;
@@ -8797,7 +9473,7 @@ function renderLatestPaid(categories, movements, monthStart, monthEnd) {
   }
 
   list.innerHTML = latest.map(m => {
-    const cat = catByCode[m.cod_categoria];
+    const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
     const catLabel = cat ? decodeHtmlEntities(cat.descricao) : null;
     const obs = decodeHtmlEntities(m.observacao);
     const desc = catLabel || obs || (m.num_titulo ? `Título ${m.num_titulo}` : 'Lançamento sem categoria');
@@ -8835,7 +9511,7 @@ function renderDelta(elId, current, previous, invertColor = false) {
 
 function computePeriodTotals(dreMovements, cashMovements, monthStart, monthEnd) {
   const dre = buildDreRows(categoriesCache, dreMovements, monthStart, monthEnd);
-  const dfc = buildDfc(cashMovements, monthStart, monthEnd);
+  const dfc = buildDfc(categoriesCache || [], cashMovements, monthStart, monthEnd);
   return {
     receita: dre.totalReceita,
     despesa: dre.totalDespesa,
@@ -9146,7 +9822,7 @@ function renderForSelectedMonth() {
   const dre = buildDreRows(categoriesCache, movementsCache, monthStart, monthEnd);
   renderDre(dre);
 
-  const dfc = buildDfc(financialMovementsCache || [], monthStart, monthEnd);
+  const dfc = buildDfc(categoriesCache || [], financialMovementsCache || [], monthStart, monthEnd);
   renderDfc(dfc);
 
   const prevStart = monthStart.subtract(1, 'month');
@@ -9163,12 +9839,18 @@ function renderForSelectedMonth() {
   // renderGaugeLiquidado(movementsCache, monthStart, monthEnd); — guardado para projeto futuro
   renderLatestPaid(categoriesCache, financialMovementsCache || [], monthStart, monthEnd);
   renderDreArvore(categoriesCache, movementsCache, monthStart, monthEnd);
+  renderDfcArvore();
 
   document.getElementById('footerRight').textContent = `Atualizado em ${dayjs().format('DD/MM/YYYY HH:mm')}`;
 
   renderProjections();
   preencherComparativoAnual(monthStart);
   renderResumoConsolidado(monthStart, monthEnd);
+  try {
+    const { de: grupoDe, ate: grupoAteInicio } = getSelectedPeriodRange();
+    const grupoAte = grupoAteInicio.add(1, 'month'); // getSelectedPeriodRange devolve o INÍCIO do mês final; buildDfc/etc esperam o fim exclusivo
+    renderGrupoDfc(grupoDe, grupoAte);
+  } catch (e) { console.error('renderGrupoDfc falhou:', e); }
 }
 
 // Preenche a view "Resumo Consolidado": números de DRE (competência) e DFC (caixa)
@@ -9179,7 +9861,7 @@ function renderResumoConsolidado(monthStart, monthEnd) {
   if (!gridMes || !movementsCache) return; // view ainda não existe / dados não carregados
 
   const totalMes = computePeriodTotals(movementsCache, financialMovementsCache || [], monthStart, monthEnd);
-  const dfcMes = buildDfc(financialMovementsCache || [], monthStart, monthEnd);
+  const dfcMes = buildDfc(categoriesCache || [], financialMovementsCache || [], monthStart, monthEnd);
 
   document.getElementById('resumoMesReceita').textContent = fmtBRL(totalMes.receita);
   document.getElementById('resumoMesDespesa').textContent = fmtBRL(totalMes.despesa);
@@ -9190,7 +9872,7 @@ function renderResumoConsolidado(monthStart, monthEnd) {
 
   const inicioAno = monthStart.startOf('year');
   const totalAno = computePeriodTotals(movementsCache, financialMovementsCache || [], inicioAno, monthEnd);
-  const dfcAno = buildDfc(financialMovementsCache || [], inicioAno, monthEnd);
+  const dfcAno = buildDfc(categoriesCache || [], financialMovementsCache || [], inicioAno, monthEnd);
 
   document.getElementById('resumoAnoReceita').textContent = fmtBRL(totalAno.receita);
   document.getElementById('resumoAnoDespesa').textContent = fmtBRL(totalAno.despesa);
@@ -9199,6 +9881,230 @@ function renderResumoConsolidado(monthStart, monthEnd) {
   document.getElementById('resumoAnoSaidas').textContent = fmtBRL(dfcAno.saidas);
   document.getElementById('resumoAnoSaldo').textContent = fmtBRL(dfcAno.saldo);
 }
+
+// ===================================================================
+// GRUPO DFC — tela de resumo executivo (equivalente à aba "Grupo DFC"
+// da planilha original). Soma as métricas-chave das 3 empresas
+// (KMNO, Blue Line, RT) para o período De/Até selecionado no topo da
+// página, mostra margens % sobre Receita Bruta, comparativo lado a
+// lado por empresa, e evolução mensal (mês a mês) com gráfico.
+// ===================================================================
+const GRUPO_DFC_EMPRESAS = ['KMNO', 'BLUELINE', 'RT'];
+
+function somarMetricas(lista) {
+  return lista.reduce((acc, m) => {
+    Object.keys(m).forEach(k => { acc[k] = (acc[k] || 0) + m[k]; });
+    return acc;
+  }, {});
+}
+
+// Métricas de todas as 3 empresas para um único período (mês ou
+// intervalo), mais o total do Grupo (soma das 3).
+function buildMetricasGrupoDfcPeriodo(categories, movements, monthStart, monthEnd) {
+  const porEmpresa = {};
+  GRUPO_DFC_EMPRESAS.forEach(emp => {
+    porEmpresa[emp] = buildMetricasGrupoDfc(emp, categories, movements, monthStart, monthEnd);
+  });
+  const grupo = somarMetricas(GRUPO_DFC_EMPRESAS.map(emp => porEmpresa[emp]));
+  return { porEmpresa, grupo };
+}
+
+function renderGrupoDfc(monthStart, monthEnd) {
+  // A tela separada "viewGrupoDfc" não existe mais — esse resumo agora
+  // vive direto no topo do menu principal (viewMenu). Guard atualizado
+  // pra checar a section que realmente existe hoje.
+  const rootEl = document.getElementById('sectionGrupoDfc');
+  if (!rootEl || !categoriesCache || !movementsCache) return; // section ainda não existe / dados não carregados
+
+  const { porEmpresa, grupo } = buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, monthStart, monthEnd);
+  const dfcPeriodo = buildDfc(categoriesCache || [], financialMovementsCache || [], monthStart, monthEnd);
+
+  // ---- Cards do topo ----
+  document.getElementById('grupoDfcReceitaBruta').textContent = fmtBRL(grupo.receitaBruta);
+  document.getElementById('grupoDfcReceitaLiquida').textContent = fmtBRL(grupo.receitaLiquida);
+  document.getElementById('grupoDfcCmv').textContent = fmtBRL(grupo.cmv);
+  document.getElementById('grupoDfcMargem').textContent = fmtBRL(grupo.margemContribuicao);
+  document.getElementById('grupoDfcEbitda').textContent = fmtBRL(grupo.ebitda);
+  document.getElementById('grupoDfcLucroLiquido').textContent = fmtBRL(grupo.lucroLiquido);
+  document.getElementById('grupoDfcSaldoLiquido').textContent = fmtBRL(grupo.saldoLiquido);
+  document.getElementById('grupoDfcCaixaPeriodo').textContent = fmtBRL(dfcPeriodo.saldo);
+
+  // ---- Geração de Caixa Acumulada (desde 01/jan até o fim do período) ----
+  const inicioAno = monthStart.startOf('year');
+  const dfcAcumulado = buildDfc(categoriesCache || [], financialMovementsCache || [], inicioAno, monthEnd);
+  document.getElementById('grupoDfcCaixaAcumulado').textContent = fmtBRL(dfcAcumulado.saldo);
+
+  // ---- Margens & Indicadores (% s/ Receita Bruta) ----
+  const base = grupo.receitaBruta || 1; // evita divisão por zero
+  const pctDeducoes = grupo.receitaBruta - grupo.receitaLiquida;
+  const linhasMargem = [
+    { label: 'Deduções (Impostos/Devoluções)', valor: pctDeducoes },
+    { label: 'CMV', valor: grupo.cmv },
+    { label: 'Margem de Contribuição', valor: grupo.margemContribuicao },
+    { label: 'Custos Fixos (ADM + Comercial + Industrial)', valor: grupo.custosFixos },
+    { label: 'Res. Operacional (EBITDA)', valor: grupo.ebitda },
+    { label: 'Despesas Financeiras', valor: grupo.despesasFinanceiras },
+    { label: 'Lucro Líquido', valor: grupo.lucroLiquido },
+    { label: 'Receita Bruta (base)', valor: grupo.receitaBruta },
+  ];
+  const margemBody = document.getElementById('grupoDfcMargensBody');
+  if (margemBody) {
+    margemBody.innerHTML = linhasMargem.map(l => `
+      <tr>
+        <td>${l.label}</td>
+        <td class="num">${fmtBRL(l.valor)}</td>
+        <td class="num">${(l.valor / base * 100).toFixed(1).replace('.', ',')}%</td>
+      </tr>
+    `).join('');
+  }
+
+  // ---- Comparativo KMNO x Blue Line x RT (período selecionado) ----
+  const comparativoBody = document.getElementById('grupoDfcComparativoBody');
+  if (comparativoBody) {
+    const linhasComparativo = [
+      { label: 'Receita Bruta', chave: 'receitaBruta' },
+      { label: 'EBITDA', chave: 'ebitda' },
+      { label: 'Lucro Líquido', chave: 'lucroLiquido' },
+    ];
+    comparativoBody.innerHTML = linhasComparativo.map(l => `
+      <tr>
+        <td>${l.label}</td>
+        ${GRUPO_DFC_EMPRESAS.map(emp => `<td class="num">${fmtBRL(porEmpresa[emp][l.chave])}</td>`).join('')}
+        <td class="num" style="font-weight:600;">${fmtBRL(grupo[l.chave])}</td>
+      </tr>
+    `).join('');
+  }
+
+  // ---- Evolução Mensal — Grupo (Jan até o mês selecionado do ano corrente) ----
+  const meses = [];
+  let cursor = inicioAno;
+  let guard = 0;
+  while ((cursor.isBefore(monthEnd) || cursor.isSame(monthEnd, 'month')) && guard < 12) {
+    meses.push(cursor);
+    cursor = cursor.add(1, 'month');
+    guard++;
+  }
+  const evolucaoMensal = meses.map(m => {
+    const fimMes = m.add(1, 'month');
+    const { grupo: metricasMes } = buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, m, fimMes);
+    const dfcMes = buildDfc(categoriesCache || [], financialMovementsCache || [], m, fimMes);
+    return {
+      mes: m,
+      receitaBruta: metricasMes.receitaBruta,
+      ebitda: metricasMes.ebitda,
+      lucroLiquido: metricasMes.lucroLiquido,
+      geracaoCaixa: dfcMes.saldo,
+    };
+  });
+
+  const evolucaoBody = document.getElementById('grupoDfcEvolucaoBody');
+  if (evolucaoBody) {
+    const linhasEvolucao = [
+      { label: 'Receita Bruta', chave: 'receitaBruta' },
+      { label: 'EBITDA', chave: 'ebitda' },
+      { label: 'Lucro Líquido', chave: 'lucroLiquido' },
+      { label: 'Geração de Caixa', chave: 'geracaoCaixa' },
+    ];
+    evolucaoBody.innerHTML = linhasEvolucao.map(l => `
+      <tr>
+        <td>${l.label}</td>
+        ${evolucaoMensal.map(e => {
+          const v = e[l.chave];
+          const negativo = v < 0;
+          return `<td class="num" style="${negativo ? 'color:var(--red);' : ''}">${negativo ? `(${fmtBRL(Math.abs(v))})` : fmtBRL(v)}</td>`;
+        }).join('')}
+      </tr>
+    `).join('');
+
+    const headerRow = document.getElementById('grupoDfcEvolucaoHeader');
+    if (headerRow) {
+      headerRow.innerHTML = '<th>Métrica</th>' + evolucaoMensal.map(e => `<th>${DRE_ARVORE_NOMES_MES[e.mes.month()]}</th>`).join('');
+    }
+  }
+
+  renderGrupoDfcChart(evolucaoMensal);
+}
+
+let chartGrupoDfc = null;
+function renderGrupoDfcChart(evolucaoMensal) {
+  const canvas = document.getElementById('chartGrupoDfc');
+  if (!canvas) return;
+  const labels = evolucaoMensal.map(e => DRE_ARVORE_NOMES_MES[e.mes.month()]);
+  const dataset = (label, chave, cor) => ({
+    label,
+    data: evolucaoMensal.map(e => e[chave]),
+    borderColor: cor,
+    backgroundColor: cor,
+    tension: 0.3,
+    fill: false,
+  });
+  const datasets = [
+    dataset('Receita Bruta', 'receitaBruta', CHART_COLORS.blue),
+    dataset('EBITDA', 'ebitda', CHART_COLORS.green),
+    dataset('Lucro Líquido', 'lucroLiquido', '#C9A227'),
+    dataset('Geração de Caixa', 'geracaoCaixa', CHART_COLORS.red),
+  ];
+  if (chartGrupoDfc) chartGrupoDfc.destroy();
+  chartGrupoDfc = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels, datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } } },
+      scales: {
+        x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { color: 'rgba(243,239,230,0.06)' } },
+        y: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { color: 'rgba(243,239,230,0.06)' } },
+      },
+    },
+  });
+}
+
+
+// ===================================================================
+// OUTROS — PENDENTES: junta num só lugar todos os itens de
+// DRE_ARVORE_BLOCOS (das 3 empresas) marcados naoConfirmado: true.
+// Não depende de categoriesCache/movementsCache — lê direto da árvore
+// estática, já que esses itens sempre valem 0/"R$ ---" por definição
+// até serem confirmados manualmente contra o Omie.
+// ===================================================================
+function renderOutrosPendentes() {
+  const container = document.getElementById('outrosPendentesConteudo');
+  if (!container) return;
+
+  // agrupa por bloco de origem (ex: "Despesas Financeiras"), cada linha
+  // guarda também de qual empresa veio, pra render da tag colorida
+  const porBloco = {};
+  const ordemBlocos = [];
+  DRE_ARVORE_EMPRESAS.forEach(empresa => {
+    const blocos = DRE_ARVORE_BLOCOS[empresa] || [];
+    blocos.forEach(bloco => {
+      (bloco.itens || []).forEach(item => {
+        if (!item.naoConfirmado) return;
+        if (!porBloco[bloco.nome]) { porBloco[bloco.nome] = []; ordemBlocos.push(bloco.nome); }
+        porBloco[bloco.nome].push({ empresa, nome: item.nome });
+      });
+    });
+  });
+
+  if (ordemBlocos.length === 0) {
+    container.innerHTML = '<div class="outros-pendentes-item"><div class="outros-pendentes-item-nome">Nenhum item pendente — tudo confirmado 🎉</div></div>';
+    return;
+  }
+
+  const empresaLabel = k => (COMPANIES[k] && COMPANIES[k].label) || k;
+
+  container.innerHTML = ordemBlocos.map(blocoNome => {
+    const itens = porBloco[blocoNome];
+    const linhas = itens.map(it => `
+      <div class="outros-pendentes-item">
+        <div class="outros-pendentes-item-nome">${it.nome}</div>
+        <span class="company-tag company-tag-${it.empresa}">${empresaLabel(it.empresa)}</span>
+      </div>`).join('');
+    return `<div class="outros-pendentes-bloco-header">${blocoNome} · ${itens.length} ${itens.length === 1 ? 'item' : 'itens'}</div>${linhas}`;
+  }).join('');
+}
+
 
 // Preenche "Ano Anterior (R$)" e "Ano Atual (R$)" com a receita acumulada
 // (do dia 01/jan até o fim do mês selecionado), comparando o mesmo período
@@ -9637,16 +10543,33 @@ document.getElementById('sidebarFab').addEventListener('click', openSidebar);
 document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
 document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
 
-// ===== BLOCO DE NOTAS (privado por usuário, vinculado à empresa) =====
-// Tabela dash_notas: id, user_id (FK auth.users), empresa (RT/KMNO/BLUELINE),
+// ===== BLOCO DE NOTAS (privado por usuário, com abas próprias por empresa) =====
+// Tabela dash_notas: id, user_id (FK auth.users), empresa (RT/KMNO/BLUELINE/TODAS),
 // titulo, conteudo, created_at, updated_at. RLS restringe cada usuário às
 // próprias notas (auth.uid() = user_id) — nem admin vê nota de outro usuário.
+// A aba "Todas as Empresas" é um espaço PRÓPRIO e SEPARADO — não agrega as
+// notas das outras 3 abas, é só mais um valor de "empresa" na tabela,
+// usado quando a nota não é específica de uma empresa. O estado de qual
+// aba está selecionada AQUI é independente de currentCompanyKey (o filtro
+// global do topo da página) — trocar de empresa no topo não afeta qual
+// aba do bloco de notas está aberta, e vice-versa.
 let notesCache = [];
+let notesEmpresaAtual = 'RT';
+
+function selecionarEmpresaNotas(empresaKey) {
+  notesEmpresaAtual = empresaKey;
+  document.querySelectorAll('.notes-panel-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.empresa === empresaKey);
+  });
+  loadNotes();
+}
 
 function openNotesPanel() {
   document.getElementById('notesPanel').classList.add('open');
   document.getElementById('notesOverlay').classList.add('open');
-  document.getElementById('notesPanelEmpresa').textContent = COMPANIES[currentCompanyKey]?.label || currentCompanyKey;
+  document.querySelectorAll('.notes-panel-tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.empresa === notesEmpresaAtual);
+  });
   loadNotes();
 }
 
@@ -9664,7 +10587,7 @@ async function loadNotes() {
     const { data, error } = await supabaseClient
       .from('dash_notas')
       .select('*')
-      .eq('empresa', currentCompanyKey)
+      .eq('empresa', notesEmpresaAtual)
       .order('updated_at', { ascending: false });
     if (error) throw error;
     notesCache = data || [];
@@ -9677,8 +10600,9 @@ async function loadNotes() {
 
 function renderNotesList() {
   const body = document.getElementById('notesPanelBody');
+  const nomeEmpresa = notesEmpresaAtual === 'TODAS' ? 'Todas as Empresas' : (COMPANIES[notesEmpresaAtual]?.label || notesEmpresaAtual);
   if (!notesCache.length) {
-    body.innerHTML = '<div class="notes-empty">Nenhuma nota ainda para ' + (COMPANIES[currentCompanyKey]?.label || currentCompanyKey) + '.</div>';
+    body.innerHTML = '<div class="notes-empty">Nenhuma nota ainda para ' + nomeEmpresa + '.</div>';
     return;
   }
   body.innerHTML = '';
@@ -9735,7 +10659,7 @@ async function createNote() {
       .from('dash_notas')
       .insert({
         user_id: currentSession.user.id,
-        empresa: currentCompanyKey,
+        empresa: notesEmpresaAtual,
         titulo: 'Nova nota',
         conteudo: '',
       })
