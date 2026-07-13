@@ -1,0 +1,6 @@
+
+---
+
+## Adendo 2 - RT: caixa sem titulo implementado (jan-abr, com corte de data)
+
+dash_current_account_transactions adicionado ao dashboard-sync (nova tabela no consolidado). RLS estava sem politica de SELECT nas 3 empresas para essa tabela - corrigido (mesmo gotcha de RLS ja documentado). Implementada extraCaixaSemTituloRT no index.html: soma lancamentos do extrato sem cod_titulo, restrito a RT e a dt_lanc < 01/05/2026 (jan-abr). Testado: jan/fev/abr batem exato ou quase exato com Excel; marco melhora bastante mas nao fecha 100%; maio permanece correto sem a soma extra (ja batia sozinho via financial_movements). Corte de data adicionado porque o casamento por valor+data+natureza sozinho, sem restricao de periodo, inflava maio incorretamente (extrato tem ruido/duplicatas proprias fora do periodo jan-abr). Residual nao totalmente explicado: uma pequena discrepancia (~R\) apareceu em testes de maio mesmo com o corte, possivelmente relacionada a como o dedup por cod_titulo+natureza escolhe qual linha vale quando o mesmo titulo tem mais de uma baixa - nao investigado a fundo, pode ser uma caracteristica preexistente do dedupFinancialMovements (usado tambem por KMNO/Blue Line), nao exclusiva dessa correcao.
