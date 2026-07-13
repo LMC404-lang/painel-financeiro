@@ -8429,11 +8429,44 @@ async function sbMultiPaged(path) {
 const ORIGENS_BAIXA_REAL = new Set(['BAXR', 'BAXP', 'EXTR', 'EXTP']);
 const ORIGENS_TRANSFERENCIA = new Set(['TRAR', 'TRAP']);
 
+// Correções pontuais de erro de dado já CONFIRMADO (não é regra geral de
+// categoria — cada título aqui foi verificado manualmente contra o ledger
+// interno da empresa). Ver validação DFC Blue Line jan/2026:
+// duplicidade Adiantamento (1.04.01) x Faturamento (1.01.01), cliente KMNO
+// SPORTS. DRE_2026_KMNO_e_NOVAH confirma Emprestimos para Novah = R$0 em
+// jan/2026 -> os R$175.000 em Adiantamento não são caixa real adicional.
+const TITULOS_EXCLUIDOS_CONFIRMADOS = new Set([
+  '2181471351', '2181471949', '2181472977', '2181475958',
+  '2181483183', '2181483275', '2181486760', '2181487041',
+  '2181489494', '2181491053', '2181492286', '2181497749',
+]);
+
+// ─── Contas correntes fora do Fluxo de Caixa (contas virtuais/de controle) ──
+// O Omie marca certas "contas correntes" (Adiantamento de Cliente, Previsão
+// de Recebíveis, Comissão, etc. — não são bancos reais, são contas de
+// controle interno) com fluxo_caixa=false. Essas contas não devem contar no
+// DFC Realizado, mas omie_financial_movements não filtra isso — soma tudo
+// por cod_cc sem olhar essa flag. Descoberto e validado em 13/07/2026 na
+// KMNO (diferença de R$1M+/mês some quase inteira ao aplicar esse filtro).
+// Só exclui quando fluxo_caixa === false explicitamente; se a conta não for
+// encontrada ou o campo vier nulo/indefinido, mantém o lançamento (mais
+// seguro do que arriscar excluir conta real por dado incompleto).
+function contasForaDoFluxoCaixa(contasCorrentes) {
+  const foraDoFluxo = new Set();
+  (contasCorrentes || []).forEach((c) => {
+    if (c.fluxo_caixa === false) {
+      foraDoFluxo.add([c._empresa, c.n_cod_cc].join('|'));
+    }
+  });
+  return foraDoFluxo;
+}
+
 function dedupFinancialMovements(movements) {
   const byTitulo = new Map();
   const noTitulo = [];
   movements.forEach((m) => {
     if (ORIGENS_TRANSFERENCIA.has(m.origem)) return; // transferência interna entre contas: fora do DFC operacional
+    if (TITULOS_EXCLUIDOS_CONFIRMADOS.has(String(m.cod_titulo))) return; // erro de lançamento confirmado, ver comentário acima
     if (!m.cod_titulo) { noTitulo.push(m); return; } // cod_titulo ausente/zero: nunca agrupar, dedup não é seguro aqui
     const key = [m._empresa, m.cod_titulo, m.natureza].join('|');
     if (!byTitulo.has(key)) byTitulo.set(key, []);
@@ -8454,6 +8487,59 @@ function dedupFinancialMovements(movements) {
     }
   });
   return result;
+}
+
+// ─── RT: caixa sem título formal (lançado direto no extrato bancário) ─────
+// A RT lançava parte do fluxo de caixa direto no extrato de conta corrente
+// (sem passar por um Título formal em Contas a Pagar/Receber) especificamente
+// entre jan-abr/2026 — esse dinheiro nunca aparece em omie_financial_movements
+// (ListarMovimentos só vê título+baixa). A partir de mai/2026 a RT passou a
+// lançar tudo com título formal, então essa correção NÃO se aplica depois
+// desse período. Detectado e validado em 13/07/2026.
+//
+// Restrito a esse período por dois motivos:
+// 1) cod_titulo IS NULL no extrato NÃO significa "sem título formal" de forma
+//    confiável em todas as empresas — na KMNO, esse campo fica nulo mesmo pra
+//    lançamentos que JÁ têm título e já estão corretos via financial_movements.
+// 2) mesmo dentro da RT, o extrato (omie_current_account_transactions) tem
+//    ruído próprio (linhas duplicadas) em meses onde o financial_movements já
+//    está completo — testado em maio/2026, que já bate exato sem essa soma,
+//    e piora se ela for aplicada. Por segurança, o corte de data evita esse
+//    risco em vez de depender só do casamento por valor/data/natureza.
+const RT_EXTRATO_SEM_TITULO_ATE = '2026-05-01'; // exclusivo: só lançamentos com dt_lanc < essa data
+
+function extraCaixaSemTituloRT(currentAccountTransactions, financialMovements) {
+  const jaContabilizado = new Set();
+  (financialMovements || []).forEach((m) => {
+    if (m._empresa !== 'RT') return;
+    if (!['PAGO', 'RECEBIDO'].includes(m.status)) return;
+    jaContabilizado.add([m.dt_pagamento, Number(m.val_pago), m.natureza].join('|'));
+  });
+
+  const extras = [];
+  (currentAccountTransactions || []).forEach((c) => {
+    if (c._empresa !== 'RT') return;
+    if (c.cod_titulo) return; // tem título formal, financial_movements já cobre
+    if (ORIGENS_TRANSFERENCIA.has(c.origem)) return;
+    if (!c.dt_lanc || c.dt_lanc >= RT_EXTRATO_SEM_TITULO_ATE) return; // fora do período validado
+    const assinatura = [c.dt_lanc, Number(c.valor_lanc), c.natureza].join('|');
+    if (jaContabilizado.has(assinatura)) return; // já contado, não duplicar
+    extras.push({
+      dt_pagamento: c.dt_lanc,
+      dt_emissao: c.dt_emissao,
+      val_pago: Number(c.valor_lanc),
+      val_liquido: Number(c.valor_lanc),
+      natureza: c.natureza,
+      cod_categoria: c.cod_categoria,
+      status: c.natureza === 'R' ? 'RECEBIDO' : 'PAGO',
+      origem: 'EXTRATO_SEM_TITULO',
+      cod_titulo: null,
+      num_titulo: c.num_doc || null,
+      observacao: c.observacao,
+      _empresa: 'RT',
+    });
+  });
+  return extras;
 }
 
 function updateCompanyMultiselectLabel() {
@@ -8877,13 +8963,14 @@ async function loadCompanyData() {
 
 lastFetchHadErrors = false;
 try {
-  const [categories, movements, receivable, payable, clients, contasCorrentes] = await Promise.all([
+  const [categories, movements, receivable, payable, clients, contasCorrentes, currentAccountTransactions] = await Promise.all([
     sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa,natureza,transferencia,nao_exibir,nao_fluxo,categoria_superior'),
-    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo'),
+    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo,cod_cc'),
     sbMultiPaged('dash_accounts_receivable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_accounts_payable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_clients?select=codigo_cliente_omie,nome_fantasia,razao_social'),
     sbMultiPaged('dash_contas_correntes?select=n_cod_cc,descricao,fluxo_caixa,saldo_inicial,saldo_data,valor_limite,saldo_atual'),
+    sbMultiPaged('dash_current_account_transactions?select=dt_lanc,dt_emissao,valor_lanc,cod_categoria,natureza,cod_titulo,origem,num_doc,observacao'),
   ]);
   clientsCache = clients;
   contasCorrentesCache = contasCorrentes;
@@ -8920,7 +9007,12 @@ try {
 
     categoriesCache = categories;
     movementsCache = unifiedMovements; // para DRE/competência (dt_emissao) — vem de receivable+payable
-    financialMovementsCache = dedupFinancialMovements(movements || []); // para DFC/caixa (dt_pagamento real) — vem de omie_financial_movements, deduplicado (título × baixa real)
+    const contasForaDoFluxo = contasForaDoFluxoCaixa(contasCorrentes);
+    const movementsNoFluxoCaixa = (movements || []).filter(
+      (m) => !contasForaDoFluxo.has([m._empresa, m.cod_cc].join('|'))
+    );
+    financialMovementsCache = dedupFinancialMovements(movementsNoFluxoCaixa); // para DFC/caixa (dt_pagamento real) — vem de omie_financial_movements, deduplicado (título × baixa real), excluindo contas fora do fluxo de caixa (ver contasForaDoFluxoCaixa)
+    financialMovementsCache = financialMovementsCache.concat(extraCaixaSemTituloRT(currentAccountTransactions, financialMovementsCache)); // RT: soma caixa lançado direto no extrato, sem título formal (ver notas 13/07)
     transferenciasCache = (movements || []).filter(m => ORIGENS_TRANSFERENCIA.has(m.origem)); // TRAR/TRAP — vão à parte no DFC ("Transferências e Ajustes de Saldo"), fora de Receitas/Despesas
     receivableCache = receivable;
     payableCache = payable;
