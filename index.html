@@ -7877,21 +7877,22 @@ async function renderSaldoBancos() {
 // (só KMNO por enquanto — sync criado em 14/07/2026). Usa o período
 // De/Até selecionado no topo da página.
 //
-// Definição adotada (assumida, sem confirmação explícita da Lucas —
-// revisar se etapa não corresponder à realidade):
-//   etapa '00'/'10' = cotação/orçamento (NÃO conta como aprovado)
-//   etapa '20'/'50'/'60' = aprovado/faturado (conta como aprovado)
-//   etapa '70' = cancelado, '80' = devolvido (NÃO conta)
+// Definição de "Pedido Aprovado" (confirmada com dado real em 15/07/2026):
+// NÃO usa mais a "etapa" (que é uma coluna do Kanban visual do Omie e
+// não indica cancelamento de forma confiável — etapa "70", por exemplo,
+// é "Expedido/Cobrar", uma venda real, não cancelada). Usa direto o
+// campo `cancelado` (vindo de informações internas do próprio Omie,
+// infoCadastro.cancelado) — muito mais simples e confiável:
+// Aprovado = cancelado = false. Validado contra 1.910 pedidos reais:
+// 1.837 não-cancelados (R$5.950.086,15) vs 73 cancelados (R$414.259,06).
 // ===================================================================
-const COM_ETAPAS_APROVADO = ['20', '50', '60'];
-
 async function renderComercial() {
   const root = document.getElementById('viewComercial');
   if (!root) return;
 
   try {
     const [orders, items, products, vendedores] = await Promise.all([
-      sbPaged('dash_orders?select=codigo_pedido,codigo_cliente,codigo_vendedor,etapa,origem_pedido,valor_total_pedido,valor_descontos,valor_mercadorias,data_pedido', 'KMNO'),
+      sbPaged('dash_orders?select=codigo_pedido,codigo_cliente,codigo_vendedor,etapa,origem_pedido,valor_total_pedido,valor_descontos,valor_mercadorias,data_pedido,cancelado,faturado', 'KMNO'),
       sbPaged('dash_order_items?select=codigo_pedido,codigo_produto,quantidade,valor_unitario,valor_desconto,valor_total', 'KMNO'),
       sbPaged('dash_products?select=codigo_produto,descricao,codigo_familia,descricao_familia', 'KMNO'),
       sbPaged('dash_vendedores?select=codigo,nome', 'KMNO'),
@@ -7907,7 +7908,10 @@ async function renderComercial() {
     const vendedorNome = {};
     (vendedores || []).forEach(v => { vendedorNome[v.codigo] = v.nome; });
 
-    const isAprovado = o => COM_ETAPAS_APROVADO.includes(o.etapa);
+    // cancelado pode vir null pra pedidos sincronizados antes desse campo
+    // existir (ver auditoria 15/07/2026, ~33 pedidos) — trata null como
+    // "não cancelado" (mais provável, já que cancelamento é raro: 73/1910).
+    const isAprovado = o => o.cancelado !== true;
     const inPeriodo = (o, ini, fim) => {
       if (!o.data_pedido) return false;
       const d = dayjs(o.data_pedido);
@@ -8715,7 +8719,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   dreArvoreInadimplenciaCache = inadimplencia;
 
   const unifiedMovements = [
-    ...receivable.filter(r => r.status_titulo !== 'CANCELADO').map(r => ({
+    ...receivable.filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor)).map(r => ({
       dt_emissao: r.data_emissao,
       dt_pagamento: r.data_pagamento || r.data_previsao,
       dt_vencimento: r.data_vencimento,
@@ -9268,7 +9272,7 @@ try {
 
     // Build unified movements from accounts receivable + payable (more complete than omie_financial_movements)
     const unifiedMovements = [
-      ...(receivable || []).filter(r => r.status_titulo !== 'CANCELADO').map(r => ({
+      ...(receivable || []).filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor)).map(r => ({
         dt_emissao: r.data_emissao,
         dt_pagamento: r.data_pagamento || r.data_previsao,
         dt_vencimento: r.data_vencimento,
@@ -9922,6 +9926,27 @@ const REDECARD_CODIGO_CLIENTE_POR_EMPRESA = {
   // RT: não tem cliente "REDECARD S/A" cadastrado — nada a excluir.
 };
 
+// Clientes fictícios de "PREVISÃO" (projeção de receita esperada por
+// canal/marca — não são vendas reais) — achado em 15/07/2026 investigando
+// o mistério do "Atrasado" da Novah. Confirmado: existe título real (a
+// KMNO tem conta a pagar "PAGO" pra Novah nas mesmas datas/valores de
+// alguns desses títulos), então parte do problema nem é cliente fantasma
+// — é conciliação manual que não aconteceu no Omie. Mas os clientes
+// "(PREVISÃO)" abaixo são 100% fictícios (nome literalmente diz
+// "previsão"/"previsao") e representam ~R$1.045.364 hoje entre as duas
+// empresas (R$700.364 na Novah, R$345.000 na KMNO — incluindo R$75.000
+// já contando como "Atrasado" no card antes desse fix). Excluídos de
+// qualquer cálculo de Contas a Receber/Pagar real.
+const PREVISAO_CODIGOS_CLIENTE_POR_EMPRESA = {
+  KMNO: [10550353479], // "KMNO PREVISAO"
+  BLUELINE: [2074032429, 2074008888, 2074040679, 2135507291], // "KMNO (PREVISÃO)", "(PREVISAO) GB", "MORMAII (PREVISÃO)", "PREVISÃO BLUE LINE"
+  // RT: não tem cliente de previsão cadastrado — nada a excluir.
+};
+function isClientePrevisao(empresa, codigoCliente) {
+  const lista = PREVISAO_CODIGOS_CLIENTE_POR_EMPRESA[empresa] || [];
+  return lista.includes(Number(codigoCliente));
+}
+
 // Filtro específico de Contas a Receber "Atrasado" (diferente do
 // filterOverdue genérico usado em Contas a Pagar): confirmado com Lucas
 // em 14/07/2026 —
@@ -9938,6 +9963,10 @@ const REDECARD_CODIGO_CLIENTE_POR_EMPRESA = {
 //      a qualquer cliente lá, então essa exclusão é regra de negócio
 //      nossa (recebível de maquininha não é inadimplência de verdade),
 //      não uma diferença de comportamento do Omie.
+//   4. Exclui clientes fictícios de "PREVISÃO" (ver
+//      PREVISAO_CODIGOS_CLIENTE_POR_EMPRESA acima) — achado em
+//      15/07/2026, já estava contaminando esse card com R$75.000 falsos
+//      na KMNO.
 //
 // PENDENTE (não resolvido, fica pra depois): o sync de contas a receber
 // não está atualizando status_titulo pra "ATRASADO" a tempo quando um
@@ -9950,6 +9979,7 @@ function filterAtrasadoReceber(items) {
     if (!m.data_emissao) return false;
     const redecardCodigo = REDECARD_CODIGO_CLIENTE_POR_EMPRESA[m._empresa];
     if (redecardCodigo && Number(m.codigo_cliente_fornecedor) === redecardCodigo) return false;
+    if (isClientePrevisao(m._empresa, m.codigo_cliente_fornecedor)) return false;
     return true;
   });
 }
