@@ -2480,6 +2480,16 @@
         <div class="value" id="sumContasPagarVencidas">—</div>
         <div class="sub" id="subContasPagarVencidas"></div>
       </div>
+      <div class="summary-card" id="cardPrazoMedioPagamento">
+        <div class="label">Prazo Médio de Pagamento</div>
+        <div class="value" id="sumPrazoMedioPagamento">—</div>
+        <div class="sub" id="subPrazoMedioPagamento"></div>
+      </div>
+      <div class="summary-card" id="cardPrazoMedioRecebimento">
+        <div class="label">Prazo Médio de Recebimento</div>
+        <div class="value" id="sumPrazoMedioRecebimento">—</div>
+        <div class="sub" id="subPrazoMedioRecebimento"></div>
+      </div>
     </div>
 
     <div class="section" id="sectionInadimplenciaDetalhe">
@@ -9324,6 +9334,7 @@ try {
     renderCharts(unifiedMovements, financialMovementsCache);
     renderStackedExpenses(categories, unifiedMovements);
     renderInadimplencia(unifiedMovements, receivable, payable);
+    renderPrazosMedios(receivable, payable);
     renderForecastFlowChart(receivable, payable);
     renderForecasts(receivable, payable);
 
@@ -9982,6 +9993,46 @@ function filterAtrasadoReceber(items) {
     if (isClientePrevisao(m._empresa, m.codigo_cliente_fornecedor)) return false;
     return true;
   });
+}
+
+// Prazo Médio de Pagamento / Recebimento — mesma métrica do relatório
+// nativo "Contas a Pagar"/"Ciclo Financeiro" do Omie: média de dias
+// entre emissão e pagamento/recebimento, ponderada pelo valor do título
+// (título maior pesa mais na média). Só considera título já PAGO/
+// RECEBIDO de verdade (precisa ter data_pagamento preenchida) — sem
+// filtro de período (mesmo comportamento dos cards vizinhos de
+// Inadimplência, que também olham o histórico todo). Exclui clientes
+// fantasma de previsão (ver isClientePrevisao) pra não distorcer a média.
+function calcPrazoMedioPonderado(titulos, statusEsperado) {
+  let somaDiasPonderada = 0;
+  let somaValor = 0;
+  (titulos || []).forEach(t => {
+    if (t.status_titulo !== statusEsperado) return;
+    if (!t.data_emissao || !t.data_pagamento) return;
+    if (isClientePrevisao(t._empresa, t.codigo_cliente_fornecedor)) return;
+    const valor = Number(t.valor_documento || 0);
+    if (!valor) return;
+    const dias = dayjs(t.data_pagamento).diff(dayjs(t.data_emissao), 'day');
+    if (dias < 0) return; // dado inconsistente (pagou antes de emitir) — ignora
+    somaDiasPonderada += dias * valor;
+    somaValor += valor;
+  });
+  return somaValor ? somaDiasPonderada / somaValor : null;
+}
+
+function renderPrazosMedios(receivable, payable) {
+  const pmp = calcPrazoMedioPonderado(payable, 'PAGO');
+  const pmr = calcPrazoMedioPonderado(receivable, 'RECEBIDO');
+
+  const elPmp = document.getElementById('sumPrazoMedioPagamento');
+  const elPmr = document.getElementById('sumPrazoMedioRecebimento');
+  if (elPmp) elPmp.textContent = pmp === null ? '—' : `${pmp.toFixed(1).replace('.', ',')} dias`;
+  if (elPmr) elPmr.textContent = pmr === null ? '—' : `${pmr.toFixed(1).replace('.', ',')} dias`;
+
+  const subPmp = document.getElementById('subPrazoMedioPagamento');
+  const subPmr = document.getElementById('subPrazoMedioRecebimento');
+  if (subPmp) subPmp.textContent = 'Média ponderada pelo valor, títulos já pagos';
+  if (subPmr) subPmr.textContent = 'Média ponderada pelo valor, títulos já recebidos';
 }
 
 function renderInadimplencia(movements, receivable, payable) {
