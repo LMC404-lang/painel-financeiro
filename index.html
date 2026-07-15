@@ -2076,7 +2076,7 @@
   <div class="notes-panel-tabs" id="notesPanelTabs">
     <button type="button" class="notes-panel-tab" data-empresa="RT" onclick="selecionarEmpresaNotas('RT')">RT</button>
     <button type="button" class="notes-panel-tab" data-empresa="KMNO" onclick="selecionarEmpresaNotas('KMNO')">KMNO</button>
-    <button type="button" class="notes-panel-tab" data-empresa="BLUELINE" onclick="selecionarEmpresaNotas('BLUELINE')">Novah</button>
+    <button type="button" class="notes-panel-tab" data-empresa="BLUELINE" onclick="selecionarEmpresaNotas('BLUELINE')">Blue Line/Novah</button>
     <button type="button" class="notes-panel-tab" data-empresa="TODAS" onclick="selecionarEmpresaNotas('TODAS')">Todas as Empresas</button>
   </div>
   <div class="notes-panel-body" id="notesPanelBody">
@@ -2122,7 +2122,7 @@
       <div class="company-check-row" id="reqCompanyRow">
         <label class="company-check-opt"><input type="checkbox" value="RT"> RT · Esportes e Eventos</label>
         <label class="company-check-opt"><input type="checkbox" value="KMNO"> KMNO Sports</label>
-        <label class="company-check-opt"><input type="checkbox" value="BLUELINE"> Novah</label>
+        <label class="company-check-opt"><input type="checkbox" value="BLUELINE"> Blue Line/Novah</label>
       </div>
 
       <label for="reqMotivo">Motivo / justificativa</label>
@@ -2185,7 +2185,7 @@
     <div class="section" id="sectionGrupoDfc">
       <div class="section-head">
         <h2>Grupo DFC — Dashboard Financeiro</h2>
-        <div class="desc">Fluxo de caixa consolidado (KMNO + Novah + RT), para o período De/Até selecionado no topo. Valores em R$.</div>
+        <div class="desc">Fluxo de caixa consolidado (KMNO + Blue Line/Novah + RT), para o período De/Até selecionado no topo. Valores em R$.</div>
       </div>
 
       <!-- Cards de resumo -->
@@ -2217,12 +2217,12 @@
           </div>
         </div>
 
-        <!-- Comparativo KMNO x Novah x RT -->
+        <!-- Comparativo KMNO x Blue Line/Novah x RT -->
         <div class="bloco-card">
-          <div class="bloco-head"><div class="bloco-titulo">KMNO x Novah x RT (período)</div></div>
+          <div class="bloco-head"><div class="bloco-titulo">KMNO x Blue Line/Novah x RT (período)</div></div>
           <div class="bloco-body">
             <table class="fin-tbl">
-              <tr><th>Métrica</th><th class="num">KMNO</th><th class="num">Novah</th><th class="num">RT</th><th class="num">Grupo</th></tr>
+              <tr><th>Métrica</th><th class="num">KMNO</th><th class="num">Blue Line/Novah</th><th class="num">RT</th><th class="num">Grupo</th></tr>
               <tbody id="grupoDfcComparativoBody"></tbody>
             </table>
           </div>
@@ -2246,6 +2246,34 @@
       <div style="position: relative; height: 320px;">
         <canvas id="chartGrupoDfc" role="img" aria-label="Gráfico de evolução mensal do Grupo: Receita Bruta, EBITDA, Lucro Líquido e Geração de Caixa">Evolução mensal do grupo.</canvas>
       </div>
+
+      <div class="chart-card-title" style="margin-top:18px;">Capex e Refis — Evolução Mensal (ano corrente, R$)</div>
+      <div style="position: relative; height: 260px;">
+        <canvas id="chartCapexRefis" role="img" aria-label="Gráfico de barras mostrando Capex (Investimentos) e Refis (parcelamentos fiscais) mês a mês no ano corrente">Evolução mensal de Capex e Refis.</canvas>
+      </div>
+
+      <!-- Resumo de Capital: início x fim do período De/Até selecionado no
+           topo da página. Saldo Bancos usa o mesmo rollback já usado no DFC
+           por Bloco (calcSaldoInicialRealizado). Cartões a Receber (KMNO)
+           ainda não tem fonte de dado confirmada — placeholder até Lucas
+           definir de onde vem esse número (não é o saldo das contas tipo
+           Cartão no Omie, os valores não batem com a referência dele). -->
+      <div class="chart-card-title" style="margin-top:18px;">Resumo de Capital (Início x Fim do Período)</div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos — Início</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoInicio">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos — Fim</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoFim">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação no Período</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoDiff">R$ 0</div></div>
+      </div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Cartões a Receber (KMNO) — Início</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesInicio">R$ -----</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Cartões a Receber (KMNO) — Fim</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesFim">R$ -----</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação (Cartões)</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesDiff">R$ -----</div></div>
+      </div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Capex (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalCapex">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagtos Impostos Atrasados / Refis (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalRefis">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Total Capex + Refis</div><div class="grupo-dfc-card-val" id="resumoCapitalCapexRefisTotal">R$ 0</div></div>
+      </div>
     </div>
 
     <div class="nav-menu-grid">
@@ -2267,7 +2295,7 @@
       <div class="nav-card" onclick="switchView('viewBlocks')">
         <div>
           <div class="nav-card-title">DRE por Bloco</div>
-          <div class="nav-card-desc">Árvore de contas completa por empresa (RT, KMNO, Novah), com ranking de categorias dentro de cada bloco.</div>
+          <div class="nav-card-desc">Árvore de contas completa por empresa (RT, KMNO, Blue Line/Novah), com ranking de categorias dentro de cada bloco.</div>
         </div>
       </div>
 
@@ -2289,6 +2317,13 @@
         <div>
           <div class="nav-card-title">Operacional & Estoque</div>
           <div class="nav-card-desc">Estoque por peça, caixa por peça e Financiamentos & Inadimplência.</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="switchView('viewComercial')">
+        <div>
+          <div class="nav-card-title">Comercial (KMNO)</div>
+          <div class="nav-card-desc">Faturamento, pedidos e ticket médio por vendedor, mix de produtos, clientes ativos/novos/recorrentes e desconto médio.</div>
         </div>
       </div>
 
@@ -2806,6 +2841,72 @@
   </div>
 
 
+  <div id="viewComercial" class="view-container">
+    <div class="btn-back-container">
+      <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+    </div>
+    <div class="section-head">
+      <h2>Comercial (KMNO)</h2>
+      <div class="desc">Indicadores comerciais da KMNO — pedidos, vendedores e produtos. Usa o mesmo período De/Até selecionado no topo da página. Fonte: dash_orders/dash_order_items/dash_products/dash_vendedores (sync manual por enquanto, ver nota no rodapé).</div>
+    </div>
+
+    <div class="grupo-dfc-cards">
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Faturamento (Período)</div><div class="grupo-dfc-card-val" id="comFaturamentoPeriodo">R$ 0</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Crescimento vs. Período Anterior</div><div class="grupo-dfc-card-val" id="comCrescimentoPeriodo">0%</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Crescimento vs. Mesmo Período Ano Anterior</div><div class="grupo-dfc-card-val" id="comCrescimentoAno">0%</div></div>
+    </div>
+    <div class="grupo-dfc-cards">
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pedidos Aprovados (Período)</div><div class="grupo-dfc-card-val" id="comPedidosAprovados">0</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Ticket Médio (Período)</div><div class="grupo-dfc-card-val" id="comTicketMedio">R$ 0</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Desconto Médio Aplicado (%)</div><div class="grupo-dfc-card-val" id="comDescontoMedio">0%</div></div>
+    </div>
+    <div class="grupo-dfc-cards">
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Clientes Ativos (Período)</div><div class="grupo-dfc-card-val" id="comClientesAtivos">0</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Novos Clientes</div><div class="grupo-dfc-card-val" id="comClientesNovos">0</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Clientes Recorrentes</div><div class="grupo-dfc-card-val" id="comClientesRecorrentes">0</div></div>
+    </div>
+    <div class="grupo-dfc-cards">
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Taxa de Recompra (Histórico)</div><div class="grupo-dfc-card-val" id="comTaxaRecompra">0%</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Churn (vs. Período Anterior)</div><div class="grupo-dfc-card-val" id="comChurn">0%</div></div>
+    </div>
+
+    <div class="bloco-card" style="margin-top:18px;">
+      <div class="bloco-head"><div class="bloco-titulo">Faturamento, Pedidos e Desconto por Vendedor (Período)</div></div>
+      <div class="bloco-body">
+        <table class="fin-tbl">
+          <tr><th>Vendedor</th><th class="num">Faturamento</th><th class="num">Pedidos Aprovados</th><th class="num">Ticket Médio</th><th class="num">Desconto Médio</th></tr>
+          <tbody id="comVendedorBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bloco-card" style="margin-top:18px;">
+      <div class="bloco-head"><div class="bloco-titulo">Ticket Médio por Canal (Período)</div></div>
+      <div class="bloco-body">
+        <table class="fin-tbl">
+          <tr><th>Canal (origem do pedido)</th><th class="num">Faturamento</th><th class="num">Pedidos</th><th class="num">Ticket Médio</th></tr>
+          <tbody id="comCanalBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="bloco-card" style="margin-top:18px;">
+      <div class="bloco-head"><div class="bloco-titulo">Mix de Produtos por Família (Período) — Top 10</div></div>
+      <div class="bloco-body">
+        <table class="fin-tbl">
+          <tr><th>Família</th><th class="num">Qtd.</th><th class="num">% Qtd.</th><th class="num">Faturamento</th><th class="num">% Faturamento</th><th class="num">Desconto Médio</th></tr>
+          <tbody id="comMixProdutoBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="chart-card-title" style="margin-top:18px;">Ticket Médio — Evolução Mensal (ano corrente, R$)</div>
+    <div style="position: relative; height: 260px;">
+      <canvas id="chartTicketMedio" role="img" aria-label="Gráfico de linha mostrando a evolução mensal do ticket médio no ano corrente">Evolução mensal do ticket médio.</canvas>
+    </div>
+  </div>
+
+
   <div id="viewSaldoBancos" class="view-container">
     <div class="blocks-inner">
       <div class="btn-back-container">
@@ -2911,6 +3012,12 @@ function switchView(viewId, options = {}) {
   // renderSaldoBancos() mantém o placeholder "R$ -----" que já está no HTML.
   if (viewId === 'viewSaldoBancos') {
     renderSaldoBancos();
+  }
+
+  // Comercial (KMNO): busca dado real (dash_orders/dash_order_items/
+  // dash_products/dash_vendedores) toda vez que a view abre.
+  if (viewId === 'viewComercial') {
+    renderComercial();
   }
 
   // DFC por Bloco: recalcula ao abrir a view (garante dado fresco mesmo
@@ -3174,7 +3281,7 @@ function fmtReqDate(iso) {
   }
 }
 
-const COMPANY_LABELS_REQ = { RT: 'RT · Esportes e Eventos', KMNO: 'KMNO Sports', BLUELINE: 'Novah' };
+const COMPANY_LABELS_REQ = { RT: 'RT · Esportes e Eventos', KMNO: 'KMNO Sports', BLUELINE: 'Blue Line/Novah' };
 
 async function renderRequestsList() {
   const listEl = document.getElementById('requestsList');
@@ -3314,8 +3421,8 @@ const COMPANIES = {
     footerSlug: 'omie-sync-kmno',
   },
   BLUELINE: {
-    label: 'Novah',
-    eyebrow: 'Novah',
+    label: 'Blue Line/Novah',
+    eyebrow: 'Blue Line/Novah',
     footerSlug: 'omie-sync-blueline',
   },
 };
@@ -3360,6 +3467,21 @@ const CATEGORIAS_SEM_CONTA_DRE = new Set([
   'Máquinas e Equipamentos',
 ]);
 
+// Códigos de categoria pro gráfico "Capex e Refis" (card Grupo). Excluídos
+// do DRE (ver CATEGORIAS_SEM_CONTA_DRE acima), então esse gráfico lê
+// movementsCache direto por código, sem passar por isExcludedFromDre.
+// Confirmado com Lucas em 14/07/2026:
+//   - Capex = árvore "Investimento" (2.07), excluindo Comunicação/Consórcio/Manutenção
+//   - Refis = parcelamentos fiscais — código difere por empresa (cada uma tem
+//     seu próprio cadastro de categorias no Omie); Blue Line/Novah não tem
+//     nenhum parcelamento registrado (confirmado, não é dado faltando).
+const CAPEX_CODIGOS = ['2.07.01', '2.07.02', '2.07.03', '2.07.04', '2.07.05', '2.07.99'];
+const REFIS_CODIGOS_POR_EMPRESA = {
+  KMNO: ['2.14.95', '2.14.98', '2.14.99'],
+  RT: ['2.06.06', '2.06.07'],
+  BLUELINE: [],
+};
+
 // ===================================================================
 // Flags reais do Omie (ListarCategorias) para exclusão de relatórios —
 // substituem a dependência exclusiva da lista manual acima.
@@ -3370,6 +3492,25 @@ const CATEGORIAS_SEM_CONTA_DRE = new Set([
 // A lista CATEGORIAS_SEM_CONTA_DRE é mantida como rede de segurança (OR),
 // caso alguma categoria ainda não tenha a flag populada corretamente.
 // ===================================================================
+// Confirmado com Lucas em 14/07/2026: até a separação operacional de
+// RT e KMNO, o ICMS da RT era lançado dentro do Omie da KMNO (categoria
+// 2.06.07). A partir de abril/2026, qualquer lançamento nessa categoria
+// pra KMNO é resíduo/lançamento errado da época em que estavam
+// misturadas — exclui do cálculo (DRE e DFC) a partir dessa data.
+// NOTA: os valores de abr-jun/26 nessa categoria são altos (R$73-82K/mês,
+// crescentes) — Lucas confirmou que mesmo assim é pra excluir.
+const KMNO_ICMS_RESIDUO_CATEGORIA = '2.06.07';
+const KMNO_ICMS_RESIDUO_A_PARTIR_DE = '2026-04-01';
+function isIcmsResiduoKmno(m) {
+  if (!m || m._empresa !== 'KMNO' || m.cod_categoria !== KMNO_ICMS_RESIDUO_CATEGORIA) return false;
+  const data = m.dt_emissao || m.dt_pagamento;
+  if (!data) return false;
+  return !dayjs(data).isBefore(KMNO_ICMS_RESIDUO_A_PARTIR_DE);
+}
+function excluirIcmsResiduoKmno(lista) {
+  return (lista || []).filter(m => !isIcmsResiduoKmno(m));
+}
+
 function isExcludedFromDre(cat, label) {
   if (cat && cat.nao_exibir) return true;
   return CATEGORIAS_SEM_CONTA_DRE.has(label);
@@ -3812,11 +3953,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "MATERIA PRIMA (EVA/FELTRO/PATCH/TAGS)",
+          "nome": "Materia Prima ( EVA/Feltro/Patch/Tags)",
           "natureza": "P"
         },
         {
-          "nome": "MODELAGEM/PLOTAGEM/CAMISETAS",
+          "nome": "Modelagem/Plotagem",
           "natureza": "P"
         },
         {
@@ -3839,9 +3980,8 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "SERVIÇOS NOVAH",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Industrialização Blue Line",
+          "natureza": "P"
         },
         {
           "nome": "Serviços (Outras facções)",
@@ -3874,11 +4014,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Emasa (Agua e esgoto)",
+          "nome": "Emasa - Água e Esgoto",
           "natureza": "P"
         },
         {
-          "nome": "Celesc (Energia Eletrica)",
+          "nome": "Celesc - Energia Elétrica",
           "natureza": "P"
         },
         {
@@ -3902,11 +4042,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Manutenção do Imovel",
+          "nome": "Manutenção do Imóvel",
           "natureza": "P"
         },
         {
-          "nome": "Manutenção Móveis",
+          "nome": "Móveis",
           "natureza": "P"
         },
         {
@@ -3926,7 +4066,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Uber / Combustivel / Aluguel Carro",
+          "nome": "Uber/Combustível/Aluguel Carro",
           "natureza": "P"
         },
         {
@@ -3934,11 +4074,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Equipamentos de Informatica",
+          "nome": "Equipamentos de Informática",
           "natureza": "P"
         },
         {
-          "nome": "Manutenção de Informatica",
+          "nome": "Manutenção de Informática",
           "natureza": "P"
         },
         {
@@ -4022,11 +4162,10 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "Bruno",
-          "natureza": "P",
-          "naoConfirmado": true
+          "natureza": "P"
         },
         {
-          "nome": "Exame Adm e Demissional",
+          "nome": "Exame Admissional e Demissional",
           "natureza": "P"
         },
         {
@@ -4054,11 +4193,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "GPS Sobre Férias",
+          "nome": "INSS Sobre Férias",
           "natureza": "P"
         },
         {
-          "nome": "13 Salario",
+          "nome": "13º Salário",
           "natureza": "P"
         },
         {
@@ -4097,11 +4236,7 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "Ricardo",
-          "natureza": "P"
-        },
-        {
-          "nome": "Timeless",
+          "nome": "Pró-Labore sócio",
           "natureza": "P"
         }
       ]
@@ -4116,7 +4251,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Edição de Videos/Fotos",
+          "nome": "Edição de Vídeos/Fotos",
           "natureza": "P"
         },
         {
@@ -4124,7 +4259,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Google E-mail WorkBussines",
+          "nome": "Google E-mail",
           "natureza": "P"
         },
         {
@@ -4136,7 +4271,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Registro BR GoDaddy",
+          "nome": "Registro BR",
           "natureza": "P"
         },
         {
@@ -4144,7 +4279,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Comissão Representantes/Franquias",
+          "nome": "Comissão Representante/Franquias",
           "natureza": "P"
         },
         {
@@ -4152,9 +4287,8 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Consultoria",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Consultoria Comercial",
+          "natureza": "P"
         },
         {
           "nome": "Software Ecommerce",
@@ -4177,7 +4311,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Despesas de Viagens",
+          "nome": "Despesas de Viagens/Eventos",
           "natureza": "P"
         }
       ]
@@ -4203,31 +4337,11 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "Patricia",
+          "nome": "PJ Comercial",
           "natureza": "P"
         },
         {
-          "nome": "Gabriel",
-          "natureza": "P"
-        },
-        {
-          "nome": "Leticia",
-          "natureza": "P"
-        },
-        {
-          "nome": "Claúdio",
-          "natureza": "P"
-        },
-        {
-          "nome": "Yasmin",
-          "natureza": "P"
-        },
-        {
-          "nome": "CLT",
-          "natureza": "P"
-        },
-        {
-          "nome": "Auxiliar de Vendas",
+          "nome": "Salário CLT Comercial",
           "natureza": "P"
         }
       ]
@@ -4238,11 +4352,11 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "(-)Aluguel Maquinas de Cartões",
+          "nome": "(-) Aluguel Máquinas de Cartões",
           "natureza": "P"
         },
         {
-          "nome": "(-)Taxas Maquina cartão",
+          "nome": "(-) Taxas Máquina Cartão",
           "natureza": "P"
         },
         {
@@ -4258,7 +4372,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "(-)Tarifa Boletos",
+          "nome": "(-) Tarifas de Boletos",
           "natureza": "P"
         },
         {
@@ -4270,7 +4384,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "(-) Juros de Antecipações Cartões",
+          "nome": "(-) Juros Antecipação cartões",
           "natureza": "P"
         },
         {
@@ -4282,7 +4396,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "(-) Emprestimos para Terceiros",
+          "nome": "(-) Empréstimos para Terceiros",
           "natureza": "P"
         },
         {
@@ -4294,7 +4408,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "R"
         },
         {
-          "nome": "(+)Descontos Recebidos/Devoluções Recebidas",
+          "nome": "(+) Descontos Recebidos",
           "natureza": "R"
         }
       ]
@@ -4305,17 +4419,12 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "(-) Compra Maquinas e Equipamentos",
+          "nome": "(-) Máquinas e Equipamentos",
           "natureza": "P"
         },
         {
-          "nome": "(-) Reforma Patrimonio",
+          "nome": "(-) Reforma Patrimônio",
           "natureza": "P"
-        },
-        {
-          "nome": "(-) Reforma Patrimonio GALPÃO",
-          "natureza": "P",
-          "naoConfirmado": true
         },
         {
           "nome": "Maquina de Bordado",
@@ -4333,17 +4442,16 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "R",
       "itens": [
         {
-          "nome": "(+) Emprestimos de Terceiros",
+          "nome": "(+) Recebimento Empréstimos de Terceiros",
           "natureza": "R"
         },
         {
-          "nome": "(+) Emprestimos de Bancos",
+          "nome": "(+) Recebimento Empréstimos Bancários",
           "natureza": "R"
         },
         {
-          "nome": "(+) Recebimento Emprestimo para Novah",
-          "natureza": "R",
-          "naoConfirmado": true
+          "nome": "(+) Recebimento Empréstimos de Terceiros",
+          "natureza": "R"
         }
       ]
     },
@@ -4353,11 +4461,11 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "(-) Pagto Emprestimos de Terceiros",
+          "nome": "(-) Pagto Empréstimos de Terceiros",
           "natureza": "P"
         },
         {
-          "nome": "(-) Pagto Emprestimos de Bancos",
+          "nome": "(-) Pagto Empréstimos Bancários",
           "natureza": "P"
         },
         {
@@ -4369,9 +4477,8 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "(-) Emprestimos para Novah",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "(-) Empréstimos para Terceiros",
+          "natureza": "P"
         },
         {
           "nome": "Despesas Nova Trento",
@@ -4396,11 +4503,11 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "REFIS (INSS - STC)",
+          "nome": "INSS - STC",
           "natureza": "P"
         },
         {
-          "nome": "REFIS (SIMPLES)/ICMS",
+          "nome": "REFIS (SIMPLES)/ICMS (Parcelas)",
           "natureza": "P"
         },
         {
@@ -4459,7 +4566,7 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "Simples Nacional",
+          "nome": "Simples Nacional (DAS)",
           "natureza": "P"
         }
       ]
@@ -4525,12 +4632,12 @@ const DRE_ARVORE_BLOCOS = {
           "naoConfirmado": true
         },
         {
-          "nome": "Assiduidade",
+          "nome": "Assiduidade Acabamento",
           "natureza": "P",
           "naoConfirmado": true
         },
         {
-          "nome": "Premio Produtividade",
+          "nome": "Produtividade CLT Acabamento",
           "natureza": "P",
           "naoConfirmado": true
         }
@@ -4609,11 +4716,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Assiduidade",
+          "nome": "Assiduidade Costura",
           "natureza": "P"
         },
         {
-          "nome": "Premio Produtividade",
+          "nome": "Produtividade CLT Costura",
           "natureza": "P"
         }
       ]
@@ -4640,11 +4747,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Assiduidade",
+          "nome": "Assiduidade Bordado",
           "natureza": "P"
         },
         {
-          "nome": "Premio Produtividade",
+          "nome": "Produtividade CLT Bordado",
           "natureza": "P"
         }
       ]
@@ -4671,11 +4778,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Assiduidade",
+          "nome": "Assiduidade Sublimação",
           "natureza": "P"
         },
         {
-          "nome": "Premio Produtividade",
+          "nome": "Produtividade CLT Sublimação",
           "natureza": "P"
         }
       ]
@@ -4725,7 +4832,7 @@ const DRE_ARVORE_BLOCOS = {
           "naoConfirmado": true
         },
         {
-          "nome": "GPS sobre Férias",
+          "nome": "GPS Sobre Férias",
           "natureza": "P"
         },
         {
@@ -4926,19 +5033,19 @@ const DRE_ARVORE_BLOCOS = {
           "naoConfirmado": true
         },
         {
-          "nome": "Horas Extras",
+          "nome": "Horas Extras Adm",
           "natureza": "P"
         },
         {
-          "nome": "FGTS",
+          "nome": "FGTS Adm",
           "natureza": "P"
         },
         {
-          "nome": "GPS (INSS)",
+          "nome": "GPS (INSS) Adm",
           "natureza": "P"
         },
         {
-          "nome": "Férias",
+          "nome": "Férias Adm",
           "natureza": "P"
         },
         {
@@ -4950,11 +5057,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "GPS sobre Férias",
+          "nome": "GPS Sobre Férias Adm",
           "natureza": "P"
         },
         {
-          "nome": "13 salário",
+          "nome": "13º Salario Adm",
           "natureza": "P"
         },
         {
@@ -4970,15 +5077,15 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "FGTS Sobre Aviso Prévio",
+          "nome": "FGTS Sobre Aviso",
           "natureza": "P"
         },
         {
-          "nome": "GPS Sobre Aviso Prévio",
+          "nome": "GPS Sobre Aviso",
           "natureza": "P"
         },
         {
-          "nome": "Multa FGTS",
+          "nome": "Multa FGTS Adm",
           "natureza": "P"
         },
         {
@@ -5154,14 +5261,12 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "Tecido 1",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Tecido Sarja",
+          "natureza": "P"
         },
         {
-          "nome": "Tecido 2",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Tecido Trançado",
+          "natureza": "P"
         },
         {
           "nome": "Carpet",
@@ -5169,9 +5274,8 @@ const DRE_ARVORE_BLOCOS = {
           "naoConfirmado": true
         },
         {
-          "nome": "Mão de Obra Costura",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Mão de Obra - Facções",
+          "natureza": "P"
         }
       ]
     },
@@ -5181,19 +5285,16 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "FGTS Sobre Aviso Prévio",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "FGTS",
+          "natureza": "P"
         },
         {
-          "nome": "GPS Sobre Aviso Prévio",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "INSS",
+          "natureza": "P"
         },
         {
-          "nome": "Multa FGTS",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "Multas",
+          "natureza": "P"
         }
       ]
     },
@@ -5254,24 +5355,16 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "(-)Manutenção de Contas Bancárias",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "(-) Manuntenção de Contas",
+          "natureza": "P"
         },
         {
-          "nome": "(-)Tarifas de TED/DOC",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "(-) Tarifas Bancárias",
+          "natureza": "P"
         },
         {
-          "nome": "(-)Tarifa de Boletos",
-          "natureza": "P",
-          "naoConfirmado": true
-        },
-        {
-          "nome": "(-) Juros Emprestimos",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "(-) Juros sobre Empréstimos",
+          "natureza": "P"
         },
         {
           "nome": "(-) Outras despesas financeiras",
@@ -5283,9 +5376,8 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "(+)Juros Recebidos",
+          "nome": "Juros Recebidos Investimentos",
           "natureza": "R",
-          "naoConfirmado": true
         },
         {
           "nome": "(+)Descontos Recebidos",
@@ -5315,24 +5407,8 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "REFIS 1",
-          "natureza": "P",
-          "naoConfirmado": true
-        },
-        {
-          "nome": "REFIS 2",
-          "natureza": "P",
-          "naoConfirmado": true
-        },
-        {
-          "nome": "REFIS 3",
-          "natureza": "P",
-          "naoConfirmado": true
-        },
-        {
-          "nome": "REFIS 4",
-          "natureza": "P",
-          "naoConfirmado": true
+          "nome": "REFIS (Parcelas)",
+          "natureza": "P"
         }
       ]
     }
@@ -5368,7 +5444,7 @@ const DRE_ORCADO_ESTATICO = {
         "TINTAS E OUTROS (RASH)": 0.0,
         "TECIDO RIPSTOP": 0.0,
         "MATERIA PRIMA (EVA/FELTRO/PATCH/TAGS)": 0.0,
-        "MODELAGEM/PLOTAGEM/CAMISETAS": 0.0,
+        "Modelagem/Plotagem": 0.0,
         "ETIQUETAS": 0.0,
         "FRETE COMPRA MATERIAIS": 0.0,
         "EMBALAGEM DE PRODUTOS": 108000.0
@@ -5382,7 +5458,7 @@ const DRE_ORCADO_ESTATICO = {
         "TINTAS E OUTROS (RASH)": 0.0,
         "TECIDO RIPSTOP": 0.0,
         "MATERIA PRIMA (EVA/FELTRO/PATCH/TAGS)": 0.0,
-        "MODELAGEM/PLOTAGEM/CAMISETAS": 0.0,
+        "Modelagem/Plotagem": 0.0,
         "ETIQUETAS": 0.0,
         "FRETE COMPRA MATERIAIS": 0.0,
         "EMBALAGEM DE PRODUTOS": 270000.0
@@ -5647,13 +5723,13 @@ const DRE_ORCADO_ESTATICO = {
     "investimentos": {
       "jan": {
         "(-) Compra Maquinas e Equipamentos": 0.0,
-        "(-) Reforma Patrimonio": 2666.0,
+        "(-) Reforma Patrimônio": 2666.0,
         "Maquina de Bordado": 2000.0,
         "(+) Venda Maquinas e Equipamentos": 0.0
       },
       "fev": {
         "(-) Compra Maquinas e Equipamentos": 15000.0,
-        "(-) Reforma Patrimonio": 2044.0,
+        "(-) Reforma Patrimônio": 2044.0,
         "Maquina de Bordado": 2000.0,
         "(+) Venda Maquinas e Equipamentos": 0.0
       }
@@ -5693,13 +5769,13 @@ const DRE_ORCADO_ESTATICO = {
     "outras_saidas": {
       "jan": {
         "REFIS (INSS - STC)": 1847.06,
-        "REFIS (SIMPLES)/ICMS": 7034.51,
+        "REFIS (SIMPLES)/ICMS (Parcelas)": 7034.51,
         "SIMPLES RT": 10000.0,
         "STANCE": 0.0
       },
       "fev": {
         "REFIS (INSS - STC)": 1847.06,
-        "REFIS (SIMPLES)/ICMS": 7034.51,
+        "REFIS (SIMPLES)/ICMS (Parcelas)": 7034.51,
         "SIMPLES RT": 10000.0,
         "STANCE": 0.0
       }
@@ -6697,6 +6773,39 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
     if (!v) return;
     totalPorLabel[label] = (totalPorLabel[label] || 0) + v;
   });
+  // Item sintético "REFIS (Parcelas)" da RT: confirmado com Lucas em
+  // 15/07/2026 que "REFIS 1/2/3/4" na árvore representavam as 4 parcelas
+  // de um parcelamento — não 4 categorias diferentes (o Omie não separa
+  // por número de parcela, só por categoria). Decisão: 1 item só, somando
+  // as 2 categorias reais de parcelamento fiscal da RT (perde a
+  // granularidade "parcela 1 vs parcela 2", que o Omie não expõe por
+  // categoria de qualquer forma).
+  if (empresa === 'RT') {
+    let refisTotal = 0;
+    (movements || []).forEach(m => {
+      if (m._empresa !== 'RT') return;
+      if (!m.dt_emissao || !['2.06.06', '2.06.07'].includes(m.cod_categoria)) return;
+      const d = dayjs(m.dt_emissao);
+      if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
+      refisTotal += Number(m.val_pago || m.val_liquido || 0);
+    });
+    totalPorLabel[normalizarLabelCategoria('REFIS (Parcelas)')] = refisTotal;
+  }
+  // KMNO: mesmo padrão — "REFIS (SIMPLES)/ICMS" na árvore combinava 2
+  // categorias reais que o Omie separa (Simples Nacional Parcelado +
+  // Parcelamento ICMS). Confirmado em 15/07/2026 (mesma lógica do RT).
+  if (empresa === 'KMNO') {
+    let refisKmnoTotal = 0;
+    (movements || []).forEach(m => {
+      if (m._empresa !== 'KMNO') return;
+      if (!m.dt_emissao || !['2.14.95', '2.14.98'].includes(m.cod_categoria)) return;
+      const d = dayjs(m.dt_emissao);
+      if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
+      refisKmnoTotal += Number(m.val_pago || m.val_liquido || 0);
+    });
+    totalPorLabel[normalizarLabelCategoria('REFIS (SIMPLES)/ICMS (Parcelas)')] = refisKmnoTotal;
+  }
+
   return totalPorLabel;
 }
 
@@ -7671,34 +7780,61 @@ function calcularVendasFaturamentoEmpresa(empresa, categories, movements, monthS
 // rodou), a função não faz nada e o placeholder estático "R$ -----"
 // que já está no HTML continua visível — degrada de forma segura.
 // ===================================================================
+// Confirmado com Lucas em 15/07/2026: o card deve mostrar o saldo
+// CONGELADO no fechamento do dia anterior (não o saldo "ao vivo" de
+// agora) — como depois das 18h nada mais sai/entra na conta naquele
+// dia, isso equivale a pegar o saldo_atual e desfazer só os lançamentos
+// com dt_lanc = hoje. A tabela de lançamentos não tem granularidade de
+// hora (só data), então "fechamento do dia anterior" = saldo_atual menos
+// tudo que foi lançado hoje.
 async function renderSaldoBancos() {
   const wrapEl = document.getElementById('saldoBancosTableWrap');
   const descEl = document.getElementById('saldoBancosDesc');
   if (!wrapEl) return;
 
   try {
-    const { data, error } = await supabaseClient
-      .from('dash_contas_correntes')
-      .select('empresa_id,descricao,saldo_atual,saldo_atualizado_em,fluxo_caixa')
-      .eq('fluxo_caixa', true)
-      .order('empresa_id', { ascending: true })
-      .order('saldo_atual', { ascending: false });
+    const hoje = dayjs().format('YYYY-MM-DD');
+
+    const [{ data, error }, { data: lancHoje, error: errLanc }] = await Promise.all([
+      supabaseClient
+        .from('dash_contas_correntes')
+        .select('empresa_id,n_cod_cc,descricao,saldo_atual,saldo_atualizado_em,fluxo_caixa')
+        .eq('fluxo_caixa', true)
+        .order('empresa_id', { ascending: true })
+        .order('saldo_atual', { ascending: false }),
+      supabaseClient
+        .from('dash_current_account_transactions')
+        .select('empresa_id,cod_cc,valor_lanc,natureza')
+        .eq('dt_lanc', hoje),
+    ]);
 
     if (error) throw error;
+    if (errLanc) throw errLanc;
     if (!data || data.length === 0) return; // tabela existe mas ainda sem dado — mantém placeholder
+
+    // Soma dos lançamentos de hoje por conta (chave empresa|cod_cc), pra
+    // desfazer do saldo_atual e chegar no fechamento de ontem.
+    const lancPorConta = {};
+    (lancHoje || []).forEach(l => {
+      const key = `${l.empresa_id}|${l.cod_cc}`;
+      const sinal = l.natureza === 'P' ? -1 : 1;
+      lancPorConta[key] = (lancPorConta[key] || 0) + sinal * Number(l.valor_lanc || 0);
+    });
 
     const porEmpresa = {};
     data.forEach(r => {
       const key = r.empresa_id || '—';
+      const chaveLanc = `${r.empresa_id}|${r.n_cod_cc}`;
+      const saldoFechamentoOntem = Number(r.saldo_atual || 0) - (lancPorConta[chaveLanc] || 0);
       if (!porEmpresa[key]) porEmpresa[key] = [];
-      porEmpresa[key].push(r);
+      porEmpresa[key].push({ ...r, saldo_fechamento_ontem: saldoFechamentoOntem });
     });
 
     let saldoGeral = 0;
     let atualizadoMaisRecente = null;
     const linhasHtml = Object.keys(porEmpresa).map(empresaKey => {
       const contas = porEmpresa[empresaKey];
-      const totalEmpresa = contas.reduce((acc, c) => acc + Number(c.saldo_atual || 0), 0);
+      const totalEmpresa = contas.reduce((acc, c) => acc + c.saldo_fechamento_ontem, 0);
       saldoGeral += totalEmpresa;
       contas.forEach(c => {
         if (c.saldo_atualizado_em && (!atualizadoMaisRecente || c.saldo_atualizado_em > atualizadoMaisRecente)) {
@@ -7707,7 +7843,7 @@ async function renderSaldoBancos() {
       });
       const nomeEmpresa = (COMPANIES[empresaKey] && COMPANIES[empresaKey].label) || empresaKey;
       const filhos = contas.map(c => `
-        <tr class="dfc-linha-filho"><td></td><td>${c.descricao}</td><td class="num">${fmtBRL(Number(c.saldo_atual || 0))}</td></tr>
+        <tr class="dfc-linha-filho"><td></td><td>${c.descricao}</td><td class="num">${fmtBRL(c.saldo_fechamento_ontem)}</td></tr>
       `).join('');
       return `
         <tr class="dfc-linha-pai"><td colspan="2" style="font-weight:700;">${nomeEmpresa}</td><td class="num" style="font-weight:700;">${fmtBRL(totalEmpresa)}</td></tr>
@@ -7716,7 +7852,7 @@ async function renderSaldoBancos() {
 
     wrapEl.innerHTML = `
       <table class="fin-tbl">
-        <tr><th colspan="2">Saldo dos Bancos</th><th class="num">SALDO ATUAL</th></tr>
+        <tr><th colspan="2">Saldo dos Bancos</th><th class="num">FECHAMENTO ONTEM</th></tr>
         ${linhasHtml}
         <tr style="font-weight:600;border-top:2px solid var(--line);">
           <td colspan="2">Saldo Total</td><td class="num">${fmtBRL(saldoGeral)}</td>
@@ -7725,8 +7861,8 @@ async function renderSaldoBancos() {
 
     if (descEl) {
       descEl.textContent = atualizadoMaisRecente
-        ? `Saldo real, por empresa e conta (só contas marcadas como caixa no Omie). Atualizado em ${dayjs(atualizadoMaisRecente).format('DD/MM/YYYY HH:mm')}.`
-        : 'Saldo real, por empresa e conta (só contas marcadas como caixa no Omie).';
+        ? `Saldo no fechamento do dia anterior (${dayjs().subtract(1, 'day').format('DD/MM/YYYY')}), por empresa e conta (só contas marcadas como caixa no Omie). Última sincronização: ${dayjs(atualizadoMaisRecente).format('DD/MM/YYYY HH:mm')}.`
+        : 'Saldo no fechamento do dia anterior, por empresa e conta (só contas marcadas como caixa no Omie).';
     }
   } catch (err) {
     // Tabela ainda não existe (sync não rodou) ou outro erro de acesso —
@@ -7734,6 +7870,248 @@ async function renderSaldoBancos() {
     console.error('Saldo dos Bancos: não foi possível carregar dado real, mantendo placeholder.', err);
   }
 }
+
+// ===================================================================
+// COMERCIAL (KMNO) — indicadores de pedidos/vendedores/produtos.
+// Fonte: dash_orders, dash_order_items, dash_products, dash_vendedores
+// (só KMNO por enquanto — sync criado em 14/07/2026). Usa o período
+// De/Até selecionado no topo da página.
+//
+// Definição adotada (assumida, sem confirmação explícita da Lucas —
+// revisar se etapa não corresponder à realidade):
+//   etapa '00'/'10' = cotação/orçamento (NÃO conta como aprovado)
+//   etapa '20'/'50'/'60' = aprovado/faturado (conta como aprovado)
+//   etapa '70' = cancelado, '80' = devolvido (NÃO conta)
+// ===================================================================
+const COM_ETAPAS_APROVADO = ['20', '50', '60'];
+
+async function renderComercial() {
+  const root = document.getElementById('viewComercial');
+  if (!root) return;
+
+  try {
+    const [orders, items, products, vendedores] = await Promise.all([
+      sbPaged('dash_orders?select=codigo_pedido,codigo_cliente,codigo_vendedor,etapa,origem_pedido,valor_total_pedido,valor_descontos,valor_mercadorias,data_pedido', 'KMNO'),
+      sbPaged('dash_order_items?select=codigo_pedido,codigo_produto,quantidade,valor_unitario,valor_desconto,valor_total', 'KMNO'),
+      sbPaged('dash_products?select=codigo_produto,descricao,codigo_familia,descricao_familia', 'KMNO'),
+      sbPaged('dash_vendedores?select=codigo,nome', 'KMNO'),
+    ]);
+
+    const { de, ate } = getSelectedPeriodRange();
+    const monthEnd = ate.add(1, 'month');
+    const duracaoDias = monthEnd.diff(de, 'day');
+    const periodoAnteriorInicio = de.subtract(duracaoDias, 'day');
+    const periodoAnoAnteriorInicio = de.subtract(1, 'year');
+    const periodoAnoAnteriorFim = monthEnd.subtract(1, 'year');
+
+    const vendedorNome = {};
+    (vendedores || []).forEach(v => { vendedorNome[v.codigo] = v.nome; });
+
+    const isAprovado = o => COM_ETAPAS_APROVADO.includes(o.etapa);
+    const inPeriodo = (o, ini, fim) => {
+      if (!o.data_pedido) return false;
+      const d = dayjs(o.data_pedido);
+      return !d.isBefore(ini) && d.isBefore(fim);
+    };
+
+    const ordersAprovados = (orders || []).filter(isAprovado);
+    const ordersPeriodo = ordersAprovados.filter(o => inPeriodo(o, de, monthEnd));
+    const ordersPeriodoAnterior = ordersAprovados.filter(o => inPeriodo(o, periodoAnteriorInicio, de));
+    const ordersAnoAnterior = ordersAprovados.filter(o => inPeriodo(o, periodoAnoAnteriorInicio, periodoAnoAnteriorFim));
+
+    const soma = (lista, campo) => lista.reduce((s, o) => s + Number(o[campo] || 0), 0);
+
+    const faturamentoPeriodo = soma(ordersPeriodo, 'valor_total_pedido');
+    const faturamentoAnterior = soma(ordersPeriodoAnterior, 'valor_total_pedido');
+    const faturamentoAnoAnterior = soma(ordersAnoAnterior, 'valor_total_pedido');
+    const descontoPeriodo = soma(ordersPeriodo, 'valor_descontos');
+
+    const crescimentoPeriodo = faturamentoAnterior ? ((faturamentoPeriodo - faturamentoAnterior) / faturamentoAnterior) * 100 : null;
+    const crescimentoAno = faturamentoAnoAnterior ? ((faturamentoPeriodo - faturamentoAnoAnterior) / faturamentoAnoAnterior) * 100 : null;
+
+    const ticketMedio = ordersPeriodo.length ? faturamentoPeriodo / ordersPeriodo.length : 0;
+    const descontoMedioPct = (faturamentoPeriodo + descontoPeriodo) ? (descontoPeriodo / (faturamentoPeriodo + descontoPeriodo)) * 100 : 0;
+
+    document.getElementById('comFaturamentoPeriodo').textContent = fmtBRL(faturamentoPeriodo);
+    document.getElementById('comCrescimentoPeriodo').textContent = crescimentoPeriodo === null ? '—' : (crescimentoPeriodo >= 0 ? '+' : '') + crescimentoPeriodo.toFixed(1).replace('.', ',') + '%';
+    document.getElementById('comCrescimentoAno').textContent = crescimentoAno === null ? '—' : (crescimentoAno >= 0 ? '+' : '') + crescimentoAno.toFixed(1).replace('.', ',') + '%';
+    document.getElementById('comPedidosAprovados').textContent = ordersPeriodo.length.toLocaleString('pt-BR');
+    document.getElementById('comTicketMedio').textContent = fmtBRL(ticketMedio);
+    document.getElementById('comDescontoMedio').textContent = descontoMedioPct.toFixed(1).replace('.', ',') + '%';
+
+    // ---- Clientes ativos / novos / recorrentes / recompra / churn ----
+    const clientesPeriodo = new Set(ordersPeriodo.map(o => o.codigo_cliente));
+    const primeiraCompraPorCliente = {};
+    ordersAprovados.forEach(o => {
+      if (!o.data_pedido || !o.codigo_cliente) return;
+      const d = o.data_pedido;
+      if (!primeiraCompraPorCliente[o.codigo_cliente] || d < primeiraCompraPorCliente[o.codigo_cliente]) {
+        primeiraCompraPorCliente[o.codigo_cliente] = d;
+      }
+    });
+    let novos = 0, recorrentes = 0;
+    clientesPeriodo.forEach(cli => {
+      const primeira = primeiraCompraPorCliente[cli];
+      if (primeira && dayjs(primeira).isBefore(de)) recorrentes++; else novos++;
+    });
+
+    const pedidosPorCliente = {};
+    ordersAprovados.forEach(o => {
+      if (!o.codigo_cliente) return;
+      pedidosPorCliente[o.codigo_cliente] = (pedidosPorCliente[o.codigo_cliente] || 0) + 1;
+    });
+    const totalClientesHistorico = Object.keys(pedidosPorCliente).length;
+    const clientesComRecompra = Object.values(pedidosPorCliente).filter(n => n > 1).length;
+    const taxaRecompra = totalClientesHistorico ? (clientesComRecompra / totalClientesHistorico) * 100 : 0;
+
+    const clientesPeriodoAnterior = new Set(ordersPeriodoAnterior.map(o => o.codigo_cliente));
+    let churnCount = 0;
+    clientesPeriodoAnterior.forEach(cli => { if (!clientesPeriodo.has(cli)) churnCount++; });
+    const churnPct = clientesPeriodoAnterior.size ? (churnCount / clientesPeriodoAnterior.size) * 100 : 0;
+
+    document.getElementById('comClientesAtivos').textContent = clientesPeriodo.size.toLocaleString('pt-BR');
+    document.getElementById('comClientesNovos').textContent = novos.toLocaleString('pt-BR');
+    document.getElementById('comClientesRecorrentes').textContent = recorrentes.toLocaleString('pt-BR');
+    document.getElementById('comTaxaRecompra').textContent = taxaRecompra.toFixed(1).replace('.', ',') + '%';
+    document.getElementById('comChurn').textContent = churnPct.toFixed(1).replace('.', ',') + '%';
+
+    // ---- Por vendedor ----
+    // Confirmado com Lucas em 15/07/2026: dentro de "sem vendedor",
+    // MRC (Mercado Livre) é esperado (pedido automático de marketplace,
+    // não tem vendedor humano de verdade) — ERP sem vendedor é lançamento
+    // manual que ficou sem preencher o campo, vale revisar. Por isso
+    // "sem vendedor" é quebrado em duas linhas por canal, em vez de uma
+    // linha só genérica.
+    const porVendedor = {};
+    ordersPeriodo.forEach(o => {
+      let key = o.codigo_vendedor || 0;
+      if (!o.codigo_vendedor) key = `SEM_VENDEDOR_${o.origem_pedido || 'DESCONHECIDO'}`;
+      if (!porVendedor[key]) porVendedor[key] = { faturamento: 0, pedidos: 0, desconto: 0 };
+      porVendedor[key].faturamento += Number(o.valor_total_pedido || 0);
+      porVendedor[key].desconto += Number(o.valor_descontos || 0);
+      porVendedor[key].pedidos += 1;
+    });
+    const NOME_SEM_VENDEDOR = {
+      SEM_VENDEDOR_MRC: 'Sem vendedor (Mercado Livre — esperado)',
+      SEM_VENDEDOR_ERP: 'Sem vendedor (ERP — revisar preenchimento)',
+      SEM_VENDEDOR_API: 'Sem vendedor (API)',
+    };
+    const vendedorRows = Object.entries(porVendedor)
+      .sort((a, b) => b[1].faturamento - a[1].faturamento)
+      .map(([cod, v]) => {
+        const nome = NOME_SEM_VENDEDOR[cod] || vendedorNome[cod] || `Cód. ${cod}`;
+        const ticket = v.pedidos ? v.faturamento / v.pedidos : 0;
+        const descPct = (v.faturamento + v.desconto) ? (v.desconto / (v.faturamento + v.desconto)) * 100 : 0;
+        return `<tr><td>${nome}</td><td class="num">${fmtBRL(v.faturamento)}</td><td class="num">${v.pedidos}</td><td class="num">${fmtBRL(ticket)}</td><td class="num">${descPct.toFixed(1).replace('.', ',')}%</td></tr>`;
+      }).join('');
+    document.getElementById('comVendedorBody').innerHTML = vendedorRows || '<tr><td colspan="5" style="text-align:center;color:var(--bone-dim);">Sem pedidos aprovados no período.</td></tr>';
+
+    // ---- Por canal (origem_pedido) ----
+    const porCanal = {};
+    ordersPeriodo.forEach(o => {
+      const key = o.origem_pedido || '—';
+      if (!porCanal[key]) porCanal[key] = { faturamento: 0, pedidos: 0 };
+      porCanal[key].faturamento += Number(o.valor_total_pedido || 0);
+      porCanal[key].pedidos += 1;
+    });
+    const canalRows = Object.entries(porCanal)
+      .sort((a, b) => b[1].faturamento - a[1].faturamento)
+      .map(([canal, v]) => {
+        const ticket = v.pedidos ? v.faturamento / v.pedidos : 0;
+        return `<tr><td>${canal}</td><td class="num">${fmtBRL(v.faturamento)}</td><td class="num">${v.pedidos}</td><td class="num">${fmtBRL(ticket)}</td></tr>`;
+      }).join('');
+    document.getElementById('comCanalBody').innerHTML = canalRows || '<tr><td colspan="4" style="text-align:center;color:var(--bone-dim);">Sem pedidos aprovados no período.</td></tr>';
+
+    // ---- Mix de produtos por família ----
+    const produtoInfo = {};
+    (products || []).forEach(p => { produtoInfo[p.codigo_produto] = p; });
+    const pedidosAprovadosSet = new Set(ordersPeriodo.map(o => o.codigo_pedido));
+    const porFamilia = {};
+    let totalQtd = 0, totalValor = 0;
+    (items || []).forEach(it => {
+      if (!pedidosAprovadosSet.has(it.codigo_pedido)) return;
+      const prod = produtoInfo[it.codigo_produto];
+      const familia = (prod && prod.descricao_familia) ? prod.descricao_familia : 'Sem família cadastrada';
+      if (!porFamilia[familia]) porFamilia[familia] = { qtd: 0, valor: 0, desconto: 0 };
+      const qtd = Number(it.quantidade || 0);
+      const valor = Number(it.valor_total || 0);
+      const desconto = Number(it.valor_desconto || 0);
+      porFamilia[familia].qtd += qtd;
+      porFamilia[familia].valor += valor;
+      porFamilia[familia].desconto += desconto;
+      totalQtd += qtd;
+      totalValor += valor;
+    });
+    const mixRows = Object.entries(porFamilia)
+      .sort((a, b) => b[1].valor - a[1].valor)
+      .slice(0, 10)
+      .map(([familia, v]) => {
+        const pctQtd = totalQtd ? (v.qtd / totalQtd) * 100 : 0;
+        const pctValor = totalValor ? (v.valor / totalValor) * 100 : 0;
+        const descPct = (v.valor + v.desconto) ? (v.desconto / (v.valor + v.desconto)) * 100 : 0;
+        return `<tr><td>${familia}</td><td class="num">${fmtUnid(v.qtd)}</td><td class="num">${pctQtd.toFixed(1).replace('.', ',')}%</td><td class="num">${fmtBRL(v.valor)}</td><td class="num">${pctValor.toFixed(1).replace('.', ',')}%</td><td class="num">${descPct.toFixed(1).replace('.', ',')}%</td></tr>`;
+      }).join('');
+    document.getElementById('comMixProdutoBody').innerHTML = mixRows || '<tr><td colspan="6" style="text-align:center;color:var(--bone-dim);">Sem itens no período.</td></tr>';
+
+    // ---- Gráfico: Ticket Médio — evolução mensal (ano corrente) ----
+    const inicioAno = monthEnd.startOf('year');
+    const mesesAno = [];
+    let cursorMes = inicioAno;
+    let guardMeses = 0;
+    while ((cursorMes.isBefore(monthEnd) || cursorMes.isSame(monthEnd, 'month')) && guardMeses < 12) {
+      mesesAno.push(cursorMes);
+      cursorMes = cursorMes.add(1, 'month');
+      guardMeses++;
+    }
+    const ticketPorMes = mesesAno.map(m => {
+      const fimMes = m.add(1, 'month');
+      const doMes = ordersAprovados.filter(o => inPeriodo(o, m, fimMes));
+      const fat = soma(doMes, 'valor_total_pedido');
+      return doMes.length ? fat / doMes.length : 0;
+    });
+
+    if (chartTicketMedioInstance) chartTicketMedioInstance.destroy();
+    const canvasTM = document.getElementById('chartTicketMedio');
+    if (canvasTM) {
+      chartTicketMedioInstance = new Chart(canvasTM.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: mesesAno.map(m => DRE_ARVORE_NOMES_MES[m.month()]),
+          datasets: [{
+            label: 'Ticket Médio',
+            data: ticketPorMes.map(v => Math.round(v)),
+            borderColor: CHART_COLORS.blue,
+            backgroundColor: 'rgba(62,137,188,0.15)',
+            fill: true,
+            tension: 0.3,
+            pointRadius: 3,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `Ticket Médio: ${fmtBRL(ctx.parsed.y)}` } },
+          },
+          scales: {
+            x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { display: false } },
+            y: {
+              ticks: {
+                color: 'rgba(243,239,230,0.55)',
+                callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
+              },
+              grid: { color: 'rgba(243,239,230,0.06)' },
+            },
+          },
+        },
+      });
+    }
+  } catch (err) {
+    console.error('Comercial (KMNO): não foi possível carregar dado real.', err);
+  }
+}
+let chartTicketMedioInstance = null;
 
 function renderVendasFaturamento() {
   const wrapEl = document.getElementById('vendasFaturamentoWrap');
@@ -8366,7 +8744,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   ];
 
   dreArvoreCategoriesCache = categories;
-  dreArvoreMovementsCache = unifiedMovements;
+  dreArvoreMovementsCache = excluirIcmsResiduoKmno(unifiedMovements);
 }
 
 // Busca o mesmo path em todas as empresas selecionadas em paralelo,
@@ -8429,44 +8807,11 @@ async function sbMultiPaged(path) {
 const ORIGENS_BAIXA_REAL = new Set(['BAXR', 'BAXP', 'EXTR', 'EXTP']);
 const ORIGENS_TRANSFERENCIA = new Set(['TRAR', 'TRAP']);
 
-// Correções pontuais de erro de dado já CONFIRMADO (não é regra geral de
-// categoria — cada título aqui foi verificado manualmente contra o ledger
-// interno da empresa). Ver validação DFC Blue Line jan/2026:
-// duplicidade Adiantamento (1.04.01) x Faturamento (1.01.01), cliente KMNO
-// SPORTS. DRE_2026_KMNO_e_NOVAH confirma Emprestimos para Novah = R$0 em
-// jan/2026 -> os R$175.000 em Adiantamento não são caixa real adicional.
-const TITULOS_EXCLUIDOS_CONFIRMADOS = new Set([
-  '2181471351', '2181471949', '2181472977', '2181475958',
-  '2181483183', '2181483275', '2181486760', '2181487041',
-  '2181489494', '2181491053', '2181492286', '2181497749',
-]);
-
-// ─── Contas correntes fora do Fluxo de Caixa (contas virtuais/de controle) ──
-// O Omie marca certas "contas correntes" (Adiantamento de Cliente, Previsão
-// de Recebíveis, Comissão, etc. — não são bancos reais, são contas de
-// controle interno) com fluxo_caixa=false. Essas contas não devem contar no
-// DFC Realizado, mas omie_financial_movements não filtra isso — soma tudo
-// por cod_cc sem olhar essa flag. Descoberto e validado em 13/07/2026 na
-// KMNO (diferença de R$1M+/mês some quase inteira ao aplicar esse filtro).
-// Só exclui quando fluxo_caixa === false explicitamente; se a conta não for
-// encontrada ou o campo vier nulo/indefinido, mantém o lançamento (mais
-// seguro do que arriscar excluir conta real por dado incompleto).
-function contasForaDoFluxoCaixa(contasCorrentes) {
-  const foraDoFluxo = new Set();
-  (contasCorrentes || []).forEach((c) => {
-    if (c.fluxo_caixa === false) {
-      foraDoFluxo.add([c._empresa, c.n_cod_cc].join('|'));
-    }
-  });
-  return foraDoFluxo;
-}
-
 function dedupFinancialMovements(movements) {
   const byTitulo = new Map();
   const noTitulo = [];
   movements.forEach((m) => {
     if (ORIGENS_TRANSFERENCIA.has(m.origem)) return; // transferência interna entre contas: fora do DFC operacional
-    if (TITULOS_EXCLUIDOS_CONFIRMADOS.has(String(m.cod_titulo))) return; // erro de lançamento confirmado, ver comentário acima
     if (!m.cod_titulo) { noTitulo.push(m); return; } // cod_titulo ausente/zero: nunca agrupar, dedup não é seguro aqui
     const key = [m._empresa, m.cod_titulo, m.natureza].join('|');
     if (!byTitulo.has(key)) byTitulo.set(key, []);
@@ -8487,59 +8832,6 @@ function dedupFinancialMovements(movements) {
     }
   });
   return result;
-}
-
-// ─── RT: caixa sem título formal (lançado direto no extrato bancário) ─────
-// A RT lançava parte do fluxo de caixa direto no extrato de conta corrente
-// (sem passar por um Título formal em Contas a Pagar/Receber) especificamente
-// entre jan-abr/2026 — esse dinheiro nunca aparece em omie_financial_movements
-// (ListarMovimentos só vê título+baixa). A partir de mai/2026 a RT passou a
-// lançar tudo com título formal, então essa correção NÃO se aplica depois
-// desse período. Detectado e validado em 13/07/2026.
-//
-// Restrito a esse período por dois motivos:
-// 1) cod_titulo IS NULL no extrato NÃO significa "sem título formal" de forma
-//    confiável em todas as empresas — na KMNO, esse campo fica nulo mesmo pra
-//    lançamentos que JÁ têm título e já estão corretos via financial_movements.
-// 2) mesmo dentro da RT, o extrato (omie_current_account_transactions) tem
-//    ruído próprio (linhas duplicadas) em meses onde o financial_movements já
-//    está completo — testado em maio/2026, que já bate exato sem essa soma,
-//    e piora se ela for aplicada. Por segurança, o corte de data evita esse
-//    risco em vez de depender só do casamento por valor/data/natureza.
-const RT_EXTRATO_SEM_TITULO_ATE = '2026-05-01'; // exclusivo: só lançamentos com dt_lanc < essa data
-
-function extraCaixaSemTituloRT(currentAccountTransactions, financialMovements) {
-  const jaContabilizado = new Set();
-  (financialMovements || []).forEach((m) => {
-    if (m._empresa !== 'RT') return;
-    if (!['PAGO', 'RECEBIDO'].includes(m.status)) return;
-    jaContabilizado.add([m.dt_pagamento, Number(m.val_pago), m.natureza].join('|'));
-  });
-
-  const extras = [];
-  (currentAccountTransactions || []).forEach((c) => {
-    if (c._empresa !== 'RT') return;
-    if (c.cod_titulo) return; // tem título formal, financial_movements já cobre
-    if (ORIGENS_TRANSFERENCIA.has(c.origem)) return;
-    if (!c.dt_lanc || c.dt_lanc >= RT_EXTRATO_SEM_TITULO_ATE) return; // fora do período validado
-    const assinatura = [c.dt_lanc, Number(c.valor_lanc), c.natureza].join('|');
-    if (jaContabilizado.has(assinatura)) return; // já contado, não duplicar
-    extras.push({
-      dt_pagamento: c.dt_lanc,
-      dt_emissao: c.dt_emissao,
-      val_pago: Number(c.valor_lanc),
-      val_liquido: Number(c.valor_lanc),
-      natureza: c.natureza,
-      cod_categoria: c.cod_categoria,
-      status: c.natureza === 'R' ? 'RECEBIDO' : 'PAGO',
-      origem: 'EXTRATO_SEM_TITULO',
-      cod_titulo: null,
-      num_titulo: c.num_doc || null,
-      observacao: c.observacao,
-      _empresa: 'RT',
-    });
-  });
-  return extras;
 }
 
 function updateCompanyMultiselectLabel() {
@@ -8963,14 +9255,13 @@ async function loadCompanyData() {
 
 lastFetchHadErrors = false;
 try {
-  const [categories, movements, receivable, payable, clients, contasCorrentes, currentAccountTransactions] = await Promise.all([
+  const [categories, movements, receivable, payable, clients, contasCorrentes] = await Promise.all([
     sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa,natureza,transferencia,nao_exibir,nao_fluxo,categoria_superior'),
-    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo,cod_cc'),
+    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo'),
     sbMultiPaged('dash_accounts_receivable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_accounts_payable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_clients?select=codigo_cliente_omie,nome_fantasia,razao_social'),
     sbMultiPaged('dash_contas_correntes?select=n_cod_cc,descricao,fluxo_caixa,saldo_inicial,saldo_data,valor_limite,saldo_atual'),
-    sbMultiPaged('dash_current_account_transactions?select=dt_lanc,dt_emissao,valor_lanc,cod_categoria,natureza,cod_titulo,origem,num_doc,observacao'),
   ]);
   clientsCache = clients;
   contasCorrentesCache = contasCorrentes;
@@ -9006,13 +9297,8 @@ try {
     ];
 
     categoriesCache = categories;
-    movementsCache = unifiedMovements; // para DRE/competência (dt_emissao) — vem de receivable+payable
-    const contasForaDoFluxo = contasForaDoFluxoCaixa(contasCorrentes);
-    const movementsNoFluxoCaixa = (movements || []).filter(
-      (m) => !contasForaDoFluxo.has([m._empresa, m.cod_cc].join('|'))
-    );
-    financialMovementsCache = dedupFinancialMovements(movementsNoFluxoCaixa); // para DFC/caixa (dt_pagamento real) — vem de omie_financial_movements, deduplicado (título × baixa real), excluindo contas fora do fluxo de caixa (ver contasForaDoFluxoCaixa)
-    financialMovementsCache = financialMovementsCache.concat(extraCaixaSemTituloRT(currentAccountTransactions, financialMovementsCache)); // RT: soma caixa lançado direto no extrato, sem título formal (ver notas 13/07)
+    movementsCache = excluirIcmsResiduoKmno(unifiedMovements); // para DRE/competência (dt_emissao) — vem de receivable+payable
+    financialMovementsCache = dedupFinancialMovements(excluirIcmsResiduoKmno(movements || [])); // para DFC/caixa (dt_pagamento real) — vem de omie_financial_movements, deduplicado (título × baixa real)
     transferenciasCache = (movements || []).filter(m => ORIGENS_TRANSFERENCIA.has(m.origem)); // TRAR/TRAP — vão à parte no DFC ("Transferências e Ajustes de Saldo"), fora de Receitas/Despesas
     receivableCache = receivable;
     payableCache = payable;
@@ -9625,10 +9911,53 @@ function filterOverdue(items, today) {
   });
 }
 
+// Códigos de cliente "REDECARD S/A" (uma por empresa, quando existe) —
+// confirmado com Lucas em 14/07/2026: recebíveis da RedeCard não seguem
+// a mesma lógica de atraso das outras contas a receber (liquidam pela
+// maquininha, não por cobrança direta), então ficam de fora do card
+// "A Receber Vencido".
+const REDECARD_CODIGO_CLIENTE_POR_EMPRESA = {
+  KMNO: 10389252594,
+  BLUELINE: 2166037108,
+  // RT: não tem cliente "REDECARD S/A" cadastrado — nada a excluir.
+};
+
+// Filtro específico de Contas a Receber "Atrasado" (diferente do
+// filterOverdue genérico usado em Contas a Pagar): confirmado com Lucas
+// em 14/07/2026 —
+//   1. Usa SÓ o status "ATRASADO" nativo do Omie — nada de aproximação
+//      por "A VENCER" com data passada (Lucas pediu pra tirar esse
+//      fallback em 14/07/2026, mesmo sabendo do bug de sync que faz
+//      alguns títulos da Novah não aparecerem aqui até serem re-
+//      sincronizados — ver nota mais abaixo sobre isso).
+//   2. Só conta título já FATURADO — aqui usamos data_emissao preenchida
+//      como proxy de "já foi faturado" (título ainda em previsão/projeção
+//      não tem data_emissao real, só data_previsao);
+//   3. Exclui RedeCard (ver REDECARD_CODIGO_CLIENTE_POR_EMPRESA acima) —
+//      confirmado por print do Omie que a RedeCard usa "Atrasado" igual
+//      a qualquer cliente lá, então essa exclusão é regra de negócio
+//      nossa (recebível de maquininha não é inadimplência de verdade),
+//      não uma diferença de comportamento do Omie.
+//
+// PENDENTE (não resolvido, fica pra depois): o sync de contas a receber
+// não está atualizando status_titulo pra "ATRASADO" a tempo quando um
+// título vence sozinho no Omie (achado em 14/07/2026 — Blue Line tinha
+// R$123.900 assim). Enquanto isso não for corrigido no sync, esses casos
+// não aparecem neste card.
+function filterAtrasadoReceber(items) {
+  return (items || []).filter(m => {
+    if (m.status_titulo !== 'ATRASADO') return false;
+    if (!m.data_emissao) return false;
+    const redecardCodigo = REDECARD_CODIGO_CLIENTE_POR_EMPRESA[m._empresa];
+    if (redecardCodigo && Number(m.codigo_cliente_fornecedor) === redecardCodigo) return false;
+    return true;
+  });
+}
+
 function renderInadimplencia(movements, receivable, payable) {
   const today = dayjs();
 
-  const overdueReceivable = filterOverdue(receivable, today);
+  const overdueReceivable = filterAtrasadoReceber(receivable);
   renderOverdueCard({
     overdue: overdueReceivable,
     today,
@@ -9696,14 +10025,12 @@ function renderInadimplenciaList(overdue, today, listElId) {
 
   const sorted = overdue.slice().sort((a, b) => dayjs(a.data_vencimento).valueOf() - dayjs(b.data_vencimento).valueOf());
 
-  const showEmpresa = new Set(sorted.map(m => m._empresa)).size > 1;
-
   listEl.innerHTML = sorted.map(m => {
     const dias = today.diff(dayjs(m.data_vencimento), 'day');
     const nome = clientByKey[`${m._empresa}|${m.codigo_cliente_fornecedor}`]
       || m.observacao
       || (m.numero_documento ? `Documento ${m.numero_documento}` : 'Registro não identificado');
-    const empresaTag = showEmpresa ? `<span class="inad-empresa">${m._empresa}</span>` : '';
+    const empresaTag = `<span class="inad-empresa">${m._empresa}</span>`;
     return `<div class="inad-row">
       <div class="inad-row-main">
         <span class="inad-cliente">${decodeHtmlEntities(nome)}</span>
@@ -10001,6 +10328,41 @@ function buildMetricasGrupoDfcPeriodo(categories, movements, monthStart, monthEn
   return { porEmpresa, grupo };
 }
 
+// Cards "Resumo de Capital" no topo da home: início x fim do período
+// De/Até selecionado. Saldo Bancos reaproveita o mesmo rollback usado no
+// DFC por Bloco (calcSaldoInicialRealizado, parte do saldo_atual de hoje
+// e desfaz os movimentos de caixa até a data alvo). Capex/Refis somam o
+// período inteiro, mesma lógica/categorias do gráfico "Capex e Refis".
+// Cartões a Receber (KMNO) fica como placeholder — fonte de dado ainda
+// não confirmada com Lucas.
+function renderResumoCapital(monthStart, monthEnd) {
+  const elSaldoInicio = document.getElementById('resumoCapitalSaldoInicio');
+  if (!elSaldoInicio || !contasCorrentesCache || !categoriesCache || !financialMovementsCache) return;
+
+  const saldoInicio = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', monthStart);
+  const saldoFim = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', monthEnd);
+
+  document.getElementById('resumoCapitalSaldoInicio').textContent = fmtBRL(saldoInicio);
+  document.getElementById('resumoCapitalSaldoFim').textContent = fmtBRL(saldoFim);
+  document.getElementById('resumoCapitalSaldoDiff').textContent = fmtBRL(saldoFim - saldoInicio);
+
+  let capex = 0, refis = 0;
+  (financialMovementsCache || []).forEach(mv => {
+    if (mv.natureza !== 'P' || !mv.dt_emissao || !mv.cod_categoria) return;
+    const d = dayjs(mv.dt_emissao);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
+    const v = Number(mv.val_pago || mv.val_liquido || 0);
+    if (!v) return;
+    if (CAPEX_CODIGOS.includes(mv.cod_categoria)) capex += v;
+    const refisCodigos = REFIS_CODIGOS_POR_EMPRESA[mv._empresa] || [];
+    if (refisCodigos.includes(mv.cod_categoria)) refis += v;
+  });
+
+  document.getElementById('resumoCapitalCapex').textContent = fmtBRL(capex);
+  document.getElementById('resumoCapitalRefis').textContent = fmtBRL(refis);
+  document.getElementById('resumoCapitalCapexRefisTotal').textContent = fmtBRL(capex + refis);
+}
+
 function renderGrupoDfc(monthStart, monthEnd) {
   // A tela separada "viewGrupoDfc" não existe mais — esse resumo agora
   // vive direto no topo do menu principal (viewMenu). Guard atualizado
@@ -10010,6 +10372,8 @@ function renderGrupoDfc(monthStart, monthEnd) {
 
   const { porEmpresa, grupo } = buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, monthStart, monthEnd);
   const dfcPeriodo = buildDfc(categoriesCache || [], financialMovementsCache || [], monthStart, monthEnd);
+
+  renderResumoCapital(monthStart, monthEnd);
 
   // ---- Cards do topo ----
   document.getElementById('grupoDfcReceitaBruta').textContent = fmtBRL(grupo.receitaBruta);
@@ -10115,6 +10479,11 @@ function renderGrupoDfc(monthStart, monthEnd) {
   }
 
   renderGrupoDfcChart(evolucaoMensal);
+
+  // Capex e Refis — mesma lista de meses (Jan até o mês selecionado do
+  // ano corrente), lida direto de movementsCache por código de categoria.
+  const capexRefisMensal = buildCapexRefisMensal(movementsCache, meses, categoriesCache);
+  renderCapexRefisChart(capexRefisMensal);
 }
 
 let chartGrupoDfc = null;
@@ -10147,6 +10516,96 @@ function renderGrupoDfcChart(evolucaoMensal) {
       scales: {
         x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { color: 'rgba(243,239,230,0.06)' } },
         y: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { color: 'rgba(243,239,230,0.06)' } },
+      },
+    },
+  });
+}
+
+// Soma valores de Capex e Refis mês a mês (mesma lista de meses já usada
+// pra "Evolução Mensal — Grupo"), lendo movementsCache direto por código
+// de categoria — NÃO passa por isExcludedFromDre (essas categorias estão
+// deliberadamente fora do DRE, ver CATEGORIAS_SEM_CONTA_DRE).
+function buildCapexRefisMensal(movements, meses, categories) {
+  const catByKey = buildCatByEmpresaCodigo(categories || []);
+  const porMes = {};
+  meses.forEach(m => { porMes[m.format('YYYY-MM')] = { capex: 0, refis: 0, capexDetalhe: {}, refisDetalhe: {} }; });
+
+  (movements || []).forEach(mv => {
+    if (mv.natureza !== 'P' || !mv.dt_emissao || !mv.cod_categoria) return;
+    const key = dayjs(mv.dt_emissao).format('YYYY-MM');
+    if (!porMes[key]) return;
+    const v = Number(mv.val_pago || mv.val_liquido || 0);
+    if (!v) return;
+
+    const cat = catByKey[`${mv._empresa}|${mv.cod_categoria}`];
+    const label = cat ? decodeHtmlEntities(cat.descricao) : mv.cod_categoria;
+    const chave = `${label} (${mv._empresa})`;
+
+    if (CAPEX_CODIGOS.includes(mv.cod_categoria)) {
+      porMes[key].capex += v;
+      porMes[key].capexDetalhe[chave] = (porMes[key].capexDetalhe[chave] || 0) + v;
+    }
+    const refisCodigos = REFIS_CODIGOS_POR_EMPRESA[mv._empresa] || [];
+    if (refisCodigos.includes(mv.cod_categoria)) {
+      porMes[key].refis += v;
+      porMes[key].refisDetalhe[chave] = (porMes[key].refisDetalhe[chave] || 0) + v;
+    }
+  });
+
+  return meses.map(m => {
+    const d = porMes[m.format('YYYY-MM')];
+    return {
+      mes: m,
+      capex: d.capex,
+      refis: d.refis,
+      capexDetalhe: d.capexDetalhe,
+      refisDetalhe: d.refisDetalhe,
+    };
+  });
+}
+
+let chartCapexRefis = null;
+function renderCapexRefisChart(evolucaoMensal) {
+  const canvas = document.getElementById('chartCapexRefis');
+  if (!canvas) return;
+  const labels = evolucaoMensal.map(e => DRE_ARVORE_NOMES_MES[e.mes.month()]);
+  if (chartCapexRefis) chartCapexRefis.destroy();
+  chartCapexRefis = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels,
+      datasets: [
+        { label: 'Capex', data: evolucaoMensal.map(e => Math.round(e.capex)), backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 28 },
+        { label: 'Refis', data: evolucaoMensal.map(e => Math.round(e.refis)), backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 28 },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } },
+        tooltip: {
+          callbacks: {
+            label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}`,
+            afterLabel: (ctx) => {
+              const item = evolucaoMensal[ctx.dataIndex];
+              const detalhe = ctx.dataset.label === 'Capex' ? item.capexDetalhe : item.refisDetalhe;
+              const entradas = Object.entries(detalhe || {}).sort((a, b) => b[1] - a[1]);
+              if (!entradas.length) return '  (sem lançamentos no mês)';
+              return entradas.map(([label, v]) => `  • ${label}: ${fmtBRL(v)}`);
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { display: false } },
+        y: {
+          ticks: {
+            color: 'rgba(243,239,230,0.55)',
+            callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v),
+          },
+          grid: { color: 'rgba(243,239,230,0.06)' },
+        },
       },
     },
   });
