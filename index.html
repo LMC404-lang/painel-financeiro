@@ -3521,6 +3521,25 @@ function excluirIcmsResiduoKmno(lista) {
   return (lista || []).filter(m => !isIcmsResiduoKmno(m));
 }
 
+// Investigado em 16/07/2026: causa principal (comprovada) da inflação de
+// Faturamento/Receita da KMNO vs o "Realizado" nativo do Omie (gap de
+// R$100k em jan/26 crescendo a R$1M+/mês a partir de mar/26, documentado
+// desde a sessão de 13/07). A categoria 1.04.96 tem no PRÓPRIO NOME no
+// cadastro Omie: "Importação de Receitas Gatways (Não entra DRE)" — é
+// usada para reconciliação de importação de gateway de pagamento, não é
+// faturamento incremental real. A flag nativa do Omie (nao_exibir) nunca
+// foi marcada pra essa categoria apesar do nome, então o dashboard
+// contava ela como receita real. Comparação banco-vs-Omie por mês
+// (jan-jun/26): essa categoria sozinha explica de 32% a mais de 70% do
+// gap mensal, e a curva bate com o crescimento do gap ao longo do ano.
+const KMNO_GATEWAY_RECONCILIACAO_CATEGORIA = '1.04.96';
+function isGatewayReconciliacaoKmno(m) {
+  return !!(m && m._empresa === 'KMNO' && m.cod_categoria === KMNO_GATEWAY_RECONCILIACAO_CATEGORIA);
+}
+function excluirGatewayReconciliacaoKmno(lista) {
+  return (lista || []).filter(m => !isGatewayReconciliacaoKmno(m));
+}
+
 function isExcludedFromDre(cat, label) {
   if (cat && cat.nao_exibir) return true;
   return CATEGORIAS_SEM_CONTA_DRE.has(label);
@@ -8685,7 +8704,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   ];
 
   dreArvoreCategoriesCache = categories;
-  dreArvoreMovementsCache = excluirIcmsResiduoKmno(unifiedMovements);
+  dreArvoreMovementsCache = excluirGatewayReconciliacaoKmno(excluirIcmsResiduoKmno(unifiedMovements));
 }
 
 // Busca o mesmo path em todas as empresas selecionadas em paralelo,
@@ -9238,8 +9257,8 @@ try {
     ];
 
     categoriesCache = categories;
-    movementsCache = excluirIcmsResiduoKmno(unifiedMovements); // para DRE/competência (dt_emissao) — vem de receivable+payable
-    financialMovementsCache = dedupFinancialMovements(excluirIcmsResiduoKmno(movements || [])); // para DFC/caixa (dt_pagamento real) — vem de omie_financial_movements, deduplicado (título × baixa real)
+    movementsCache = excluirGatewayReconciliacaoKmno(excluirIcmsResiduoKmno(unifiedMovements)); // para DRE/competência (dt_emissao) — vem de receivable+payable
+    financialMovementsCache = dedupFinancialMovements(excluirGatewayReconciliacaoKmno(excluirIcmsResiduoKmno(movements || []))); // para DFC/caixa (dt_pagamento real) — vem de omie_financial_movements, deduplicado (título × baixa real)
     transferenciasCache = (movements || []).filter(m => ORIGENS_TRANSFERENCIA.has(m.origem)); // TRAR/TRAP — vão à parte no DFC ("Transferências e Ajustes de Saldo"), fora de Receitas/Despesas
     receivableCache = receivable;
     payableCache = payable;
