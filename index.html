@@ -3513,7 +3513,7 @@ const KMNO_ICMS_RESIDUO_CATEGORIA = '2.06.07';
 const KMNO_ICMS_RESIDUO_A_PARTIR_DE = '2026-04-01';
 function isIcmsResiduoKmno(m) {
   if (!m || m._empresa !== 'KMNO' || m.cod_categoria !== KMNO_ICMS_RESIDUO_CATEGORIA) return false;
-  const data = m.dt_emissao || m.dt_pagamento;
+  const data = m.dt_registro || m.dt_emissao || m.dt_pagamento;
   if (!data) return false;
   return !dayjs(data).isBefore(KMNO_ICMS_RESIDUO_A_PARTIR_DE);
 }
@@ -6720,8 +6720,8 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
   const totalPorLabel = {};
   (movements || []).forEach(m => {
     if (m._empresa !== empresa) return;
-    if (!m.dt_emissao || !m.cod_categoria) return;
-    const d = dayjs(m.dt_emissao);
+    if (!(m.dt_registro || m.dt_emissao) || !m.cod_categoria) return;
+    const d = dayjs(m.dt_registro || m.dt_emissao);
     if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
     const label = catLabelByCode[m.cod_categoria];
     if (!label) return;
@@ -6740,8 +6740,8 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
     let refisTotal = 0;
     (movements || []).forEach(m => {
       if (m._empresa !== 'RT') return;
-      if (!m.dt_emissao || !['2.06.06', '2.06.07'].includes(m.cod_categoria)) return;
-      const d = dayjs(m.dt_emissao);
+      if (!(m.dt_registro || m.dt_emissao) || !['2.06.06', '2.06.07'].includes(m.cod_categoria)) return;
+      const d = dayjs(m.dt_registro || m.dt_emissao);
       if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
       refisTotal += Number(m.val_pago || m.val_liquido || 0);
     });
@@ -6754,8 +6754,8 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
     let refisKmnoTotal = 0;
     (movements || []).forEach(m => {
       if (m._empresa !== 'KMNO') return;
-      if (!m.dt_emissao || !['2.14.95', '2.14.98'].includes(m.cod_categoria)) return;
-      const d = dayjs(m.dt_emissao);
+      if (!(m.dt_registro || m.dt_emissao) || !['2.14.95', '2.14.98'].includes(m.cod_categoria)) return;
+      const d = dayjs(m.dt_registro || m.dt_emissao);
       if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
       refisKmnoTotal += Number(m.val_pago || m.val_liquido || 0);
     });
@@ -8620,8 +8620,8 @@ async function sbPaged(path, empresaId, pageSize = 1000) {
 async function carregarDadosDreArvoreTodasEmpresas() {
   const empresas = ['RT', 'KMNO', 'BLUELINE'];
   const catPath = 'dash_categories?select=codigo,descricao,conta_receita,conta_despesa';
-  const recPath = 'dash_accounts_receivable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor';
-  const payPath = 'dash_accounts_payable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento';
+  const recPath = 'dash_accounts_receivable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor';
+  const payPath = 'dash_accounts_payable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento';
   // Dados operacionais que não vêm do Omie (preenchidos manualmente no
   // dashboard, substituindo a antiga planilha DRE_2026_KMNO_e_NOVAH):
   // CMV por produto e faturamento por unidades vendidas, por empresa/mês.
@@ -8677,6 +8677,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   const unifiedMovements = [
     ...receivable.filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor)).map(r => ({
       dt_emissao: r.data_emissao,
+      dt_registro: r.data_registro,
       dt_pagamento: r.data_pagamento || r.data_previsao,
       dt_vencimento: r.data_vencimento,
       natureza: 'R',
@@ -8690,6 +8691,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
     })),
     ...payable.filter(p => p.status_titulo !== 'CANCELADO').map(p => ({
       dt_emissao: p.data_emissao,
+      dt_registro: p.data_registro,
       dt_pagamento: p.data_pagamento || p.data_previsao,
       dt_vencimento: p.data_vencimento,
       natureza: 'P',
@@ -8915,7 +8917,7 @@ function findMostRecentMonthWithData(dreMovements, cashMovements) {
   // Fallback: most recent month with DRE data, if no cash data exists at all
   let latestDre = null;
   (dreMovements || []).forEach(m => {
-    const ref = m.dt_emissao || m.dt_pagamento;
+    const ref = m.dt_registro || m.dt_emissao || m.dt_pagamento;
     if (!ref) return;
     if (!latestDre || dayjs(ref).isAfter(latestDre)) latestDre = dayjs(ref);
   });
@@ -8926,8 +8928,8 @@ function buildDreRows(categories, movements, monthStart, monthEnd) {
   const catByKey = buildCatByEmpresaCodigo(categories);
 
   const inRange = movements.filter(m => {
-    if (!m.dt_emissao) return false;
-    const d = dayjs(m.dt_emissao);
+    if (!(m.dt_registro || m.dt_emissao)) return false;
+    const d = dayjs(m.dt_registro || m.dt_emissao);
     return !d.isBefore(monthStart) && d.isBefore(monthEnd);
   });
 
@@ -9217,9 +9219,9 @@ lastFetchHadErrors = false;
 try {
   const [categories, movements, receivable, payable, clients, contasCorrentes] = await Promise.all([
     sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa,natureza,transferencia,nao_exibir,nao_fluxo,categoria_superior'),
-    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo'),
-    sbMultiPaged('dash_accounts_receivable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
-    sbMultiPaged('dash_accounts_payable?select=data_emissao,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
+    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_registro,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo'),
+    sbMultiPaged('dash_accounts_receivable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
+    sbMultiPaged('dash_accounts_payable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_clients?select=codigo_cliente_omie,nome_fantasia,razao_social'),
     sbMultiPaged('dash_contas_correntes?select=n_cod_cc,descricao,fluxo_caixa,saldo_inicial,saldo_data,valor_limite,saldo_atual'),
   ]);
@@ -9230,6 +9232,7 @@ try {
     const unifiedMovements = [
       ...(receivable || []).filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor)).map(r => ({
         dt_emissao: r.data_emissao,
+        dt_registro: r.data_registro,
         dt_pagamento: r.data_pagamento || r.data_previsao,
         dt_vencimento: r.data_vencimento,
         natureza: 'R',
@@ -9243,6 +9246,7 @@ try {
       })),
       ...(payable || []).filter(p => p.status_titulo !== 'CANCELADO').map(p => ({
         dt_emissao: p.data_emissao,
+        dt_registro: p.data_registro,
         dt_pagamento: p.data_pagamento || p.data_previsao,
         dt_vencimento: p.data_vencimento,
         natureza: 'P',
@@ -9333,8 +9337,8 @@ function monthlyTotals(dreMovements, cashMovements) {
   // DRE bucket: by emission month — vem de unifiedMovements (receivable+payable), mais completo
   dreMovements.forEach(m => {
     const v = Number(m.val_pago || m.val_liquido || 0);
-    if (!v || !m.dt_emissao || isExcludedDre(m)) return;
-    const key = dayjs(m.dt_emissao).format('YYYY-MM');
+    if (!v || !(m.dt_registro || m.dt_emissao) || isExcludedDre(m)) return;
+    const key = dayjs(m.dt_registro || m.dt_emissao).format('YYYY-MM');
     if (!byMonth[key]) byMonth[key] = { receita: 0, despesa: 0, entrada: 0, saida: 0 };
     if (m.natureza === 'R') byMonth[key].receita += v;
     else if (m.natureza === 'P') byMonth[key].despesa += v;
@@ -9448,10 +9452,10 @@ function renderStackedExpenses(categories, movements) {
   // total despesa por label (nome da categoria), consolidando entre empresas, para escolher as top categorias
   const totalsByLabel = {};
   movements.forEach(m => {
-    if (m.natureza !== 'P' || !m.dt_emissao || !m.cod_categoria) return;
+    if (m.natureza !== 'P' || !(m.dt_registro || m.dt_emissao) || !m.cod_categoria) return;
     const { cat, label } = catInfo(m);
     if (isExcludedFromDre(cat, label)) return;
-    const key = dayjs(m.dt_emissao).format('YYYY-MM');
+    const key = dayjs(m.dt_registro || m.dt_emissao).format('YYYY-MM');
     if (!keys.includes(key)) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
@@ -9467,10 +9471,10 @@ function renderStackedExpenses(categories, movements) {
   keys.forEach(k => { byMonthByLabel[k] = {}; topLabels.forEach(l => byMonthByLabel[k][l] = 0); byMonthByLabel[k]._outros = 0; });
 
   movements.forEach(m => {
-    if (m.natureza !== 'P' || !m.dt_emissao || !m.cod_categoria) return;
+    if (m.natureza !== 'P' || !(m.dt_registro || m.dt_emissao) || !m.cod_categoria) return;
     const { cat, label } = catInfo(m);
     if (isExcludedFromDre(cat, label)) return;
-    const key = dayjs(m.dt_emissao).format('YYYY-MM');
+    const key = dayjs(m.dt_registro || m.dt_emissao).format('YYYY-MM');
     if (!keys.includes(key)) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
@@ -9554,10 +9558,10 @@ function renderDonutRevenue(categories, movements, monthStart, monthEnd) {
   const windowKeys = lastSixMonthKeys();
   const historicalTotals = {};
   movements.forEach(m => {
-    if (m.natureza !== 'R' || !m.dt_emissao || !m.cod_categoria) return;
+    if (m.natureza !== 'R' || !(m.dt_registro || m.dt_emissao) || !m.cod_categoria) return;
     const { cat, label } = catInfo(m);
     if (isExcludedFromDre(cat, label)) return;
-    const key = dayjs(m.dt_emissao).format('YYYY-MM');
+    const key = dayjs(m.dt_registro || m.dt_emissao).format('YYYY-MM');
     if (!windowKeys.includes(key)) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
@@ -9571,10 +9575,10 @@ function renderDonutRevenue(categories, movements, monthStart, monthEnd) {
   // Actual totals for the selected month only — calculation untouched.
   const totals = {};
   movements.forEach(m => {
-    if (m.natureza !== 'R' || !m.dt_emissao || !m.cod_categoria) return;
+    if (m.natureza !== 'R' || !(m.dt_registro || m.dt_emissao) || !m.cod_categoria) return;
     const { cat, label } = catInfo(m);
     if (isExcludedFromDre(cat, label)) return;
-    const d = dayjs(m.dt_emissao);
+    const d = dayjs(m.dt_registro || m.dt_emissao);
     if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
@@ -10375,8 +10379,8 @@ function renderResumoCapital(monthStart, monthEnd) {
 
   let capex = 0, refis = 0;
   (financialMovementsCache || []).forEach(mv => {
-    if (mv.natureza !== 'P' || !mv.dt_emissao || !mv.cod_categoria) return;
-    const d = dayjs(mv.dt_emissao);
+    if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
+    const d = dayjs(mv.dt_registro || mv.dt_emissao);
     if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
     const v = Number(mv.val_pago || mv.val_liquido || 0);
     if (!v) return;
@@ -10558,8 +10562,8 @@ function buildCapexRefisMensal(movements, meses, categories) {
   meses.forEach(m => { porMes[m.format('YYYY-MM')] = { capex: 0, refis: 0, capexDetalhe: {}, refisDetalhe: {} }; });
 
   (movements || []).forEach(mv => {
-    if (mv.natureza !== 'P' || !mv.dt_emissao || !mv.cod_categoria) return;
-    const key = dayjs(mv.dt_emissao).format('YYYY-MM');
+    if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
+    const key = dayjs(mv.dt_registro || mv.dt_emissao).format('YYYY-MM');
     if (!porMes[key]) return;
     const v = Number(mv.val_pago || mv.val_liquido || 0);
     if (!v) return;
@@ -10758,8 +10762,8 @@ function computeYearlyProjectionData() {
   const monthlyExpense = {};
 
   movementsCache.forEach(m => {
-    if (!m.dt_emissao) return;
-    const d = dayjs(m.dt_emissao);
+    if (!(m.dt_registro || m.dt_emissao)) return;
+    const d = dayjs(m.dt_registro || m.dt_emissao);
     if (d.isBefore(yearStart) || d.isAfter(yearEnd)) return;
     const monthKey = d.format('YYYY-MM');
     const v = Number(m.val_pago || m.val_liquido || 0);
