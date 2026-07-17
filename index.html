@@ -4254,6 +4254,58 @@ function acharContaPorCodigo(arvore, codigo) {
   return 0;
 }
 
+// ===================================================================
+// CARD INFORMATIVO — Empréstimos & Dividendos (fora da cascata de
+// resultado, por decisão registrada em 17/07/2026): são movimentação
+// de financiamento/patrimônio, não resultado operacional — o próprio
+// Omie já trata assim (não tem codigo_dre pra principal de empréstimo
+// nem pra dividendo, só pro JURO do empréstimo, que já está certo
+// dentro de "Despesas Financeiras" na cascata acima). Aqui é só pra
+// não perder a visibilidade que existia no resumo antigo.
+function buildCardEmprestimosDividendos(empresa, categories, movements) {
+  const catByCodigo = {};
+  (categories || []).forEach(c => { if (c._empresa === empresa) catByCodigo[c.codigo] = c; });
+
+  const { de, ate } = getSelectedPeriodRange();
+  const inicio = dayjs(de);
+  const fim = dayjs(ate);
+
+  const linhas = {};
+  (movements || []).forEach(m => {
+    if (m._empresa !== empresa) return;
+    if (!m.cod_categoria) return;
+    const cat = catByCodigo[m.cod_categoria];
+    if (!cat || cat.codigo_dre) return; // só o que NÃO tem codigo_dre (fora do DRE nativo)
+    const desc = decodeHtmlEntities(cat.descricao || '').toLowerCase();
+    const ehEmprestimo = desc.includes('emprést') || desc.includes('emprest');
+    const ehDividendo = desc.includes('dividendo');
+    if (!ehEmprestimo && !ehDividendo) return;
+    const dataRef = m.dt_registro || m.dt_emissao;
+    if (!dataRef) return;
+    const d = dayjs(dataRef);
+    if (d.isBefore(inicio) || !d.isBefore(fim.add(1, 'day'))) return;
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (!v) return;
+    const sinal = m.natureza === 'P' ? -1 : 1;
+    const label = ehDividendo ? 'Dividendos' : (m.natureza === 'R' ? 'Recebimentos de Empréstimos' : 'Pagamentos de Empréstimos');
+    linhas[label] = (linhas[label] || 0) + v * sinal;
+  });
+
+  return Object.entries(linhas).map(([label, val]) => ({ label, val }));
+}
+
+function renderCardEmprestimosDividendosHtml(linhas) {
+  if (!linhas || linhas.length === 0) {
+    return `<div class="bloco-card" style="margin-bottom:18px;"><div class="bloco-body"><div class="bloco-vazio">Sem movimentação de empréstimos/dividendos no período — informativo, não entra no cálculo de resultado.</div></div></div>`;
+  }
+  const total = linhas.reduce((s, l) => s + l.val, 0);
+  const rows = linhas.map(l => `<tr class="dre-tbl-row"><td class="dre-tbl-sticky">${l.label}</td><td style="text-align:right;">${fmtBRL(l.val)}</td></tr>`).join('');
+  return `<div class="dre-tbl-wrap" style="margin-bottom:18px;"><table class="dre-tbl">
+    <thead><tr><th>Empréstimos &amp; Dividendos <span style="font-weight:400;font-size:11px;color:var(--bone-dim);">(informativo — não entra no resultado)</span></th><th>Valor</th></tr></thead>
+    <tbody>${rows}<tr class="dre-tbl-row" style="font-weight:700;"><td class="dre-tbl-sticky">Total</td><td style="text-align:right;">${fmtBRL(total)}</td></tr></tbody>
+  </table></div>`;
+}
+
 function buildResumoNativo(arvore, empresa) {
   const receitaBruta = acharContaPorCodigo(arvore, '1.01.01');
   const impostos = acharContaPorCodigo(arvore, '1.01.02');
@@ -4339,7 +4391,8 @@ async function renderDreArvoreNativa() {
   if (meses.length === 0) meses.push(dayjs().startOf('month'));
   const arvore = buildArvoreNativaDre(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache);
   const resumo = buildResumoNativo(arvore, empresa);
-  wrapEl.innerHTML = renderResumoNativoHtml(resumo) + renderArvoreNativaDreHtml(arvore, meses);
+  const emprestimosDividendos = buildCardEmprestimosDividendos(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo);
+  wrapEl.innerHTML = renderResumoNativoHtml(resumo) + renderCardEmprestimosDividendosHtml(emprestimosDividendos) + renderArvoreNativaDreHtml(arvore, meses);
 }
 
 function toggleVisaoDreNativa() {
