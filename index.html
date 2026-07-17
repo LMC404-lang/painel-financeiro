@@ -3490,11 +3490,39 @@ const COMPANIES = {
 
 let currentCompanyKey = 'RT';
 let selectedCompanyKeys = ['RT'];
+
+// ===================================================================
+// MAPA DOS CACHES GLOBAIS — Fase 2 de organização (17/07/2026)
+// ===================================================================
+// Consolidação de verdade (um objeto único em vez de variáveis soltas)
+// fica pra reconstrução maior do arquivo (ver decisão registrada em
+// 17/07/2026) — mudar isso agora significa caçar toda referência num
+// arquivo de +11 mil linhas sem suíte de teste, risco desproporcional
+// ao ganho. Por ora, só agrupado por sistema que alimenta, com nomes
+// e comentários já eram descritivos o suficiente pra navegar com
+// Ctrl+F por prefixo (ex: "dreArvore" acha as 12 variáveis do card
+// "DRE por Bloco" de uma vez).
+//
+//   GRUPO 1 — Dashboard principal (respeita o seletor de empresa do
+//             topo da página; muda quando o usuário troca de empresa)
+//   GRUPO 2 — Árvore de DRE por Bloco (cache PRÓPRIO, sempre as 3
+//             empresas juntas, independente do seletor global — ver
+//             nota detalhada abaixo)
+//   GRUPO 3 — Dados operacionais manuais (substituem a antiga planilha
+//             DRE_2026_KMNO_e_NOVAH; sem fonte no Omie)
+// ===================================================================
+
+// --- GRUPO 1: Dashboard principal ---
 let categoriesCache = null;
 let movementsCache = null; // unifiedMovements (receivable+payable) — usar SOMENTE para DRE/competência (dt_emissao)
 let financialMovementsCache = null; // omie_financial_movements puro — usar para DFC/caixa (dt_pagamento real)
 let receivableCache = null;
 let payableCache = null;
+let clientsCache = null;
+let contasCorrentesCache = null; // dash_contas_correntes — saldo_inicial/saldo_atual/valor_limite por conta, para o DFC por Bloco
+let transferenciasCache = null; // movimentos TRAR/TRAP (transferência entre contas) — bloco "Transferências e Ajustes de Saldo" do DFC
+
+// --- GRUPO 2: Árvore de DRE por Bloco ---
 // Cache PRÓPRIO do card "DRE por Bloco" — busca sempre as 3 empresas
 // (RT+KMNO+BLUELINE), independente do que estiver marcado no seletor
 // global de empresas (que pode estar filtrado numa empresa só). Sem isso,
@@ -3504,18 +3532,20 @@ let dreArvoreCategoriesCache = null;
 let dreArvoreMovementsCache = null;
 let dreArvoreMovementsCacheNativo = null; // sem filtro isClientePrevisao, com exclusão pontual por omie_id — ver carregarDadosDreArvoreTodasEmpresas
 let dreArvoreNfeCache = null; // ICMS/PIS/COFINS embutidos na nota, usados só pela árvore nativa (bucket Impostos)
+let dreArvoreExtratoSemTituloCache = null; // lançamentos de extrato sem título formal (cod_titulo nulo/0), usados só pela árvore nativa
+let dreArvoreCmcVendasCache = null; // CMC real por venda (codOrigem='VEN'), usado só pela árvore nativa — só KMNO tem dado hoje
 let dreArvoreCarregando = false;
-// Cache dos dados operacionais que substituíram a antiga planilha
-// DRE_2026_KMNO_e_NOVAH (CMV por produto e faturamento por unidades) —
-// alimentados manualmente no próprio dashboard, sem fonte no Omie.
+
+// --- GRUPO 3: Dados operacionais manuais ---
+// Substituem a antiga planilha DRE_2026_KMNO_e_NOVAH (CMV por produto e
+// faturamento por unidades) — alimentados manualmente no próprio
+// dashboard, sem fonte no Omie.
 let dreArvoreCmvCache = null;
 let dreArvoreFatUnidCache = null;
 let dreArvoreFinanciamentosCache = null;
 let dreArvoreParcelasCache = null;
 let dreArvoreInadimplenciaCache = null;
-let clientsCache = null;
-let contasCorrentesCache = null; // dash_contas_correntes — saldo_inicial/saldo_atual/valor_limite por conta, para o DFC por Bloco
-let transferenciasCache = null; // movimentos TRAR/TRAP (transferência entre contas) — bloco "Transferências e Ajustes de Saldo" do DFC
+
 let dfcArvoreEmpresaAtual = null;
 
 // Categorias ativas no Omie que NÃO têm "Conta do DRE" vinculada no cadastro.
@@ -3990,13 +4020,18 @@ const DRE_NATIVO_ORDEM_CONTA = {
   '2.11': ['2.11.01', '2.11.02', '2.11.03', '2.11.04', '2.11.05'],
   '3.01': ['3.01.01', '3.01.02'],
 };
+// Fonte única dos códigos-destino usados fora da árvore em si (imposto de
+// NFe e CMC de vendas apontam pra dentro dela) — evita ter o literal
+// '1.01.02'/'1.21.01' redigitado em mais de um lugar do arquivo.
+const DRE_NATIVO_DESTINO_IMPOSTOS = '1.01.02'; // "02. Impostos"
+const DRE_NATIVO_DESTINO_CMC = '1.21.01'; // "01. Custo Médio (CMC) das Vendas"
 
 function numeroCurtoDre(codigo) {
   const partes = codigo.split('.');
   return partes[partes.length - 1];
 }
 
-function buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows) {
+function buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas) {
   const catByCodigo = {};
   (categories || []).forEach(c => {
     if (c._empresa === empresa && c.codigo_dre) catByCodigo[c.codigo] = c;
@@ -4031,7 +4066,7 @@ function buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows) {
   // categoria (nome) do título de venda como label dentro de Impostos,
   // não uma categoria fiscal separada. Isso exigiu sincronizar
   // compl.cCodCateg como codigo_categoria em dash_nfe (antes não vinha).
-  const DRE_NATIVO_IMPOSTO_NFE_DESTINO = '1.01.02';
+  const DRE_NATIVO_IMPOSTO_NFE_DESTINO = DRE_NATIVO_DESTINO_IMPOSTOS;
   (nfeRows || []).forEach(n => {
     if (n._empresa !== empresa) return;
     if (!n.codigo_categoria) return;
@@ -4047,6 +4082,51 @@ function buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows) {
     if (!valores[DRE_NATIVO_IMPOSTO_NFE_DESTINO]) valores[DRE_NATIVO_IMPOSTO_NFE_DESTINO] = {};
     if (!valores[DRE_NATIVO_IMPOSTO_NFE_DESTINO][labelCat]) valores[DRE_NATIVO_IMPOSTO_NFE_DESTINO][labelCat] = new Array(meses.length).fill(0);
     valores[DRE_NATIVO_IMPOSTO_NFE_DESTINO][labelCat][mesIdx] += -totalImposto;
+  });
+
+  // Extrato bancário sem título formal — mesma lógica de categoria→codigo_dre
+  // dos títulos normais, só que a data de referência é dt_lanc (não tem
+  // dt_registro/dt_emissao nesse tipo de lançamento) e o sinal já vem do
+  // campo natureza nativo (R/P), igual às demais fontes.
+  (extratoSemTitulo || []).forEach(t => {
+    if (t._empresa !== empresa) return;
+    if (!t.cod_categoria) return;
+    const cat = catByCodigo[t.cod_categoria];
+    if (!cat || !cat.codigo_dre) return;
+    if (!t.dt_lanc) return;
+    const d = dayjs(t.dt_lanc);
+    const mesIdx = meses.findIndex(mm => d.isSame(mm, 'month') && d.isSame(mm, 'year'));
+    if (mesIdx < 0) return;
+    const v = Number(t.valor_lanc || 0);
+    if (!v) return;
+    const sinal = t.natureza === 'P' ? -1 : 1;
+    const codigoDre = cat.codigo_dre;
+    const labelCat = decodeHtmlEntities(cat.descricao || cat.codigo);
+    if (!valores[codigoDre]) valores[codigoDre] = {};
+    if (!valores[codigoDre][labelCat]) valores[codigoDre][labelCat] = new Array(meses.length).fill(0);
+    valores[codigoDre][labelCat][mesIdx] += v * sinal;
+  });
+
+  // CMC (01.21.01 — Custo Médio das Vendas): resolvido em 17/07/2026 via
+  // endpoint estoque/consulta/MovimentoEstoque, que traz o CMC real de
+  // cada saída de venda (codOrigem='VEN') na data em que aconteceu —
+  // validado contra o pivot nativo (gap de 0,1%). Cancelamentos já vêm
+  // filtrados no cache (ver carregarDadosDreArvoreTodasEmpresas). Só
+  // existe pra KMNO — RT/Blue Line ficam sem essa linha até terem esse
+  // sync implementado também.
+  const DRE_NATIVO_CMC_DESTINO = DRE_NATIVO_DESTINO_CMC;
+  const DRE_NATIVO_CMC_LABEL = 'Custo de Produtos Vendidos';
+  (cmcVendas || []).forEach(c => {
+    if (c._empresa !== empresa) return;
+    if (!c.dt_mov) return;
+    const d = dayjs(c.dt_mov);
+    const mesIdx = meses.findIndex(mm => d.isSame(mm, 'month') && d.isSame(mm, 'year'));
+    if (mesIdx < 0) return;
+    const custo = Number(c.custo || 0);
+    if (!custo) return;
+    if (!valores[DRE_NATIVO_CMC_DESTINO]) valores[DRE_NATIVO_CMC_DESTINO] = {};
+    if (!valores[DRE_NATIVO_CMC_DESTINO][DRE_NATIVO_CMC_LABEL]) valores[DRE_NATIVO_CMC_DESTINO][DRE_NATIVO_CMC_LABEL] = new Array(meses.length).fill(0);
+    valores[DRE_NATIVO_CMC_DESTINO][DRE_NATIVO_CMC_LABEL][mesIdx] += -custo;
   });
 
   const somaArrays = (arrs) => {
@@ -4171,7 +4251,7 @@ async function renderDreArvoreNativa() {
     cursor = cursor.add(1, 'month');
   }
   if (meses.length === 0) meses.push(dayjs().startOf('month'));
-  const arvore = buildArvoreNativaDre(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache);
+  const arvore = buildArvoreNativaDre(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache);
   wrapEl.innerHTML = renderArvoreNativaDreHtml(arvore, meses);
 }
 
@@ -8933,6 +9013,20 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   // embutidos na nota, atribuídos à mesma categoria do título de venda —
   // ver comentário mais abaixo sobre DRE_NATIVO_IMPOSTO_NFE_CODIGO_DRE.
   const nfePath = 'dash_nfe?select=id_nf,codigo_categoria,dt_emissao,valor_icms,valor_pis,valor_cofins';
+  // Extrato bancário sem título formal (Transferência entre contas, Tarifas
+  // Bancárias, Saque, IOF, Multas, Resgate/Juros de Investimentos etc.) —
+  // confirmado com Lucas em 17/07/2026 (caso da RT: Receitas/Despesas
+  // Financeiras do relatório nativo do Omie batem exato somando isso).
+  // Filtra cod_titulo nulo/0 pra não contar de novo o que já vem de título
+  // formal (accounts_payable/receivable).
+  const extratoSemTituloPath = 'dash_current_account_transactions?select=dt_lanc,valor_lanc,cod_categoria,natureza,cod_titulo';
+  // CMC (Custo Médio das Vendas) — resolvido em 17/07/2026 via endpoint
+  // estoque/consulta/MovimentoEstoque do Omie, que traz o CMC real de
+  // cada saída de venda (codOrigem='VEN'), na data em que aconteceu —
+  // diferente da tentativa anterior (CMC atual × qtd, que saía 6x errado).
+  // Validado contra o pivot: R$301.269,46 vs R$300.975,86 (0,1% de gap).
+  // Só existe pra KMNO hoje (RT/Blue Line não têm esse sync ainda).
+  const cmcVendasPath = 'dash_estoque_cmc_vendas?select=dt_mov,custo,cancelamento';
   // Dados operacionais que não vêm do Omie (preenchidos manualmente no
   // dashboard, substituindo a antiga planilha DRE_2026_KMNO_e_NOVAH):
   // CMV por produto e faturamento por unidades vendidas, por empresa/mês.
@@ -8969,7 +9063,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
     }
   };
 
-  const [categories, receivable, payable, cmvProdutos, fatUnidades, financiamentos, parcelas, inadimplencia, nfe] = await Promise.all([
+  const [categories, receivable, payable, cmvProdutos, fatUnidades, financiamentos, parcelas, inadimplencia, nfe, extratoSemTitulo, cmcVendas] = await Promise.all([
     buscarPorEmpresa(catPath),
     buscarPorEmpresa(recPath),
     buscarPorEmpresa(payPath),
@@ -8979,6 +9073,8 @@ async function carregarDadosDreArvoreTodasEmpresas() {
     buscarParcelas(),
     buscarPorEmpresa(inadPath),
     buscarPorEmpresa(nfePath),
+    buscarPorEmpresa(extratoSemTituloPath),
+    buscarPorEmpresa(cmcVendasPath),
   ]);
   dreArvoreCmvCache = cmvProdutos;
   dreArvoreFatUnidCache = fatUnidades;
@@ -8986,6 +9082,8 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   dreArvoreParcelasCache = parcelas;
   dreArvoreInadimplenciaCache = inadimplencia;
   dreArvoreNfeCache = nfe;
+  dreArvoreExtratoSemTituloCache = (extratoSemTitulo || []).filter(t => !t.cod_titulo || Number(t.cod_titulo) === 0);
+  dreArvoreCmcVendasCache = (cmcVendas || []).filter(c => !c.cancelamento);
 
   const unifiedMovements = [
     ...receivable.filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor)).map(r => ({
