@@ -4234,6 +4234,92 @@ function renderArvoreNativaDreHtml(arvore, meses) {
   </table></div>`;
 }
 
+// ===================================================================
+// RESUMO EM CASCATA UNIFICADO (Fase 3, 17/07/2026) — substitui as 3
+// funções separadas (buildResumoKMNO/Blueline/RT) por UMA só, que lê
+// direto da árvore nativa por codigo_dre. Cada subtotal bate exato com
+// o agrupamento TIPO nativo do Omie (Lucro Bruto = TIPO 1, Despesas =
+// TIPO 2, Investimentos = TIPO 3) — só a Depreciação continua sendo um
+// ajuste sintético (não existe no Omie), e Empréstimos/Dividendos saem
+// da cascata (não têm codigo_dre próprio) para um card informativo
+// separado, decisão registrada em 17/07/2026.
+// ===================================================================
+function acharContaPorCodigo(arvore, codigo) {
+  for (const tipo of arvore.tipos) {
+    for (const grupo of tipo.grupos) {
+      const conta = grupo.contas.find(c => c.codigo === codigo);
+      if (conta) return conta.total;
+    }
+  }
+  return 0;
+}
+
+function buildResumoNativo(arvore, empresa) {
+  const receitaBruta = acharContaPorCodigo(arvore, '1.01.01');
+  const impostos = acharContaPorCodigo(arvore, '1.01.02');
+  const deducoes = acharContaPorCodigo(arvore, '1.01.03');
+  const receitaLiquida = receitaBruta + impostos + deducoes;
+  const outrasReceitas = acharContaPorCodigo(arvore, '1.11.01');
+  const receitasFinanceiras = acharContaPorCodigo(arvore, '1.11.02');
+  const cmc = acharContaPorCodigo(arvore, '1.21.01');
+  const custoServicos = acharContaPorCodigo(arvore, '1.21.02');
+  const outrosCustos = acharContaPorCodigo(arvore, '1.21.03');
+  const lucroBruto = receitaLiquida + outrasReceitas + receitasFinanceiras + cmc + custoServicos + outrosCustos;
+
+  const despVariaveis = acharContaPorCodigo(arvore, '2.01.01');
+  const recuperacaoDespVariaveis = acharContaPorCodigo(arvore, '2.01.02');
+  const margemContribuicao = lucroBruto + despVariaveis + recuperacaoDespVariaveis;
+  const despPessoal = acharContaPorCodigo(arvore, '2.11.01');
+  const despAdm = acharContaPorCodigo(arvore, '2.11.02');
+  const despFinanceiras = acharContaPorCodigo(arvore, '2.11.03');
+  const despVendas = acharContaPorCodigo(arvore, '2.11.04');
+  const outrosTributos = acharContaPorCodigo(arvore, '2.11.05');
+  const resultadoOperacional = margemContribuicao + despPessoal + despAdm + despVendas + outrosTributos;
+
+  const depreciacao = calcDepreciacao(empresa, receitaBruta);
+  const resultadoLiquido = resultadoOperacional - depreciacao + despFinanceiras;
+
+  const investimentos = acharContaPorCodigo(arvore, '3.01.01') + acharContaPorCodigo(arvore, '3.01.02');
+  const resultadoFinal = resultadoLiquido + investimentos;
+
+  return [
+    { label: 'Receita Bruta de Vendas', val: receitaBruta, cls: 'total' },
+    { label: '(-) Impostos', val: impostos, cls: 'item' },
+    { label: '(-) Deduções de Receita', val: deducoes, cls: 'item' },
+    { label: '(=) Receita Líquida', val: receitaLiquida, cls: 'total', destaque: true },
+    { label: '(+) Outras Receitas', val: outrasReceitas, cls: 'item' },
+    { label: '(+) Receitas Financeiras', val: receitasFinanceiras, cls: 'item' },
+    { label: '(-) Custo Médio (CMC) das Vendas', val: cmc, cls: 'item' },
+    { label: '(-) Custo dos Serviços Prestados', val: custoServicos, cls: 'item' },
+    { label: '(-) Outros Custos', val: outrosCustos, cls: 'item' },
+    { label: '(=) Lucro Bruto', val: lucroBruto, cls: 'total', destaque: true },
+    { label: '(-) Despesas Variáveis', val: despVariaveis, cls: 'item' },
+    { label: '(+) Recuperação de Despesas Variáveis', val: recuperacaoDespVariaveis, cls: 'item' },
+    { label: '(=) Margem de Contribuição', val: margemContribuicao, cls: 'total', destaque: true },
+    { label: '(-) Despesas com Pessoal', val: despPessoal, cls: 'item' },
+    { label: '(-) Despesas Administrativas', val: despAdm, cls: 'item' },
+    { label: '(-) Despesas de Vendas e Marketing', val: despVendas, cls: 'item' },
+    { label: '(-) Outros Tributos', val: outrosTributos, cls: 'item' },
+    { label: '(=) Resultado Operacional', val: resultadoOperacional, cls: 'total', destaque: true },
+    { label: `(-) Depreciação (${fmtPct(DRE_ARVORE_DEPRECIACAO_PCT[empresa] || 0)})`, val: -depreciacao, cls: 'item' },
+    { label: '(+/-) Despesas Financeiras', val: despFinanceiras, cls: 'item' },
+    { label: '(=) Resultado Líquido', val: resultadoLiquido, cls: 'total', destaque: true },
+    { label: '(+/-) Investimentos', val: investimentos, cls: 'item' },
+    { label: '(=) Resultado Final', val: resultadoFinal, cls: 'total', destaque: true },
+  ];
+}
+
+function renderResumoNativoHtml(linhas) {
+  const rows = linhas.map(l => `<tr class="dre-tbl-row${l.destaque ? '' : ''}" style="${l.cls === 'total' ? 'font-weight:700;' : ''}${l.destaque ? 'background:rgba(255,255,255,0.04);' : ''}">
+    <td class="dre-tbl-sticky">${l.label}</td>
+    <td style="text-align:right;">${fmtBRL(l.val)}</td>
+  </tr>`).join('');
+  return `<div class="dre-tbl-wrap" style="margin-bottom:18px;"><table class="dre-tbl">
+    <thead><tr><th>Resumo (baseado no codigo_dre nativo do Omie)</th><th>Valor</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table></div>`;
+}
+
 async function renderDreArvoreNativa() {
   const wrapEl = document.getElementById('dreNativaWrap');
   if (!wrapEl) return;
@@ -4252,7 +4338,8 @@ async function renderDreArvoreNativa() {
   }
   if (meses.length === 0) meses.push(dayjs().startOf('month'));
   const arvore = buildArvoreNativaDre(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache);
-  wrapEl.innerHTML = renderArvoreNativaDreHtml(arvore, meses);
+  const resumo = buildResumoNativo(arvore, empresa);
+  wrapEl.innerHTML = renderResumoNativoHtml(resumo) + renderArvoreNativaDreHtml(arvore, meses);
 }
 
 function toggleVisaoDreNativa() {
