@@ -2327,6 +2327,13 @@
         </div>
       </div>
 
+      <div class="nav-card" onclick="switchView('viewCicloFinanceiro')">
+        <div>
+          <div class="nav-card-title">Ciclo Financeiro</div>
+          <div class="nav-card-desc">Faturado, pagos e recebidos por mês, evolução dos vencidos e do índice de inadimplência.</div>
+        </div>
+      </div>
+
     </div>
 
     <div class="section" id="sectionResumoMes">
@@ -2916,6 +2923,42 @@
     </div>
   </div>
 
+  <div id="viewCicloFinanceiro" class="view-container">
+    <div class="btn-back-container">
+      <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+    </div>
+    <div class="section-head">
+      <h2>Ciclo Financeiro</h2>
+      <div class="desc">Faturado, pagos e recebidos por mês, prazos médios, e evolução dos vencidos e da inadimplência — mesmo conceito do relatório nativo "Ciclo Financeiro" do Omie. Usa as empresas selecionadas no topo da página, últimos 12 meses a partir de hoje.</div>
+    </div>
+
+    <div class="grupo-dfc-cards">
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Total Faturado</div><div class="grupo-dfc-card-val" id="cicloFatProdutos">R$ 0</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Recebidos</div><div class="grupo-dfc-card-val" id="cicloRecebidos">R$ 0</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagos</div><div class="grupo-dfc-card-val" id="cicloPagos">R$ 0</div></div>
+    </div>
+    <div class="grupo-dfc-cards">
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Prazo Médio de Pagamento</div><div class="grupo-dfc-card-val" id="cicloPrazoPagamento">—</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Prazo Médio de Recebimento</div><div class="grupo-dfc-card-val" id="cicloPrazoRecebimento">—</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Inadimplência (período)</div><div class="grupo-dfc-card-val" id="cicloInadimplencia">—</div></div>
+    </div>
+
+    <div class="chart-card-title" style="margin-top:18px;">Total Faturado, Pagos e Recebidos por Mês</div>
+    <div style="position: relative; height: 260px;">
+      <canvas id="chartCicloFaturadoPagoRecebido" role="img" aria-label="Gráfico de linha mostrando faturado, pagos e recebidos mês a mês">Faturado, pagos e recebidos por mês.</canvas>
+    </div>
+
+    <div class="chart-card-title" style="margin-top:18px;">Receber Vencidos e A Pagar Vencidos por Mês</div>
+    <div style="position: relative; height: 260px;">
+      <canvas id="chartCicloVencidos" role="img" aria-label="Gráfico de linha mostrando o saldo de contas vencidas a receber e a pagar, mês a mês">Vencidos a receber e a pagar por mês.</canvas>
+    </div>
+
+    <div class="chart-card-title" style="margin-top:18px;">Evolução do Índice de Inadimplência</div>
+    <div style="position: relative; height: 260px;">
+      <canvas id="chartCicloInadimplencia" role="img" aria-label="Gráfico de linha mostrando a evolução mensal do índice de inadimplência">Evolução do índice de inadimplência.</canvas>
+    </div>
+  </div>
+
 
   <div id="viewSaldoBancos" class="view-container">
     <div class="blocks-inner">
@@ -3028,6 +3071,10 @@ function switchView(viewId, options = {}) {
   // dash_products/dash_vendedores) toda vez que a view abre.
   if (viewId === 'viewComercial') {
     renderComercial();
+  }
+
+  if (viewId === 'viewCicloFinanceiro') {
+    renderCicloFinanceiro();
   }
 
   // DFC por Bloco: recalcula ao abrir a view (garante dado fresco mesmo
@@ -9304,6 +9351,9 @@ let chartDonutInstance = null;
 let chartGaugeInstance = null;
 let chartInOutInstance = null;
 let chartForecastFlowInstance = null;
+let chartCicloFatInstance = null;
+let chartCicloVencidosInstance = null;
+let chartCicloInadimplenciaInstance = null;
 
 const CATEGORY_PALETTE = ['#3E89BC', '#C75450', '#3FA66A', '#D7A23E', '#8E6BC0', '#5DA8A0', '#C77E3E', '#7B8FA6'];
 const CHART_COLORS = {
@@ -9983,6 +10033,182 @@ function renderPrazosMedios(receivable, payable) {
   const subPmr = document.getElementById('subPrazoMedioRecebimento');
   if (subPmp) subPmp.textContent = 'Média ponderada pelo valor, títulos já pagos';
   if (subPmr) subPmr.textContent = 'Média ponderada pelo valor, títulos já recebidos';
+}
+
+// Recuperado em 17/07/2026 de uma sessão anterior que construiu essa view
+// mas nunca deu commit/push (ficou só local, achado num arquivo baixado
+// do navegador). Mesmo conceito do relatório nativo "Ciclo Financeiro" do
+// Omie: faturado/pagos/recebidos por mês, prazos médios, vencidos e
+// evolução da inadimplência, últimos 12 meses a partir de hoje.
+async function renderCicloFinanceiro() {
+  const root = document.getElementById('viewCicloFinanceiro');
+  if (!root) return;
+  if (!receivableCache || !payableCache) return;
+
+  try {
+    const hoje = dayjs();
+    const fimJanela = hoje.startOf('month').add(1, 'month'); // fim exclusivo do mês atual
+    const inicioJanela = fimJanela.subtract(12, 'month');
+
+    const receivable = receivableCache.filter(r => !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor));
+    const payable = payableCache;
+
+    // ---- Cards de resumo (janela inteira de 12 meses) ----
+    const somaNoPeriodo = (lista, campoData) => lista.reduce((s, t) => {
+      const d = t[campoData];
+      if (!d) return s;
+      const dj = dayjs(d);
+      if (dj.isBefore(inicioJanela) || !dj.isBefore(fimJanela)) return s;
+      return s + Number(t.valor_documento || 0);
+    }, 0);
+
+    const totalFaturado = somaNoPeriodo(receivable.filter(r => r.status_titulo !== 'CANCELADO'), 'data_emissao');
+    const totalRecebidos = somaNoPeriodo(receivable.filter(r => r.status_titulo === 'RECEBIDO'), 'data_pagamento');
+    const totalPagos = somaNoPeriodo(payable.filter(p => p.status_titulo === 'PAGO'), 'data_pagamento');
+
+    document.getElementById('cicloFatProdutos').textContent = fmtBRL(totalFaturado);
+    document.getElementById('cicloRecebidos').textContent = fmtBRL(totalRecebidos);
+    document.getElementById('cicloPagos').textContent = fmtBRL(totalPagos);
+
+    const pmp = calcPrazoMedioPonderado(payable, 'PAGO');
+    const pmr = calcPrazoMedioPonderado(receivable, 'RECEBIDO');
+    document.getElementById('cicloPrazoPagamento').textContent = pmp === null ? '—' : `${pmp.toFixed(1).replace('.', ',')} dias`;
+    document.getElementById('cicloPrazoRecebimento').textContent = pmr === null ? '—' : `${pmr.toFixed(1).replace('.', ',')} dias`;
+
+    // ---- Monta os 12 meses ----
+    const meses = [];
+    let cursor = inicioJanela;
+    for (let i = 0; i < 12; i++) { meses.push(cursor); cursor = cursor.add(1, 'month'); }
+
+    const faturadoPorMes = [];
+    const recebidosPorMes = [];
+    const pagosPorMes = [];
+    const receberVencidosPorMes = [];
+    const pagarVencidosPorMes = [];
+    const inadimplenciaPorMes = [];
+
+    meses.forEach(mesInicio => {
+      const mesFim = mesInicio.add(1, 'month');
+      const somaMes = (lista, campoData) => lista.reduce((s, t) => {
+        const d = t[campoData];
+        if (!d) return s;
+        const dj = dayjs(d);
+        if (dj.isBefore(mesInicio) || !dj.isBefore(mesFim)) return s;
+        return s + Number(t.valor_documento || 0);
+      }, 0);
+
+      faturadoPorMes.push(somaMes(receivable.filter(r => r.status_titulo !== 'CANCELADO'), 'data_emissao'));
+      recebidosPorMes.push(somaMes(receivable.filter(r => r.status_titulo === 'RECEBIDO'), 'data_pagamento'));
+      pagosPorMes.push(somaMes(payable.filter(p => p.status_titulo === 'PAGO'), 'data_pagamento'));
+
+      const venceramNoMesReceber = receivable.filter(r => {
+        if (!r.data_vencimento || r.status_titulo === 'CANCELADO') return false;
+        const dj = dayjs(r.data_vencimento);
+        return !dj.isBefore(mesInicio) && dj.isBefore(mesFim);
+      });
+      const vencidosReceber = venceramNoMesReceber.filter(r => r.status_titulo !== 'RECEBIDO' && dayjs(r.data_vencimento).isBefore(hoje, 'day'));
+      const totalVenceuReceber = venceramNoMesReceber.reduce((s, r) => s + Number(r.valor_documento || 0), 0);
+      const totalVencidoReceber = vencidosReceber.reduce((s, r) => s + Number(r.valor_documento || 0), 0);
+      receberVencidosPorMes.push(totalVencidoReceber);
+      inadimplenciaPorMes.push(totalVenceuReceber ? (totalVencidoReceber / totalVenceuReceber) * 100 : 0);
+
+      const venceramNoMesPagar = payable.filter(p => {
+        if (!p.data_vencimento || p.status_titulo === 'CANCELADO') return false;
+        const dj = dayjs(p.data_vencimento);
+        return !dj.isBefore(mesInicio) && dj.isBefore(mesFim);
+      });
+      const vencidosPagar = venceramNoMesPagar.filter(p => p.status_titulo !== 'PAGO' && dayjs(p.data_vencimento).isBefore(hoje, 'day'));
+      pagarVencidosPorMes.push(vencidosPagar.reduce((s, p) => s + Number(p.valor_documento || 0), 0));
+    });
+
+    const totalVencidoJanela = receberVencidosPorMes.reduce((a, b) => a + b, 0);
+    const totalVenceuJanela = meses.reduce((acc, mesInicio, i) => {
+      const mesFim = mesInicio.add(1, 'month');
+      const venceram = receivable.filter(r => {
+        if (!r.data_vencimento || r.status_titulo === 'CANCELADO') return false;
+        const dj = dayjs(r.data_vencimento);
+        return !dj.isBefore(mesInicio) && dj.isBefore(mesFim);
+      });
+      return acc + venceram.reduce((s, r) => s + Number(r.valor_documento || 0), 0);
+    }, 0);
+    document.getElementById('cicloInadimplencia').textContent = totalVenceuJanela
+      ? `${((totalVencidoJanela / totalVenceuJanela) * 100).toFixed(1).replace('.', ',')}%`
+      : '—';
+
+    const labels = meses.map(m => `${DRE_ARVORE_NOMES_MES[m.month()]}/${String(m.year()).slice(2)}`);
+
+    if (chartCicloFatInstance) chartCicloFatInstance.destroy();
+    const canvasFat = document.getElementById('chartCicloFaturadoPagoRecebido');
+    if (canvasFat) {
+      chartCicloFatInstance = new Chart(canvasFat.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Faturado', data: faturadoPorMes, borderColor: CHART_COLORS.blue, backgroundColor: 'transparent', tension: 0.3 },
+            { label: 'Pagos', data: pagosPorMes, borderColor: CHART_COLORS.red, backgroundColor: 'transparent', tension: 0.3 },
+            { label: 'Recebidos', data: recebidosPorMes, borderColor: CHART_COLORS.green, backgroundColor: 'transparent', tension: 0.3 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } } },
+          scales: {
+            x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { display: false } },
+            y: { ticks: { color: 'rgba(243,239,230,0.55)', callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }, grid: { color: 'rgba(243,239,230,0.06)' } },
+          },
+        },
+      });
+    }
+
+    if (chartCicloVencidosInstance) chartCicloVencidosInstance.destroy();
+    const canvasVenc = document.getElementById('chartCicloVencidos');
+    if (canvasVenc) {
+      chartCicloVencidosInstance = new Chart(canvasVenc.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            { label: 'Receber Vencidos', data: receberVencidosPorMes, borderColor: CHART_COLORS.green, backgroundColor: 'transparent', tension: 0.3 },
+            { label: 'A Pagar Vencidos', data: pagarVencidosPorMes, borderColor: CHART_COLORS.red, backgroundColor: 'transparent', tension: 0.3 },
+          ],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } },
+            tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } } },
+          scales: {
+            x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { display: false } },
+            y: { ticks: { color: 'rgba(243,239,230,0.55)', callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }, grid: { color: 'rgba(243,239,230,0.06)' } },
+          },
+        },
+      });
+    }
+
+    if (chartCicloInadimplenciaInstance) chartCicloInadimplenciaInstance.destroy();
+    const canvasInad = document.getElementById('chartCicloInadimplencia');
+    if (canvasInad) {
+      chartCicloInadimplenciaInstance = new Chart(canvasInad.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{ label: 'Inadimplência', data: inadimplenciaPorMes.map(v => Math.round(v * 100) / 100), borderColor: '#D7443E', backgroundColor: 'rgba(215,68,62,0.12)', fill: true, tension: 0.3 }],
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false },
+            tooltip: { callbacks: { label: (ctx) => `Inadimplência: ${ctx.parsed.y.toFixed(1).replace('.', ',')}%` } } },
+          scales: {
+            x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { display: false } },
+            y: { ticks: { color: 'rgba(243,239,230,0.55)', callback: (v) => v + '%' }, grid: { color: 'rgba(243,239,230,0.06)' } },
+          },
+        },
+      });
+    }
+  } catch (err) {
+    console.error('Ciclo Financeiro: não foi possível calcular.', err);
+  }
 }
 
 function renderInadimplencia(movements, receivable, payable) {
