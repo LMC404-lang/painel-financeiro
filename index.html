@@ -2688,22 +2688,29 @@
         <div id="vendasFaturamentoWrap"></div>
 
         <div class="dre-empresa-tabs" id="dreEmpresaTabs"></div>
+        <!-- Confirmado com Lucas em 17/07/2026: a árvore nativa (por
+             codigo_dre, igual ao relatório oficial do Omie) virou a
+             visão PADRÃO — "o dashboard é um resumo do Omie, tem que
+             bater igual". O sistema antigo (blocos manuais por nome de
+             categoria) fica só como opção de comparação, escondido por
+             padrão, até ter certeza total pra remover o código de vez. -->
         <div style="margin:10px 0;">
-          <button type="button" id="btnToggleDreNativa" class="btn-back" onclick="toggleVisaoDreNativa()">Ver como relatório nativo Omie</button>
+          <button type="button" id="btnToggleDreNativa" class="btn-back" onclick="toggleVisaoDreNativa()">Ver blocos customizados (sistema antigo)</button>
         </div>
-        <div id="dreNativaWrap" style="display:none;"></div>
+        <div id="dreNativaWrap" style="display:;"></div>
         <!-- Barra de cabeçalho única (meses/Total/Média), fixa logo
              abaixo do menu do app — compartilhada por TODAS as tabelas
              (resumo + cada bloco), que não repetem mais seu próprio
              cabeçalho. O scroll horizontal dela fica sincronizado com
-             o scroll de qualquer tabela (ver sincronizarScrollDreTbl). -->
-        <div class="dre-tbl-header-fixo-wrap" id="dreTblHeaderFixoWrap">
+             o scroll de qualquer tabela (ver sincronizarScrollDreTbl).
+             Só aparece quando o sistema antigo está ativo. -->
+        <div class="dre-tbl-header-fixo-wrap" id="dreTblHeaderFixoWrap" style="display:none;">
           <table class="dre-tbl dre-tbl-header-fixo">
             <tbody id="dreTblHeaderFixoBody"></tbody>
           </table>
         </div>
-        <div class="dre-arvore-resumo" id="dreArvoreResumo"></div>
-        <div class="blocos-grid" id="blocosGrid"></div>
+        <div class="dre-arvore-resumo" id="dreArvoreResumo" style="display:none;"></div>
+        <div class="blocos-grid" id="blocosGrid" style="display:none;"></div>
       </div>
     </div>
 
@@ -4399,13 +4406,18 @@ function toggleVisaoDreNativa() {
   const nativaWrap = document.getElementById('dreNativaWrap');
   const blocosGrid = document.getElementById('blocosGrid');
   const resumo = document.getElementById('dreArvoreResumo');
+  const headerFixo = document.getElementById('dreTblHeaderFixoWrap');
   const btn = document.getElementById('btnToggleDreNativa');
-  const ativando = nativaWrap.style.display === 'none' || !nativaWrap.style.display;
-  nativaWrap.style.display = ativando ? '' : 'none';
-  if (blocosGrid) blocosGrid.style.display = ativando ? 'none' : '';
-  if (resumo) resumo.style.display = ativando ? 'none' : '';
-  if (btn) btn.textContent = ativando ? 'Ver blocos customizados' : 'Ver como relatório nativo Omie';
-  if (ativando) renderDreArvoreNativa();
+  // O sistema antigo é o que alterna (nativo é o padrão sempre visível);
+  // detecta o estado atual pelo blocosGrid.
+  const antigoEstaAtivo = blocosGrid && blocosGrid.style.display !== 'none';
+  const vaiAtivarAntigo = !antigoEstaAtivo;
+  if (nativaWrap) nativaWrap.style.display = vaiAtivarAntigo ? 'none' : '';
+  if (blocosGrid) blocosGrid.style.display = vaiAtivarAntigo ? '' : 'none';
+  if (resumo) resumo.style.display = vaiAtivarAntigo ? '' : 'none';
+  if (headerFixo) headerFixo.style.display = vaiAtivarAntigo ? '' : 'none';
+  if (btn) btn.textContent = vaiAtivarAntigo ? 'Ver árvore nativa (Omie)' : 'Ver blocos customizados (sistema antigo)';
+  if (!vaiAtivarAntigo) renderDreArvoreNativa();
 }
 
 const DRE_ARVORE_BLOCOS = {
@@ -11067,6 +11079,7 @@ function renderForSelectedMonth() {
   // renderGaugeLiquidado(movementsCache, monthStart, monthEnd); — guardado para projeto futuro
   renderLatestPaid(categoriesCache, financialMovementsCache || [], monthStart, monthEnd);
   renderDreArvore(categoriesCache, movementsCache, monthStart, monthEnd);
+  renderDreArvoreNativa(); // virou a visão padrão em 17/07/2026 — precisa atualizar junto com o resto
   renderDfcArvore();
 
   document.getElementById('footerRight').textContent = `Atualizado em ${dayjs().format('DD/MM/YYYY HH:mm')}`;
