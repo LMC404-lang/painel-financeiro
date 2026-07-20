@@ -1394,6 +1394,30 @@
     padding: 1px 6px;
     flex-shrink: 0;
   }
+  .inad-categoria {
+    font-size: 10.5px;
+    color: var(--bone-dim);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 1px 7px;
+    flex-shrink: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 160px;
+  }
+  .inad-categoria-destaque {
+    color: #D7A23E;
+    border-color: #D7A23E;
+    font-weight: 600;
+  }
+  .inad-documento {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 10px;
+    color: var(--bone-dim);
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
   .inad-row-meta { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
   .inad-dias { font-family: 'IBM Plex Mono', monospace; font-size: 11px; color: var(--red); white-space: nowrap; }
   .inad-valor { font-family: 'IBM Plex Mono', monospace; font-size: 12.5px; color: var(--bone); font-weight: 600; white-space: nowrap; }
@@ -2478,12 +2502,12 @@
         <div class="value"><span id="sumCaixa">—</span><span class="delta" id="deltaCaixa"></span></div>
       </div>
       <div class="summary-card" id="cardInadimplencia">
-        <div class="label">⚠ A Receber Vencido</div>
+        <div class="label">A Receber (A Vencer)</div>
         <div class="value" id="sumInadimplencia">—</div>
         <div class="sub" id="subInadimplencia"></div>
       </div>
       <div class="summary-card" id="cardContasPagarVencidas">
-        <div class="label">⚠ A Pagar Vencido</div>
+        <div class="label">A Pagar (A Vencer)</div>
         <div class="value" id="sumContasPagarVencidas">—</div>
         <div class="sub" id="subContasPagarVencidas"></div>
       </div>
@@ -2502,9 +2526,9 @@
     <div class="section" id="sectionInadimplenciaDetalhe">
       <div class="section-head">
         <div class="section-head-title">
-          <h2>⚠ A Receber Vencido</h2>
+          <h2>A Receber (A Vencer)</h2>
         </div>
-        <div class="desc">Títulos a receber com vencimento já ultrapassado e ainda não recebidos. Mais atrasados primeiro.</div>
+        <div class="desc">Títulos a receber ainda não vencidos, com vencimento a partir do início do período selecionado (sem limite superior — igual o A Pagar) — com cliente, documento e categoria (Royalties/Comissão em destaque). Mais próximos do vencimento primeiro.</div>
       </div>
       <div id="inadimplenciaList" class="inad-list">
         <div style="font-size:11.5px;color:var(--bone-dim);text-align:center;padding:10px 0;">Carregando…</div>
@@ -2514,12 +2538,67 @@
     <div class="section" id="sectionContasPagarVencidasDetalhe">
       <div class="section-head">
         <div class="section-head-title">
-          <h2>⚠ A Pagar Vencido</h2>
+          <h2>A Pagar (A Vencer)</h2>
         </div>
-        <div class="desc">Títulos a pagar com vencimento já ultrapassado e ainda não pagos. Mais atrasados primeiro.</div>
+        <div class="desc">Títulos a pagar ainda não vencidos, com previsão de pagamento a partir do início do período selecionado (sem limite superior — igual o relatório nativo do Omie) — com fornecedor, documento e categoria (Royalties/Comissão em destaque). Mais próximos do vencimento primeiro.</div>
       </div>
       <div id="contasPagarVencidasList" class="inad-list">
         <div style="font-size:11.5px;color:var(--bone-dim);text-align:center;padding:10px 0;">Carregando…</div>
+      </div>
+    </div>
+
+    <div class="section" id="sectionContasPagarAnalises">
+      <div class="section-head">
+        <div class="section-head-title">
+          <h2>Análises — Contas a Pagar (A Vencer)</h2>
+        </div>
+        <div class="desc">Mesmo conjunto de títulos do card acima — só reorganizado por fornecedor, categoria, status e prazo. Mesmo período (De do cabeçalho como piso, sem teto).</div>
+      </div>
+      <div class="grupo-dfc-cards" style="margin-bottom:14px;">
+        <div class="bloco-card" style="flex:1;">
+          <div class="bloco-head"><div class="bloco-titulo">Total x Fornecedor (Top 10)</div></div>
+          <div class="bloco-body">
+            <table class="fin-tbl">
+              <tr><th>Fornecedor</th><th class="num">Valor</th></tr>
+              <tbody id="pagarPorFornecedorBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bloco-card" style="flex:1;">
+          <div class="bloco-head"><div class="bloco-titulo">Total x Categoria (Top 10)</div></div>
+          <div class="bloco-body">
+            <table class="fin-tbl">
+              <tr><th>Categoria</th><th class="num">Valor</th></tr>
+              <tbody id="pagarPorCategoriaBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="grupo-dfc-cards" style="margin-bottom:14px;">
+        <div class="bloco-card" style="flex:1;">
+          <div class="bloco-head"><div class="bloco-titulo">Total x Status</div></div>
+          <div class="bloco-body">
+            <table class="fin-tbl">
+              <tr><th>Status</th><th class="num">Qtd.</th><th class="num">Valor</th></tr>
+              <tbody id="pagarPorStatusBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="bloco-card" style="flex:1;">
+          <div class="bloco-head"><div class="bloco-titulo">Aging (A Vencer, por prazo)</div></div>
+          <div class="bloco-body">
+            <table class="fin-tbl">
+              <tr><th>Prazo</th><th class="num">Valor</th></tr>
+              <tbody id="pagarAgingBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card-title">Total a Pagar por Mês (previsão de pagamento)</div>
+      <div style="position: relative; height: 240px;">
+        <canvas id="chartPagarPorData" role="img" aria-label="Gráfico de barras mostrando o total a pagar por mês de previsão de pagamento">Total a pagar por mês.</canvas>
       </div>
     </div>
 
@@ -9894,7 +9973,9 @@ try {
 
     renderCharts(unifiedMovements, financialMovementsCache);
     renderStackedExpenses(categories, unifiedMovements);
-    renderInadimplencia(unifiedMovements, receivable, payable);
+    // renderInadimplencia/renderPagarAnalises agora rodam dentro de
+    // renderForSelectedMonth() (chamada logo acima), já com o período
+    // (grupoDe) selecionado no cabeçalho — necessário pro filtro "A Vencer".
     renderPrazosMedios(receivable, payable);
     renderForecastFlowChart(receivable, payable);
     renderForecasts(receivable, payable);
@@ -10490,6 +10571,27 @@ function filterOverdue(items, today) {
   });
 }
 
+// Confirmado com Lucas em 15/07/2026: o card de Contas a Pagar deve
+// filtrar por "A VENCER" (não vencido) — isso é como estava certo antes
+// de mexermos (foi engano nosso + do financeiro ter mudado). Contas a
+// Receber continua "Atrasado/Vencido" (filterOverdue/filterAtrasadoReceber).
+// O "A Vencer" respeita a data "De" do cabeçalho como PISO — mas sem teto
+// (sem limite de "Até"), igual o relatório nativo "Contas a Pagar" do
+// Omie filtrado por Situação=A Vencer + Previsão de Pagamento a partir
+// de uma data: mostra tudo dali pra frente, mesmo pagamento programado
+// pra muito mais tarde (ex: parcelas de máquina).
+function filterAVencerPagar(payable, periodoIni) {
+  return (payable || []).filter(p => {
+    if (p.status_titulo !== 'A VENCER') return false;
+    if (isClientePrevisao(p._empresa, p.codigo_cliente_fornecedor)) return false;
+    if (periodoIni) {
+      if (!p.data_vencimento) return false;
+      if (dayjs(p.data_vencimento).isBefore(periodoIni)) return false;
+    }
+    return true;
+  });
+}
+
 // Códigos de cliente "REDECARD S/A" (uma por empresa, quando existe) —
 // confirmado com Lucas em 14/07/2026: recebíveis da RedeCard não seguem
 // a mesma lógica de atraso das outras contas a receber (liquidam pela
@@ -10548,9 +10650,18 @@ function isClientePrevisao(empresa, codigoCliente) {
 // título vence sozinho no Omie (achado em 14/07/2026 — Blue Line tinha
 // R$123.900 assim). Enquanto isso não for corrigido no sync, esses casos
 // não aparecem neste card.
-function filterAtrasadoReceber(items) {
+// Confirmado com Lucas em 15/07/2026: Contas a Receber usa só A VENCER
+// (mesmo padrão do A Pagar — "De" do cabeçalho como piso, sem teto).
+// Atrasado foi retirado do card. Restaurado em 20/07/2026 — a versão
+// anterior (só ATRASADO, sem periodoIni) tinha voltado ao vivo por engano
+// na refatoração Fase 3.
+function filterAtrasadoReceber(items, periodoIni) {
   return (items || []).filter(m => {
-    if (m.status_titulo !== 'ATRASADO') return false;
+    if (m.status_titulo !== 'A VENCER') return false;
+    if (periodoIni) {
+      if (!m.data_vencimento) return false;
+      if (dayjs(m.data_vencimento).isBefore(periodoIni)) return false;
+    }
     if (!m.data_emissao) return false;
     const redecardCodigo = REDECARD_CODIGO_CLIENTE_POR_EMPRESA[m._empresa];
     if (redecardCodigo && Number(m.codigo_cliente_fornecedor) === redecardCodigo) return false;
@@ -10775,10 +10886,10 @@ async function renderCicloFinanceiro() {
   }
 }
 
-function renderInadimplencia(movements, receivable, payable) {
+function renderInadimplencia(movements, receivable, payable, periodoIni) {
   const today = dayjs();
 
-  const overdueReceivable = filterAtrasadoReceber(receivable);
+  const overdueReceivable = filterAtrasadoReceber(receivable, periodoIni);
   renderOverdueCard({
     overdue: overdueReceivable,
     today,
@@ -10786,24 +10897,26 @@ function renderInadimplencia(movements, receivable, payable) {
     subElId: 'subInadimplencia',
     cardElId: 'cardInadimplencia',
     listElId: 'inadimplenciaList',
-    subLabelSuffix: 'e não recebida',
-    emptyLabel: 'Nenhuma conta vencida em aberto',
+    subLabelSuffix: 'a vencer a partir do período',
+    emptyLabel: 'Nenhuma conta a receber a vencer a partir do período selecionado',
+    modo: 'a_vencer',
   });
 
-  const overduePayable = filterOverdue(payable, today);
+  const aVencerPayable = filterAVencerPagar(payable, periodoIni);
   renderOverdueCard({
-    overdue: overduePayable,
+    overdue: aVencerPayable,
     today,
     valElId: 'sumContasPagarVencidas',
     subElId: 'subContasPagarVencidas',
     cardElId: 'cardContasPagarVencidas',
     listElId: 'contasPagarVencidasList',
-    subLabelSuffix: 'e não paga',
-    emptyLabel: 'Nenhuma conta a pagar vencida em aberto',
+    subLabelSuffix: 'a vencer a partir do período',
+    emptyLabel: 'Nenhuma conta a pagar a vencer a partir do período selecionado',
+    modo: 'a_vencer',
   });
 }
 
-function renderOverdueCard({ overdue, today, valElId, subElId, cardElId, listElId, subLabelSuffix, emptyLabel }) {
+function renderOverdueCard({ overdue, today, valElId, subElId, cardElId, listElId, subLabelSuffix, emptyLabel, modo }) {
   const total = overdue.reduce((s, m) => s + Number(m.valor_documento || 0), 0);
   const valEl = document.getElementById(valElId);
   const subEl = document.getElementById(subElId);
@@ -10811,10 +10924,10 @@ function renderOverdueCard({ overdue, today, valElId, subElId, cardElId, listElI
 
   valEl.textContent = fmtBRL(total);
   subEl.textContent = overdue.length
-    ? `${overdue.length} conta${overdue.length > 1 ? 's' : ''} vencida${overdue.length > 1 ? 's' : ''} ${subLabelSuffix}${overdue.length > 1 ? 's' : ''}`
+    ? `${overdue.length} conta${overdue.length > 1 ? 's' : ''} ${subLabelSuffix}`
     : emptyLabel;
 
-  if (total > 0) {
+  if (total > 0 && modo === 'atrasado') {
     cardEl.classList.add('alert');
     valEl.style.color = CHART_COLORS.red;
   } else {
@@ -10822,20 +10935,22 @@ function renderOverdueCard({ overdue, today, valElId, subElId, cardElId, listElI
     valEl.style.color = '';
   }
 
-  renderInadimplenciaList(overdue, today, listElId);
+  renderInadimplenciaList(overdue, today, listElId, modo);
 }
 
-// Monta a lista detalhada de contas vencidas: cliente, valor, dias em
-// atraso e empresa (quando mais de uma selecionada). Clientes são
-// resolvidos via clientsCache, casando por (codigo_cliente_omie, empresa_id)
-// — dash_clients tem uma linha por empresa para o mesmo cliente, então o
-// join precisa considerar as duas chaves (mesmo cuidado de dash_categories).
-function renderInadimplenciaList(overdue, today, listElId) {
+// Monta a lista detalhada: cliente/fornecedor, categoria (com destaque
+// pra Royalties/Comissão), valor, prazo (dias em atraso ou dias até
+// vencer, conforme o modo) e empresa (quando mais de uma selecionada).
+// Clientes são resolvidos via clientsCache, casando por
+// (codigo_cliente_omie, empresa_id) — dash_clients tem uma linha por
+// empresa para o mesmo cliente, então o join precisa considerar as duas
+// chaves (mesmo cuidado de dash_categories).
+function renderInadimplenciaList(overdue, today, listElId, modo) {
   const listEl = document.getElementById(listElId || 'inadimplenciaList');
   if (!listEl) return; // elemento ainda não existe nesta view
 
   if (!overdue.length) {
-    listEl.innerHTML = '<div style="font-size:11.5px;color:var(--bone-dim);text-align:center;padding:10px 0;">Nenhum título vencido em aberto.</div>';
+    listEl.innerHTML = '<div style="font-size:11.5px;color:var(--bone-dim);text-align:center;padding:10px 0;">Nenhum título em aberto.</div>';
     return;
   }
 
@@ -10844,25 +10959,177 @@ function renderInadimplenciaList(overdue, today, listElId) {
     clientByKey[`${c._empresa}|${c.codigo_cliente_omie}`] = c.nome_fantasia || c.razao_social;
   });
 
+  const categoriaByKey = {};
+  (categoriesCache || []).forEach(c => {
+    categoriaByKey[`${c._empresa}|${c.codigo}`] = c.descricao;
+  });
+
   const sorted = overdue.slice().sort((a, b) => dayjs(a.data_vencimento).valueOf() - dayjs(b.data_vencimento).valueOf());
 
   listEl.innerHTML = sorted.map(m => {
-    const dias = today.diff(dayjs(m.data_vencimento), 'day');
     const nome = clientByKey[`${m._empresa}|${m.codigo_cliente_fornecedor}`]
       || m.observacao
-      || (m.numero_documento ? `Documento ${m.numero_documento}` : 'Registro não identificado');
+      || 'Registro não identificado';
+    const documentoTag = m.numero_documento ? `<span class="inad-documento">Doc. ${decodeHtmlEntities(String(m.numero_documento))}</span>` : '';
     const empresaTag = `<span class="inad-empresa">${m._empresa}</span>`;
+
+    const categoriaNome = categoriaByKey[`${m._empresa}|${m.codigo_categoria || m.cod_categoria}`] || '';
+    const categoriaLower = categoriaNome.toLowerCase();
+    const isRoyaltiesOuComissao = categoriaLower.includes('royalt') || categoriaLower.includes('comiss');
+    const categoriaTag = categoriaNome
+      ? `<span class="inad-categoria${isRoyaltiesOuComissao ? ' inad-categoria-destaque' : ''}">${decodeHtmlEntities(categoriaNome)}</span>`
+      : '';
+
+    // Prazo calculado pelo STATUS REAL de cada item (não pelo "modo" geral
+    // do card) — necessário desde que Contas a Receber passou a misturar
+    // Atrasado + A Vencer na mesma lista.
+    const ehAVencerDeVerdade = m.status_titulo === 'A VENCER';
+    const dias = ehAVencerDeVerdade
+      ? dayjs(m.data_vencimento).diff(today, 'day')
+      : today.diff(dayjs(m.data_vencimento), 'day');
+    const prazoTexto = ehAVencerDeVerdade
+      ? (dias < 0 ? `venceu há ${Math.abs(dias)} dia${Math.abs(dias) === 1 ? '' : 's'}` : dias === 0 ? 'vence hoje' : `vence em ${dias} dia${dias === 1 ? '' : 's'}`)
+      : `${dias} dia${dias === 1 ? '' : 's'} em atraso`;
+
     return `<div class="inad-row">
       <div class="inad-row-main">
         <span class="inad-cliente">${decodeHtmlEntities(nome)}</span>
+        ${documentoTag}
+        ${categoriaTag}
         ${empresaTag}
       </div>
       <div class="inad-row-meta">
-        <span class="inad-dias">${dias} dia${dias === 1 ? '' : 's'} em atraso</span>
+        <span class="inad-dias">${prazoTexto}</span>
         <span class="inad-valor">${fmtBRL(Number(m.valor_documento || 0))}</span>
       </div>
     </div>`;
   }).join('');
+}
+
+let chartPagarPorDataInstance = null;
+
+// Análises de Contas a Pagar — ranking por fornecedor/categoria, status,
+// aging (por prazo até vencer) e evolução mensal. Mesmo conjunto de dados
+// do card "A Pagar (A Vencer)" (status A VENCER, período "De" do
+// cabeçalho como piso, sem teto, exclui previsão) — só reorganizado de
+// jeitos diferentes, igual os relatórios nativos do Omie (Total x
+// Fornecedores, Total x Categoria, Total x Status, Aging). Recuperado em
+// 20/07/2026 do arquivo index_19.html — feito em sessão anterior mas
+// nunca commitado no GitHub.
+function renderPagarAnalises(payable, periodoIni) {
+  const aVencer = filterAVencerPagar(payable, periodoIni);
+  const hoje = dayjs();
+
+  // ---- Total x Fornecedor ----
+  const clientByKey = {};
+  (clientsCache || []).forEach(c => {
+    clientByKey[`${c._empresa}|${c.codigo_cliente_omie}`] = c.nome_fantasia || c.razao_social;
+  });
+  const porFornecedor = {};
+  aVencer.forEach(p => {
+    const nome = clientByKey[`${p._empresa}|${p.codigo_cliente_fornecedor}`] || p.observacao || 'Não identificado';
+    porFornecedor[nome] = (porFornecedor[nome] || 0) + Number(p.valor_documento || 0);
+  });
+  const fornecedorBody = document.getElementById('pagarPorFornecedorBody');
+  if (fornecedorBody) {
+    const linhas = Object.entries(porFornecedor).sort((a, b) => b[1] - a[1]).slice(0, 10)
+      .map(([nome, valor]) => `<tr><td>${decodeHtmlEntities(nome)}</td><td class="num">${fmtBRL(valor)}</td></tr>`).join('');
+    fornecedorBody.innerHTML = linhas || '<tr><td colspan="2" style="text-align:center;color:var(--bone-dim);">Sem dado no período.</td></tr>';
+  }
+
+  // ---- Total x Categoria ----
+  const categoriaByKey = {};
+  (categoriesCache || []).forEach(c => {
+    categoriaByKey[`${c._empresa}|${c.codigo}`] = c.descricao;
+  });
+  const porCategoria = {};
+  aVencer.forEach(p => {
+    const nome = categoriaByKey[`${p._empresa}|${p.codigo_categoria}`] || 'Sem categoria';
+    porCategoria[nome] = (porCategoria[nome] || 0) + Number(p.valor_documento || 0);
+  });
+  const categoriaBody = document.getElementById('pagarPorCategoriaBody');
+  if (categoriaBody) {
+    const linhas = Object.entries(porCategoria).sort((a, b) => b[1] - a[1]).slice(0, 10)
+      .map(([nome, valor]) => `<tr><td>${decodeHtmlEntities(nome)}</td><td class="num">${fmtBRL(valor)}</td></tr>`).join('');
+    categoriaBody.innerHTML = linhas || '<tr><td colspan="2" style="text-align:center;color:var(--bone-dim);">Sem dado no período.</td></tr>';
+  }
+
+  // ---- Total x Status ----
+  // Usa TODO o payable (não só o filtrado A Vencer) pra dar contexto real
+  // de quanto já foi pago vs quanto ainda falta, dentro do mesmo piso de
+  // período (por data de vencimento).
+  const statusRelevante = (payable || []).filter(p => {
+    if (p.status_titulo === 'CANCELADO') return false;
+    if (isClientePrevisao(p._empresa, p.codigo_cliente_fornecedor)) return false;
+    if (periodoIni && p.data_vencimento && dayjs(p.data_vencimento).isBefore(periodoIni)) return false;
+    return true;
+  });
+  const porStatus = {};
+  statusRelevante.forEach(p => {
+    const key = p.status_titulo || 'Sem status';
+    if (!porStatus[key]) porStatus[key] = { qtd: 0, valor: 0 };
+    porStatus[key].qtd += 1;
+    porStatus[key].valor += Number(p.valor_documento || 0);
+  });
+  const statusBody = document.getElementById('pagarPorStatusBody');
+  if (statusBody) {
+    const linhas = Object.entries(porStatus).sort((a, b) => b[1].valor - a[1].valor)
+      .map(([status, v]) => `<tr><td>${status}</td><td class="num">${v.qtd}</td><td class="num">${fmtBRL(v.valor)}</td></tr>`).join('');
+    statusBody.innerHTML = linhas || '<tr><td colspan="3" style="text-align:center;color:var(--bone-dim);">Sem dado no período.</td></tr>';
+  }
+
+  // ---- Aging (por prazo até vencer) ----
+  const faixas = [
+    { label: '0-30 dias', min: 0, max: 30 },
+    { label: '31-60 dias', min: 31, max: 60 },
+    { label: '61-90 dias', min: 61, max: 90 },
+    { label: '91-180 dias', min: 91, max: 180 },
+    { label: 'Acima de 180 dias', min: 181, max: Infinity },
+  ];
+  const agingTotais = faixas.map(() => 0);
+  aVencer.forEach(p => {
+    if (!p.data_vencimento) return;
+    const dias = dayjs(p.data_vencimento).diff(hoje, 'day');
+    const idx = faixas.findIndex(f => dias >= f.min && dias <= f.max);
+    if (idx >= 0) agingTotais[idx] += Number(p.valor_documento || 0);
+  });
+  const agingBody = document.getElementById('pagarAgingBody');
+  if (agingBody) {
+    agingBody.innerHTML = faixas.map((f, i) => `<tr><td>${f.label}</td><td class="num">${fmtBRL(agingTotais[i])}</td></tr>`).join('');
+  }
+
+  // ---- Total x Data (evolução mensal) ----
+  const porMes = {};
+  aVencer.forEach(p => {
+    if (!p.data_vencimento) return;
+    const chave = dayjs(p.data_vencimento).format('YYYY-MM');
+    porMes[chave] = (porMes[chave] || 0) + Number(p.valor_documento || 0);
+  });
+  const mesesOrdenados = Object.keys(porMes).sort();
+  const labelsMes = mesesOrdenados.map(m => {
+    const d = dayjs(m + '-01');
+    return `${DRE_ARVORE_NOMES_MES[d.month()]}/${String(d.year()).slice(2)}`;
+  });
+
+  if (chartPagarPorDataInstance) chartPagarPorDataInstance.destroy();
+  const canvasPagarData = document.getElementById('chartPagarPorData');
+  if (canvasPagarData && mesesOrdenados.length) {
+    chartPagarPorDataInstance = new Chart(canvasPagarData.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels: labelsMes,
+        datasets: [{ label: 'A Pagar', data: mesesOrdenados.map(m => porMes[m]), backgroundColor: CHART_COLORS.red }],
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: (ctx) => fmtBRL(ctx.parsed.y) } } },
+        scales: {
+          x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { display: false } },
+          y: { ticks: { color: 'rgba(243,239,230,0.55)', callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v / 1000).toFixed(0) + 'k' : v) }, grid: { color: 'rgba(243,239,230,0.06)' } },
+        },
+      },
+    });
+  }
 }
 
 function renderForecastFlowChart(receivable, payable) {
@@ -11091,6 +11358,8 @@ function renderForSelectedMonth() {
     const { de: grupoDe, ate: grupoAteInicio } = getSelectedPeriodRange();
     const grupoAte = grupoAteInicio.add(1, 'month'); // getSelectedPeriodRange devolve o INÍCIO do mês final; buildDfc/etc esperam o fim exclusivo
     renderGrupoDfc(grupoDe, grupoAte);
+    renderInadimplencia(movementsCache, receivableCache, payableCache, grupoDe);
+    renderPagarAnalises(payableCache, grupoDe);
   } catch (e) { console.error('renderGrupoDfc falhou:', e); }
 }
 
