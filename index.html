@@ -521,7 +521,7 @@
     flex-shrink: 0;
   }
   .company-tag-KMNO { background: rgba(94, 158, 255, 0.15); color: #7db2ff; border: 1px solid rgba(94, 158, 255, 0.35); }
-  .company-tag-BLUELINE { background: rgba(94, 255, 209, 0.15); color: #6df0c9; border: 1px solid rgba(94, 255, 209, 0.35); }
+  .company-tag-NOVAH { background: rgba(94, 255, 209, 0.15); color: #6df0c9; border: 1px solid rgba(94, 255, 209, 0.35); }
   .company-tag-RT { background: rgba(255, 176, 94, 0.15); color: #ffbf7d; border: 1px solid rgba(255, 176, 94, 0.35); }
 
   .bloco-head {
@@ -2100,7 +2100,7 @@
   <div class="notes-panel-tabs" id="notesPanelTabs">
     <button type="button" class="notes-panel-tab" data-empresa="RT" onclick="selecionarEmpresaNotas('RT')">RT</button>
     <button type="button" class="notes-panel-tab" data-empresa="KMNO" onclick="selecionarEmpresaNotas('KMNO')">KMNO</button>
-    <button type="button" class="notes-panel-tab" data-empresa="BLUELINE" onclick="selecionarEmpresaNotas('BLUELINE')">Blue Line/Novah</button>
+    <button type="button" class="notes-panel-tab" data-empresa="NOVAH" onclick="selecionarEmpresaNotas('NOVAH')">Blue Line/Novah</button>
     <button type="button" class="notes-panel-tab" data-empresa="TODAS" onclick="selecionarEmpresaNotas('TODAS')">Todas as Empresas</button>
   </div>
   <div class="notes-panel-body" id="notesPanelBody">
@@ -2146,7 +2146,7 @@
       <div class="company-check-row" id="reqCompanyRow">
         <label class="company-check-opt"><input type="checkbox" value="RT"> RT · Esportes e Eventos</label>
         <label class="company-check-opt"><input type="checkbox" value="KMNO"> KMNO Sports</label>
-        <label class="company-check-opt"><input type="checkbox" value="BLUELINE"> Blue Line/Novah</label>
+        <label class="company-check-opt"><input type="checkbox" value="NOVAH"> Blue Line/Novah</label>
       </div>
 
       <label for="reqMotivo">Motivo / justificativa</label>
@@ -3428,7 +3428,7 @@ function fmtReqDate(iso) {
   }
 }
 
-const COMPANY_LABELS_REQ = { RT: 'RT · Esportes e Eventos', KMNO: 'KMNO Sports', BLUELINE: 'Blue Line/Novah' };
+const COMPANY_LABELS_REQ = { RT: 'RT · Esportes e Eventos', KMNO: 'KMNO Sports', NOVAH: 'Blue Line/Novah' };
 
 async function renderRequestsList() {
   const listEl = document.getElementById('requestsList');
@@ -3567,10 +3567,10 @@ const COMPANIES = {
     eyebrow: 'KMNO · Sports',
     footerSlug: 'omie-sync-kmno',
   },
-  BLUELINE: {
+  NOVAH: {
     label: 'Blue Line/Novah',
     eyebrow: 'Blue Line/Novah',
-    footerSlug: 'omie-sync-blueline',
+    footerSlug: 'omie-sync-novah',
   },
 };
 
@@ -3610,7 +3610,7 @@ let transferenciasCache = null; // movimentos TRAR/TRAP (transferência entre co
 
 // --- GRUPO 2: Árvore de DRE por Bloco ---
 // Cache PRÓPRIO do card "DRE por Bloco" — busca sempre as 3 empresas
-// (RT+KMNO+BLUELINE), independente do que estiver marcado no seletor
+// (RT+KMNO+NOVAH), independente do que estiver marcado no seletor
 // global de empresas (que pode estar filtrado numa empresa só). Sem isso,
 // as abas/consolidado desse card ficam zeradas quando o seletor global
 // não inclui a empresa selecionada na aba.
@@ -3658,7 +3658,7 @@ const CAPEX_CODIGOS = ['2.07.01', '2.07.02', '2.07.03', '2.07.04', '2.07.05', '2
 const REFIS_CODIGOS_POR_EMPRESA = {
   KMNO: ['2.14.95', '2.14.98', '2.14.99'],
   RT: ['2.06.06', '2.06.07'],
-  BLUELINE: [],
+  NOVAH: [],
 };
 
 // ===================================================================
@@ -3915,7 +3915,7 @@ function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, month
     .sort((a, b) => b.val - a.val);
 }
 
-const DFC_ARVORE_EMPRESAS = ['RT', 'KMNO', 'BLUELINE', 'TODAS'];
+const DFC_ARVORE_EMPRESAS = ['RT', 'KMNO', 'NOVAH', 'TODAS'];
 
 function selecionarEmpresaDfcArvore(key) {
   dfcArvoreEmpresaAtual = key;
@@ -4322,7 +4322,7 @@ function renderArvoreNativaDreHtml(arvore, meses) {
 
 // ===================================================================
 // RESUMO EM CASCATA UNIFICADO (Fase 3, 17/07/2026) — substitui as 3
-// funções separadas (buildResumoKMNO/Blueline/RT) por UMA só, que lê
+// funções separadas (buildResumoKMNO/Novah/RT) por UMA só, que lê
 // direto da árvore nativa por codigo_dre. Cada subtotal bate exato com
 // o agrupamento TIPO nativo do Omie (Lucro Bruto = TIPO 1, Despesas =
 // TIPO 2, Investimentos = TIPO 3) — só a Depreciação continua sendo um
@@ -5164,7 +5164,7 @@ const DRE_ARVORE_BLOCOS = {
       ]
     }
   ],
-  "BLUELINE": [
+  "NOVAH": [
     {
       "id": "receita_bruta",
       "nome": "Receita Bruta",
@@ -6355,7 +6355,7 @@ const DRE_ORCADO_ESTATICO = {
       }
     }
   },
-  "BLUELINE": {
+  "NOVAH": {
     "receita_bruta": {
       "jan": {
         "Clientes - Faturamento para KMNO": 175000.0,
@@ -7277,12 +7277,12 @@ const DRE_ORCADO_MES_INFO = {
   mai: { mes: 5, ano: 2026 },
 };
 
-const DRE_ARVORE_EMPRESAS = ['RT', 'KMNO', 'BLUELINE'];
+const DRE_ARVORE_EMPRESAS = ['RT', 'KMNO', 'NOVAH'];
 // Abas visíveis no seletor do card — reflete dinamicamente o que está
 // marcado no seletor de empresas do topo da página (selectedCompanyKeys),
 // em vez de sempre mostrar as 3. "TODAS" (consolidado) só aparece quando
 // as 3 estiverem marcadas ao mesmo tempo: a soma consolidada (função
-// buildResumoConsolidado) hoje sempre soma RT+KMNO+BlueLine fixo — não
+// buildResumoConsolidado) hoje sempre soma RT+KMNO+Novah fixo — não
 // sabe somar um subconjunto — então mostrá-la com só 1 ou 2 marcadas
 // daria um resultado inconsistente com o filtro escolhido no topo.
 function getDreArvoreTabs() {
@@ -7292,7 +7292,7 @@ function getDreArvoreTabs() {
 }
 function labelAbaDreArvore(k) { return k === 'TODAS' ? 'Todas as Empresas' : COMPANIES[k].label; }
 
-const DRE_ARVORE_DEPRECIACAO_PCT = { KMNO: 0.01, BLUELINE: 0.01, RT: 0 };
+const DRE_ARVORE_DEPRECIACAO_PCT = { KMNO: 0.01, NOVAH: 0.01, RT: 0 };
 
 const KMNO_IMPOSTOS_TAXAS = {
   baseLucroPresumido: 0.08, irpj: 0.15, adicionalIrpjExcedente: 20000,
@@ -7564,7 +7564,7 @@ function buildResumoKMNO(B) {
   ];
 }
 
-function buildResumoBlueline(B) {
+function buildResumoNovah(B) {
   const receitaBruta = B.receita_bruta.total;
   const impostos = B.impostos.total;
   const devolucoes = B.devolucoes.total;
@@ -7577,7 +7577,7 @@ function buildResumoBlueline(B) {
   const depPessoalAdm = B.dep_pessoal_adm.total;
   const proLabore = B.pro_labore.total;
   const resultadoOperacional = margemContribuicao - despIndustriais - despesasAdm - proLabore - depPessoalAdm;
-  const depreciacao = calcDepreciacao('BLUELINE', receitaBruta);
+  const depreciacao = calcDepreciacao('NOVAH', receitaBruta);
   const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
   const despFinanceiras = B.despesas_financeiras.total;
   const resultadoLiquido = lucroBrutoDepreciacao - despFinanceiras;
@@ -7595,7 +7595,7 @@ function buildResumoBlueline(B) {
     { label: '(-) Dep. Pessoal ADM / PJ Terceiros', val: depPessoalAdm, cls: 'item' },
     { label: '(-) Pró-Labore', val: proLabore, cls: 'item' },
     { label: '(=) Resultado Operacional (Lucro Bruto)', val: resultadoOperacional, cls: 'total', destaque: true },
-    { label: `(-) Depreciação (${fmtPct(DRE_ARVORE_DEPRECIACAO_PCT.BLUELINE)})`, val: depreciacao, cls: 'item' },
+    { label: `(-) Depreciação (${fmtPct(DRE_ARVORE_DEPRECIACAO_PCT.NOVAH)})`, val: depreciacao, cls: 'item' },
     { label: '(=) Lucro Bruto - Depreciação', val: lucroBrutoDepreciacao, cls: 'total' },
     { label: '(-) Despesas Financeiras', val: despFinanceiras, cls: 'item' },
     { label: '(=) Resultado Líquido', val: resultadoLiquido, cls: 'total', destaque: true },
@@ -7645,7 +7645,7 @@ function buildResumoRT(B) {
   ];
 }
 
-const DRE_ARVORE_RESUMO_BUILDERS = { KMNO: buildResumoKMNO, BLUELINE: buildResumoBlueline, RT: buildResumoRT };
+const DRE_ARVORE_RESUMO_BUILDERS = { KMNO: buildResumoKMNO, NOVAH: buildResumoNovah, RT: buildResumoRT };
 
 // ===================================================================
 // GRUPO DFC — extrai as métricas-chave (Receita Bruta, Receita Líquida,
@@ -7737,7 +7737,7 @@ function buildResumoConsolidado(B_RT, B_KMNO, B_BL) {
   const resultadoOperacional = margemContribuicao - custosFixos;
 
   const depreciacao = calcDepreciacao('KMNO', B_KMNO.faturamento.total)
-    + calcDepreciacao('BLUELINE', B_BL.receita_bruta.total)
+    + calcDepreciacao('NOVAH', B_BL.receita_bruta.total)
     + calcDepreciacao('RT', B_RT.receita_bruta.total);
   const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
 
@@ -7875,17 +7875,17 @@ function calcularResumoBlocosPeriodoAnterior(empresa, categories, movements, dat
       return {
         RT: buildTodosBlocosRealizado('RT', categories, movements, m, monthEnd),
         KMNO: buildTodosBlocosRealizado('KMNO', categories, movements, m, monthEnd),
-        BLUELINE: buildTodosBlocosRealizado('BLUELINE', categories, movements, m, monthEnd),
+        NOVAH: buildTodosBlocosRealizado('NOVAH', categories, movements, m, monthEnd),
       };
     });
-    const resumosPorMes = porMes.map(t => buildResumoConsolidado(t.RT, t.KMNO, t.BLUELINE));
+    const resumosPorMes = porMes.map(t => buildResumoConsolidado(t.RT, t.KMNO, t.NOVAH));
     // Guarda também os totais POR EMPRESA — usado pra calcular a % de
     // variação de cada bloco detalhado quando a aba "Todas as Empresas"
     // mostra os 3 conjuntos de blocos (RT/KMNO/Blue Line) empilhados.
     const blocosTotaisPorEmpresa = {
       RT: somarBlocosTotais(porMes.map(t => t.RT)),
       KMNO: somarBlocosTotais(porMes.map(t => t.KMNO)),
-      BLUELINE: somarBlocosTotais(porMes.map(t => t.BLUELINE)),
+      NOVAH: somarBlocosTotais(porMes.map(t => t.NOVAH)),
     };
     return { resumoTotais: somarLinhasResumoPorIndice(resumosPorMes), blocosTotais: {}, blocosTotaisPorEmpresa };
   }
@@ -7927,7 +7927,7 @@ function calcularBlocosConsolidadoPorColuna(colunas, categories, movements) {
     return {
       RT: buildTodosBlocosRealizado('RT', categories, movements, col.mes, monthEnd),
       KMNO: buildTodosBlocosRealizado('KMNO', categories, movements, col.mes, monthEnd),
-      BLUELINE: buildTodosBlocosRealizado('BLUELINE', categories, movements, col.mes, monthEnd),
+      NOVAH: buildTodosBlocosRealizado('NOVAH', categories, movements, col.mes, monthEnd),
     };
   });
 }
@@ -8093,7 +8093,7 @@ async function renderDreArvore(categoriesParam, movementsParam, monthStart, mont
   let resumoPorColuna;
   if (consolidado) {
     blocosConsolidadoPorColuna = calcularBlocosConsolidadoPorColuna(colunas, categories, movements);
-    resumoPorColuna = blocosConsolidadoPorColuna.map(t => t ? buildResumoConsolidado(t.RT, t.KMNO, t.BLUELINE) : null);
+    resumoPorColuna = blocosConsolidadoPorColuna.map(t => t ? buildResumoConsolidado(t.RT, t.KMNO, t.NOVAH) : null);
   } else {
     blocosPorColuna = calcularBlocosPorColuna(empresa, colunas, categories, movements);
     const resumoBuilder = DRE_ARVORE_RESUMO_BUILDERS[empresa];
@@ -8120,9 +8120,9 @@ async function renderDreArvore(categoriesParam, movementsParam, monthStart, mont
     if (consolidado) {
       const B_RT = buildTodosBlocosRealizado('RT', categories, movements, mesSombra, sombraFim);
       const B_KMNO = buildTodosBlocosRealizado('KMNO', categories, movements, mesSombra, sombraFim);
-      const B_BL = buildTodosBlocosRealizado('BLUELINE', categories, movements, mesSombra, sombraFim);
+      const B_BL = buildTodosBlocosRealizado('NOVAH', categories, movements, mesSombra, sombraFim);
       resumoSombra = buildResumoConsolidado(B_RT, B_KMNO, B_BL);
-      blocosSombraPorEmpresa = { RT: B_RT, KMNO: B_KMNO, BLUELINE: B_BL };
+      blocosSombraPorEmpresa = { RT: B_RT, KMNO: B_KMNO, NOVAH: B_BL };
     } else {
       blocosSombra = buildTodosBlocosRealizado(empresa, categories, movements, mesSombra, sombraFim);
       resumoSombra = DRE_ARVORE_RESUMO_BUILDERS[empresa](blocosSombra);
@@ -8172,7 +8172,7 @@ async function renderDreArvore(categoriesParam, movementsParam, monthStart, mont
   // exatamente a mesma função/estilo (pai/filho colapsável) das abas
   // de empresa única.
   if (consolidado) {
-    const EMPRESAS_DETALHE = ['RT', 'KMNO', 'BLUELINE'];
+    const EMPRESAS_DETALHE = ['RT', 'KMNO', 'NOVAH'];
     const partes = EMPRESAS_DETALHE.map(empresaKey => {
       const blocosPorColunaEmpresa = blocosConsolidadoPorColuna.map(t => t ? t[empresaKey] : null);
       const blocosSombraEmpresa = blocosSombraPorEmpresa ? blocosSombraPorEmpresa[empresaKey] : null;
@@ -8713,7 +8713,7 @@ function renderVendasFaturamento() {
   }
   if (!meses.length) return;
 
-  const EMPRESAS = ['KMNO', 'BLUELINE', 'RT'];
+  const EMPRESAS = ['KMNO', 'NOVAH', 'RT'];
   const categories = dreArvoreCategoriesCache;
   const movements = dreArvoreMovementsCache;
 
@@ -9236,7 +9236,7 @@ async function sbPaged(path, empresaId, pageSize = 1000) {
 // pro card "DRE por Bloco" — não depende de selectedCompanyKeys. Mesma
 // lógica de unificação receivable+payable usada no carregamento principal.
 async function carregarDadosDreArvoreTodasEmpresas() {
-  const empresas = ['RT', 'KMNO', 'BLUELINE'];
+  const empresas = ['RT', 'KMNO', 'NOVAH'];
   const catPath = 'dash_categories?select=codigo,descricao,conta_receita,conta_despesa,codigo_dre';
   const recPath = 'dash_accounts_receivable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor,codigo_lancamento_omie';
   const payPath = 'dash_accounts_payable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_lancamento_omie';
@@ -10599,7 +10599,7 @@ function filterAVencerPagar(payable, periodoIni) {
 // "A Receber Vencido".
 const REDECARD_CODIGO_CLIENTE_POR_EMPRESA = {
   KMNO: 10389252594,
-  BLUELINE: 2166037108,
+  NOVAH: 2166037108,
   // RT: não tem cliente "REDECARD S/A" cadastrado — nada a excluir.
 };
 
@@ -10616,7 +10616,7 @@ const REDECARD_CODIGO_CLIENTE_POR_EMPRESA = {
 // qualquer cálculo de Contas a Receber/Pagar real.
 const PREVISAO_CODIGOS_CLIENTE_POR_EMPRESA = {
   KMNO: [10550353479], // "KMNO PREVISAO"
-  BLUELINE: [2074032429, 2074008888, 2074040679, 2135507291], // "KMNO (PREVISÃO)", "(PREVISAO) GB", "MORMAII (PREVISÃO)", "PREVISÃO BLUE LINE"
+  NOVAH: [2074032429, 2074008888, 2074040679, 2135507291], // "KMNO (PREVISÃO)", "(PREVISAO) GB", "MORMAII (PREVISÃO)", "PREVISÃO BLUE LINE"
   // RT: não tem cliente de previsão cadastrado — nada a excluir.
 };
 function isClientePrevisao(empresa, codigoCliente) {
@@ -11399,7 +11399,7 @@ function renderResumoConsolidado(monthStart, monthEnd) {
 // página, mostra margens % sobre Receita Bruta, comparativo lado a
 // lado por empresa, e evolução mensal (mês a mês) com gráfico.
 // ===================================================================
-const GRUPO_DFC_EMPRESAS = ['KMNO', 'BLUELINE', 'RT'];
+const GRUPO_DFC_EMPRESAS = ['KMNO', 'NOVAH', 'RT'];
 
 function somarMetricas(lista) {
   return lista.reduce((acc, m) => {
@@ -12186,7 +12186,7 @@ document.getElementById('sidebarClose').addEventListener('click', closeSidebar);
 document.getElementById('sidebarOverlay').addEventListener('click', closeSidebar);
 
 // ===== BLOCO DE NOTAS (privado por usuário, com abas próprias por empresa) =====
-// Tabela dash_notas: id, user_id (FK auth.users), empresa (RT/KMNO/BLUELINE/TODAS),
+// Tabela dash_notas: id, user_id (FK auth.users), empresa (RT/KMNO/NOVAH/TODAS),
 // titulo, conteudo, created_at, updated_at. RLS restringe cada usuário às
 // próprias notas (auth.uid() = user_id) — nem admin vê nota de outro usuário.
 // A aba "Todas as Empresas" é um espaço PRÓPRIO e SEPARADO — não agrega as
