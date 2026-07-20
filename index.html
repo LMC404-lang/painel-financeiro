@@ -9250,7 +9250,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   // Financeiras do relatório nativo do Omie batem exato somando isso).
   // Filtra cod_titulo nulo/0 pra não contar de novo o que já vem de título
   // formal (accounts_payable/receivable).
-  const extratoSemTituloPath = 'dash_current_account_transactions?select=dt_lanc,valor_lanc,cod_categoria,natureza,cod_titulo';
+  const extratoSemTituloPath = 'dash_current_account_transactions?select=dt_lanc,valor_lanc,cod_categoria,natureza,cod_titulo,origem';
   // CMC (Custo Médio das Vendas) — resolvido em 17/07/2026 via endpoint
   // estoque/consulta/MovimentoEstoque do Omie, que traz o CMC real de
   // cada saída de venda (codOrigem='VEN'), na data em que aconteceu —
@@ -9313,7 +9313,31 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   dreArvoreParcelasCache = parcelas;
   dreArvoreInadimplenciaCache = inadimplencia;
   dreArvoreNfeCache = nfe;
-  dreArvoreExtratoSemTituloCache = (extratoSemTitulo || []).filter(t => !t.cod_titulo || Number(t.cod_titulo) === 0);
+  // BUG REAL encontrado e corrigido em 20/07/2026: o endpoint ListarLancCC
+  // (fonte de dash_current_account_transactions) NUNCA retorna nCodTitulo
+  // no payload da API -- é uma característica do endpoint, não falha de
+  // sincronização. Isso fazia TODA transação bancária (100% das linhas,
+  // nas 3 empresas) passar pelo filtro "sem título formal" abaixo, mesmo
+  // quando a origem era claramente a liquidação de um título já contado
+  // via receivable/payable -- dobrando (e às vezes mais) a receita/custo/
+  // despesa na árvore nativa (achado: R$16mi KMNO + R$2,9mi Novah +
+  // R$645k RT de duplicação em 2026).
+  //
+  // Lista POSITIVA (whitelist), não negativa: só entram origens
+  // confirmadas como genuinamente sem título. Se o Omie usar um código
+  // de origem novo no futuro, ele fica de FORA por padrão (mais seguro
+  // subestimar que duplicar). Confirmados como sem título e relevantes
+  // pra DRE: EXTR/EXTP (extrato bancário puro). Verificados e
+  // confirmados INÓFENSIVOS em 20/07/2026 (mapeiam pra categoria com
+  // codigo_dre NULL, nunca entram em nenhuma linha da DRE de qualquer
+  // forma, incluir ou não é indiferente): ADVP ("Adiantamento a
+  // Fornecedores", item de balanço não de resultado) e TRAP/TRAR
+  // (transferência entre contas próprias, categoria "Entrada/Saída de
+  // Transferência").
+  const ORIGENS_EXTRATO_SEM_TITULO_CONFIRMADAS = new Set(['EXTR', 'EXTP']);
+  dreArvoreExtratoSemTituloCache = (extratoSemTitulo || []).filter(t =>
+    (!t.cod_titulo || Number(t.cod_titulo) === 0) && ORIGENS_EXTRATO_SEM_TITULO_CONFIRMADAS.has(t.origem)
+  );
   dreArvoreCmcVendasCache = (cmcVendas || []).filter(c => !c.cancelamento);
 
   const unifiedMovements = [
