@@ -435,6 +435,13 @@
   .fin-tbl .status-pago { color: var(--green); }
   .fin-tbl .status-pendente { color: var(--bone-dim); }
   .fin-tbl .status-atraso { color: var(--red); }
+  .waterfall-grupo td { font-weight: 600; background: rgba(62,137,188,0.08); cursor: pointer; user-select: none; }
+  .waterfall-grupo:hover td { background: rgba(62,137,188,0.14); }
+  .waterfall-toggle-icon { display: inline-block; width: 12px; color: var(--blue-belt-light); }
+  .waterfall-count { font-weight: 400; color: var(--bone-dim); font-size: 11px; }
+  .waterfall-item td { padding-left: 22px; color: var(--bone-dim); font-size: 12px; }
+  .waterfall-subtotal td { font-weight: 700; background: rgba(201,162,39,0.16); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+  .waterfall-naoclass td { font-weight: 600; background: rgba(199,84,80,0.14); }
   .blocks-inner {
     max-width: 1400px;
     margin: 0 auto;
@@ -465,6 +472,12 @@
   .grupo-dfc-card-val {
     font-family: 'Space Grotesk', sans-serif;
     font-size: 22px; font-weight: 700; color: var(--bone);
+  }
+  .grupo-dfc-card-meta {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 11px;
+    color: var(--bone-dim);
+    margin-top: 6px;
   }
   .grupo-dfc-tabelas-row {
     display: grid;
@@ -2208,48 +2221,39 @@
          abaixo. Conteúdo idêntico ao que já existia, só mudou de lugar. -->
     <div class="section" id="sectionGrupoDfc">
       <div class="section-head">
-        <h2>Grupo DFC — Dashboard Financeiro</h2>
+        <h2>Grupo DRE Caixa — Dashboard Financeiro</h2>
         <div class="desc">Fluxo de caixa consolidado (KMNO + Blue Line/Novah + RT), para o período De/Até selecionado no topo. Valores em R$.</div>
       </div>
 
       <!-- Cards de resumo -->
       <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Receita Bruta (Recebimento)</div><div class="grupo-dfc-card-val" id="grupoDfcReceitaBruta">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Receita Líquida</div><div class="grupo-dfc-card-val" id="grupoDfcReceitaLiquida">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">CMV</div><div class="grupo-dfc-card-val" id="grupoDfcCmv">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Margem de Contribuição</div><div class="grupo-dfc-card-val" id="grupoDfcMargem">R$ 0</div></div>
-      </div>
-      <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">EBITDA</div><div class="grupo-dfc-card-val" id="grupoDfcEbitda">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Lucro Líquido</div><div class="grupo-dfc-card-val" id="grupoDfcLucroLiquido">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Líquido</div><div class="grupo-dfc-card-val" id="grupoDfcSaldoLiquido">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Geração de Caixa (Acum.)</div><div class="grupo-dfc-card-val" id="grupoDfcCaixaAcumulado">R$ 0</div></div>
-      </div>
-      <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Geração de Caixa (Período)</div><div class="grupo-dfc-card-val" id="grupoDfcCaixaPeriodo">R$ 0</div></div>
-      </div>
-
-      <div class="grupo-dfc-tabelas-row">
-        <!-- Margens & Indicadores -->
-        <div class="bloco-card">
-          <div class="bloco-head"><div class="bloco-titulo">Margens & Indicadores (% s/ Receita)</div></div>
-          <div class="bloco-body">
-            <table class="fin-tbl">
-              <tr><th>Indicador</th><th class="num">Valor (R$)</th><th class="num">% Receita</th></tr>
-              <tbody id="grupoDfcMargensBody"></tbody>
-            </table>
-          </div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">Receita Bruta (Recebimento)</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcReceitaBruta">R$ 0</div>
+          <!-- TODO(meta): placeholder ate definir a fonte da meta (ver comentario no topo do bloco renderGrupoDfc) -->
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcReceitaBrutaMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcReceitaBrutaPct">-----%</span></div>
         </div>
-
-        <!-- Comparativo KMNO x Blue Line/Novah x RT -->
-        <div class="bloco-card">
-          <div class="bloco-head"><div class="bloco-titulo">KMNO x Blue Line/Novah x RT (período)</div></div>
-          <div class="bloco-body">
-            <table class="fin-tbl">
-              <tr><th>Métrica</th><th class="num">KMNO</th><th class="num">Blue Line/Novah</th><th class="num">RT</th><th class="num">Grupo</th></tr>
-              <tbody id="grupoDfcComparativoBody"></tbody>
-            </table>
-          </div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">CMV</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcCmv">R$ 0</div>
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcCmvMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcCmvPct">-----%</span></div>
+        </div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">Margem de Contribuição</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcMargem">R$ 0</div>
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcMargemMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcMargemPct">-----%</span></div>
+        </div>
+      </div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">EBITDA</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcEbitda">R$ 0</div>
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcEbitdaMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcEbitdaPct">-----%</span></div>
+        </div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">Saldo Líquido</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcSaldoLiquido">R$ 0</div>
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcSaldoLiquidoMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcSaldoLiquidoPct">-----%</span></div>
         </div>
       </div>
 
@@ -2268,12 +2272,23 @@
 
       <div class="chart-card-title" style="margin-top:18px;">Evolução Mensal — Grupo (R$)</div>
       <div style="position: relative; height: 320px;">
-        <canvas id="chartGrupoDfc" role="img" aria-label="Gráfico de evolução mensal do Grupo: Receita Bruta, EBITDA, Lucro Líquido e Geração de Caixa">Evolução mensal do grupo.</canvas>
+        <canvas id="chartGrupoDfc" role="img" aria-label="Gráfico de evolução mensal do Grupo: Receita Bruta, CMV, Margem de Contribuição, EBITDA e Saldo Líquido">Evolução mensal do grupo.</canvas>
       </div>
 
-      <div class="chart-card-title" style="margin-top:18px;">Capex e Refis — Evolução Mensal (ano corrente, R$)</div>
-      <div style="position: relative; height: 260px;">
-        <canvas id="chartCapexRefis" role="img" aria-label="Gráfico de barras mostrando Capex (Investimentos) e Refis (parcelamentos fiscais) mês a mês no ano corrente">Evolução mensal de Capex e Refis.</canvas>
+      <!-- Waterfall detalhada "GRUPO DFC" — réplica linha por linha do
+           Excel de referência (DRE 2026 KMNO e NOVAH 28.06.xlsx, abas
+           Grupo DFC / KMNO DFC (caixa) / NOVAH DFC (caixa)). Ver
+           DRE_WATERFALL_GRUPOS + buildWaterfallDreCaixa() no JS. -->
+      <div class="bloco-card" style="margin-top:18px;">
+        <div class="bloco-head"><div class="bloco-titulo">Grupo DRE Caixa — Detalhado</div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr><th>Descrição</th><th class="num">Total do Período</th><th class="num">% Receita</th></tr>
+              <tbody id="waterfallDreCaixaBody"></tbody>
+            </table>
+          </div>
+        </div>
       </div>
 
       <!-- Resumo de Capital: início x fim do período De/Até selecionado no
@@ -2282,39 +2297,23 @@
            ainda não tem fonte de dado confirmada — placeholder até Lucas
            definir de onde vem esse número (não é o saldo das contas tipo
            Cartão no Omie, os valores não batem com a referência dele). -->
-      <div class="chart-card-title" style="margin-top:18px;">Resumo de Capital (Início x Fim do Período)</div>
+      <div class="chart-card-title" style="margin-top:18px;">Análise Caixa Bancos no Período</div>
       <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos — Início</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoInicio">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos — Fim</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoFim">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoInicio">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoFim">R$ 0</div></div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação no Período</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoDiff">R$ 0</div></div>
       </div>
       <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Cartões a Receber (KMNO) — Início</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesInicio">R$ -----</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Cartões a Receber (KMNO) — Fim</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesFim">R$ -----</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesInicio">R$ -----</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesFim">R$ -----</div></div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação (Cartões)</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesDiff">R$ -----</div></div>
       </div>
       <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Capex (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalCapex">R$ 0</div></div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagtos Impostos Atrasados / Refis (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalRefis">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Total Capex + Refis</div><div class="grupo-dfc-card-val" id="resumoCapitalCapexRefisTotal">R$ 0</div></div>
       </div>
     </div>
 
     <div class="nav-menu-grid">
-
-      <div class="nav-card" onclick="switchView('viewCharts')">
-        <div>
-          <div class="nav-card-title">Gráficos e Indicadores</div>
-          <div class="nav-card-desc">Análise visual de faturamento, despesas por categoria, fluxo de caixa futuro e saldos liquidados.</div>
-        </div>
-      </div>
-
-      <div class="nav-card" onclick="switchView('viewProjections')">
-        <div>
-          <div class="nav-card-title">Metas & Tendências</div>
-          <div class="nav-card-desc">Acompanhamento do atingimento de metas anuais estimadas ou manuais e projeções de performance.</div>
-        </div>
-      </div>
 
       <div class="nav-card" onclick="switchView('viewBlocks')">
         <div>
@@ -2325,105 +2324,11 @@
 
       <div class="nav-card" onclick="switchView('viewDfcArvore')">
         <div>
-          <div class="nav-card-title">DFC por Bloco</div>
+          <div class="nav-card-title">DRE Caixa por Bloco</div>
           <div class="nav-card-desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie: Saldo Inicial, Transferências, Receitas, Despesas, Resultado e Limite de Crédito.</div>
         </div>
       </div>
 
-      <div class="nav-card" onclick="switchView('viewOutrosPendentes')">
-        <div>
-          <div class="nav-card-title">Validação de Categorias</div>
-          <div class="nav-card-desc">Categorias ainda não confirmadas contra o Omie, das 3 empresas, reunidas num só lugar até serem validadas.</div>
-        </div>
-      </div>
-
-      <div class="nav-card" onclick="switchView('viewExtras')">
-        <div>
-          <div class="nav-card-title">Operacional & Estoque</div>
-          <div class="nav-card-desc">Estoque por peça, caixa por peça e Financiamentos & Inadimplência.</div>
-        </div>
-      </div>
-
-      <div class="nav-card" onclick="switchView('viewComercial')">
-        <div>
-          <div class="nav-card-title">Comercial (KMNO)</div>
-          <div class="nav-card-desc">Faturamento, pedidos e ticket médio por vendedor, mix de produtos, clientes ativos/novos/recorrentes e desconto médio.</div>
-        </div>
-      </div>
-
-      <div class="nav-card" onclick="switchView('viewCicloFinanceiro')">
-        <div>
-          <div class="nav-card-title">Ciclo Financeiro</div>
-          <div class="nav-card-desc">Faturado, pagos e recebidos por mês, evolução dos vencidos e do índice de inadimplência.</div>
-        </div>
-      </div>
-
-    </div>
-
-    <div class="section" id="sectionResumoMes">
-      <div class="section-head">
-        <h2>Resumo do mês selecionado</h2>
-        <div class="desc">Consolidado de DRE (competência) e DFC (caixa) das empresas selecionadas, para o mês escolhido no topo.</div>
-      </div>
-      <div class="summary-grid" id="resumoMesGrid">
-        <div class="summary-card">
-          <div class="label">Receitas (DRE)</div>
-          <div class="value"><span id="resumoMesReceita">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Despesas (DRE)</div>
-          <div class="value"><span id="resumoMesDespesa">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Resultado (DRE)</div>
-          <div class="value"><span id="resumoMesResultado">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Entradas (DFC)</div>
-          <div class="value"><span id="resumoMesEntradas">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Saídas (DFC)</div>
-          <div class="value"><span id="resumoMesSaidas">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Saldo de Caixa (DFC)</div>
-          <div class="value"><span id="resumoMesSaldo">—</span></div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section" id="sectionResumoAno">
-      <div class="section-head">
-        <h2>Acumulado no ano</h2>
-        <div class="desc">Consolidado de 01/jan até o fim do mês selecionado (mesmo critério: DRE por competência, DFC por caixa).</div>
-      </div>
-      <div class="summary-grid" id="resumoAnoGrid">
-        <div class="summary-card">
-          <div class="label">Receitas (DRE)</div>
-          <div class="value"><span id="resumoAnoReceita">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Despesas (DRE)</div>
-          <div class="value"><span id="resumoAnoDespesa">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Resultado (DRE)</div>
-          <div class="value"><span id="resumoAnoResultado">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Entradas (DFC)</div>
-          <div class="value"><span id="resumoAnoEntradas">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Saídas (DFC)</div>
-          <div class="value"><span id="resumoAnoSaidas">—</span></div>
-        </div>
-        <div class="summary-card">
-          <div class="label">Saldo de Caixa (DFC)</div>
-          <div class="value"><span id="resumoAnoSaldo">—</span></div>
-        </div>
-      </div>
     </div>
 
   </div>
@@ -2444,7 +2349,7 @@
         </div>
       </div>
       <div class="chart-card" id="chartCardDfc">
-        <div class="chart-card-title">DFC — Saldo de caixa (últimos 6 meses)</div>
+        <div class="chart-card-title">DRE Caixa — Saldo de caixa (últimos 6 meses)</div>
         <div style="position: relative; height: 200px;">
           <canvas id="chartDfc" role="img" aria-label="Gráfico de linha mostrando o saldo de caixa mensal dos últimos 6 meses">Gráfico de saldo de caixa mensal.</canvas>
         </div>
@@ -2481,7 +2386,7 @@
     </div>
 
     <div class="chart-actions-row" style="display:flex; justify-content:flex-end; margin-bottom:10px;">
-      <button type="button" class="btn-export" id="btnExportDfcPdf" onclick="exportResumoPeriodoToPdf()" title="Gera PDF com o resumo do período: DRE (aba Categoria por Bloco) e DFC (Saldo de Caixa, gráfico acima)">⬇ Exportar PDF do período</button>
+      <button type="button" class="btn-export" id="btnExportDfcPdf" onclick="exportResumoPeriodoToPdf()" title="Gera PDF com o resumo do período: DRE (aba Categoria por Bloco) e DRE Caixa (Saldo de Caixa, gráfico acima)">⬇ Exportar PDF do período</button>
     </div>
 
     <div class="summary-grid" id="summaryGrid">
@@ -2498,7 +2403,7 @@
         <div class="value"><span id="sumResultado">—</span><span class="delta" id="deltaResultado"></span></div>
       </div>
       <div class="summary-card">
-        <div class="label">Saldo de Caixa (DFC)</div>
+        <div class="label">Saldo de Caixa (DRE Caixa)</div>
         <div class="value"><span id="sumCaixa">—</span><span class="delta" id="deltaCaixa"></span></div>
       </div>
       <div class="summary-card" id="cardInadimplencia">
@@ -2808,7 +2713,7 @@
 
       <div class="section" id="sectionDfcArvore">
         <div class="section-head">
-          <h2>DFC por Bloco</h2>
+          <h2>DRE Caixa por Bloco</h2>
           <div class="desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie. Usa o mesmo período De/Até selecionado no topo da página. Saldo Inicial e Resultado Acumulado são aproximados por rollback a partir do saldo de hoje (sem histórico diário de saldo por conta) — Receitas, Despesas e Resultado do período vêm direto dos lançamentos e não sofrem essa aproximação.</div>
         </div>
 
@@ -2920,14 +2825,14 @@
         </div>
 
         <div class="section-head" style="margin-top:28px;">
-          <h2>DFC (Caixa)</h2>
-          <div class="desc">Fluxo de caixa por forma de recebimento — estrutura pai/filho (bloco "Recebimento" com os meios de recebimento como itens). Fonte do dado (Depósito/Cartão/Boleto/etc) ainda não confirmada no Omie — valores em R$ 0 até mapear. Seção separada do DRE por Bloco, para não misturar DRE e DFC no mesmo card.</div>
+          <h2>DRE Caixa</h2>
+          <div class="desc">Fluxo de caixa por forma de recebimento — estrutura pai/filho (bloco "Recebimento" com os meios de recebimento como itens). Fonte do dado (Depósito/Cartão/Boleto/etc) ainda não confirmada no Omie — valores em R$ 0 até mapear. Seção separada do DRE por Bloco, para não misturar DRE e DRE Caixa no mesmo card.</div>
         </div>
         <div class="bloco-card">
           <div class="bloco-body">
             <div class="dre-tbl-wrap">
               <table class="fin-tbl">
-                <tr><th colspan="2">DFC (Caixa)</th><th class="num">JAN</th></tr>
+                <tr><th colspan="2">DRE Caixa</th><th class="num">JAN</th></tr>
                 <tr class="dfc-linha-pai"><td colspan="2" style="font-weight:700;">RECEBIMENTO</td><td class="num" style="font-weight:700;">R$ 0</td></tr>
                 <tr class="dfc-linha-filho"><td></td><td>Depósito</td><td class="num">R$ 0</td></tr>
                 <tr class="dfc-linha-filho"><td></td><td>Cartões de Crédito</td><td class="num">R$ 0</td></tr>
@@ -9827,7 +9732,7 @@ function exportResumoPeriodoToPdf() {
       ['Receitas', fmtBRL(current.receita), fmtBRL(previous.receita), deltaText(current.receita, previous.receita)],
       ['Despesas', fmtBRL(current.despesa), fmtBRL(previous.despesa), deltaText(current.despesa, previous.despesa)],
       ['Resultado (DRE)', fmtBRL(current.resultado), fmtBRL(previous.resultado), deltaText(current.resultado, previous.resultado)],
-      ['Saldo de Caixa (DFC)', fmtBRL(current.caixa), fmtBRL(previous.caixa), deltaText(current.caixa, previous.caixa)],
+      ['Saldo de Caixa (DRE Caixa)', fmtBRL(current.caixa), fmtBRL(previous.caixa), deltaText(current.caixa, previous.caixa)],
     ];
     doc.autoTable({
       startY: 118,
@@ -9892,7 +9797,7 @@ function exportResumoPeriodoToPdf() {
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(12);
-    doc.text('DFC — Fluxo de Caixa (regime de caixa, pagamentos liquidados)', margin, dfcTitleY);
+    doc.text('DRE Caixa — Fluxo de Caixa (regime de caixa, pagamentos liquidados)', margin, dfcTitleY);
 
     doc.autoTable({
       startY: dfcTitleY + 10,
@@ -11454,8 +11359,13 @@ function renderResumoCapital(monthStart, monthEnd) {
   const elSaldoInicio = document.getElementById('resumoCapitalSaldoInicio');
   if (!elSaldoInicio || !contasCorrentesCache || !categoriesCache || !financialMovementsCache) return;
 
-  const saldoInicio = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', monthStart);
-  const saldoFim = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', monthEnd);
+  // Saldo Bancos passou a ser fixo (não depende mais do período De/Até
+  // selecionado no topo): início = abertura de 01/01/2026, fim = último
+  // dia do mês anterior ao mês atual (hoje).
+  const inicioAnoFixo = dayjs('2026-01-01');
+  const fimMesAnteriorFixo = dayjs().startOf('month');
+  const saldoInicio = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', inicioAnoFixo);
+  const saldoFim = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', fimMesAnteriorFixo);
 
   document.getElementById('resumoCapitalSaldoInicio').textContent = fmtBRL(saldoInicio);
   document.getElementById('resumoCapitalSaldoFim').textContent = fmtBRL(saldoFim);
@@ -11473,9 +11383,523 @@ function renderResumoCapital(monthStart, monthEnd) {
     if (refisCodigos.includes(mv.cod_categoria)) refis += v;
   });
 
-  document.getElementById('resumoCapitalCapex').textContent = fmtBRL(capex);
   document.getElementById('resumoCapitalRefis').textContent = fmtBRL(refis);
-  document.getElementById('resumoCapitalCapexRefisTotal').textContent = fmtBRL(capex + refis);
+}
+
+// TODO(meta): Receita Bruta/CMV/Margem/EBITDA/Saldo Líquido ganharam um
+// sub-rótulo "Meta: -- · --%" nos cards acima (placeholder, ids
+// grupoDfc<Indicador>Meta / grupoDfc<Indicador>Pct). Ainda não há fonte
+// de dado pra essas metas (aguardando confirmação do Lucas: input manual,
+// regra fixa tipo "+10% sobre ano anterior", ou outra fonte). Quando
+// definir, calcular aqui dentro de renderGrupoDfc() e preencher os spans.
+// ===================================================================
+// WATERFALL "GRUPO DFC" DETALHADA — réplica linha por linha do Excel de
+// referência que o Lucas enviou (DRE 2026 KMNO e NOVAH 28.06.xlsx, abas
+// "Grupo DFC", "KMNO DFC (caixa)" e "NOVAH DFC (caixa)"). Mapeamento
+// categoria→grupo extraído linha a linha desse arquivo em 21/07/2026,
+// cobre KMNO e NOVAH (a planilha de referência não tinha uma "Grupo DFC"
+// consolidada com RT). Qualquer categoria que não bata com nenhum nome
+// da lista (RT tem categorias próprias, ou categoria nova ainda não
+// mapeada) NUNCA é descartada silenciosamente: cai em "Receita
+// (Recebimento)" se for categoria de receita, ou em "Não Classificado"
+// se for despesa — ambas aparecem na tabela, pra ficar visível o que
+// ainda falta mapear.
+//
+// LIMITAÇÕES CONHECIDAS (o match é só por NOME da categoria, não por
+// código — o Excel de referência não guarda o código Omie por linha):
+// 1) "Impostos": a aba "KMNO DRE" (competência) estima por alíquota
+//    presumida; aqui usamos direto as categorias reais de imposto
+//    (DIFAL, ICMS, PIS/COFINS, Simples Nacional Parcelado), que é o que
+//    faz sentido pra um relatório de CAIXA.
+// 2) Termos de folha genéricos demais (FGTS, INSS, Férias, 13º Salário,
+//    Horas Extras, Assiduidade) foram deixados só no grupo "Despesas
+//    ADM" e tirados de "Custo Mão de Obra" — o nome sozinho não dá pra
+//    saber se é folha da produção (NOVAH) ou administrativa (KMNO), e
+//    como "Custo Mão de Obra" entra no CMV (métrica mais visível no
+//    topo do painel), preferimos errar pro lado seguro (Despesas ADM).
+// 3) "RICARDO" aparece em Pró-labore (Despesas ADM) E em Distribuição de
+//    Lucros no Excel original — são duas categorias Omie diferentes com
+//    o mesmo nome de pessoa; como o match é só por texto, tudo que se
+//    chamar "Ricardo" cai em Despesas ADM (Distribuição fica zerada até
+//    isso ser diferenciado por código).
+// Qualquer um desses 3 pontos é fácil de ajustar depois que o Lucas
+// confirmar o código Omie exato de cada categoria ambígua.
+// ===================================================================
+const DRE_WATERFALL_GRUPOS = [
+  {
+    "chave": "impostos",
+    "label": "Impostos",
+    "sinal": "-",
+    "itens": [
+      "Base de Cálculo Lucro Presumido (8%)",
+      "IRPJ Presumido (15%)",
+      "Adicional IRPJ Presumido (10% sobre excedente R$ 20mil)",
+      "CSLL Presumido (9%)",
+      "PIS Presumido (0,65%)",
+      "COFINS Presumido (3%)",
+      "Difal (2%)",
+      "ICMS (3%)",
+      "Simples Nacional",
+      "DIFAL",
+      "PIS / COFINS",
+      "ICMS",
+      "Fundo Social FUMDES",
+      "Simples Nacional Parcelado"
+    ]
+  },
+  {
+    "chave": "devolucoes",
+    "label": "Devoluções",
+    "sinal": "-",
+    "itens": [
+      "Devolução de Produtos",
+      "Devoluções",
+      "Devolução Financeira",
+      "Devoluções De Produtos"
+    ]
+  },
+  {
+    "chave": "custo_materia_prima",
+    "label": "Custo de Insumos e Matéria-Prima",
+    "sinal": "-",
+    "itens": [
+      "TECIDO SARJA",
+      "TECIDO TRANÇADO",
+      "TECIDO RASH/BERMUDA",
+      "TINTURARIA",
+      "AVIAMENTOS",
+      "TINTAS E OUTROS (RASH)",
+      "TECIDO RIPSTOP",
+      "MATERIA PRIMA (EVA/FELTRO/PATCH/TAGS)",
+      "MODELAGEM/PLOTAGEM/CAMISETAS",
+      "ETIQUETAS",
+      "FRETE COMPRA MATERIAIS",
+      "EMBALAGEM DE PRODUTOS",
+      "Insumos Costura",
+      "Insumos Sublimação",
+      "Insumos Acabamento",
+      "Serviço Industrialização (Impressão/Costura/Corte)",
+      "Embalagens Produção",
+      "Embalagens Comerciais",
+      "Difal"
+    ]
+  },
+  {
+    "chave": "custo_servicos",
+    "label": "Custo de Serviços",
+    "sinal": "-",
+    "itens": [
+      "SERVIÇOS NOVAH",
+      "SERVIÇOS TERCEIROS",
+      "Costura Externa",
+      "Serviços (Outras facções)",
+      "Serviços Outras Facções"
+    ]
+  },
+  {
+    "chave": "custo_mao_de_obra",
+    "label": "Custo Mão de Obra",
+    "sinal": "-",
+    "itens": [
+      "Salarios CLT Acabamento",
+      "PJ Acabamento",
+      "PPR CLT Acabamento",
+      "PPR PJ Acabamento",
+      "Salarios CLT Corte",
+      "PJ Corte",
+      "PPR CLT Corte",
+      "PPR PJ Corte",
+      "Salarios CLT Costura RASH Guard Bermuda",
+      "PJ Costura RASH Guard Bermuda",
+      "PPR CLT Costura RASH Guard Bermuda",
+      "PPR PJ Costura RASH Guard Bermuda",
+      "Terceiros (Costura Externa)",
+      "Salarios CLT Costura Kimono",
+      "PJ Costura Kimono",
+      "PPR CLT Costura Kimono",
+      "PPR PJ Costura Kimono",
+      "Salarios CLT Bordado",
+      "PJ Bordado",
+      "PPR CLT Bordado",
+      "PPR PJ Bordado",
+      "Salarios CLT Sublimação",
+      "PJ Sublimação",
+      "PPR CLT Sublimação",
+      "PPR PJ Sublimação",
+      "Free Lancers",
+      "Premio Produtividade",
+      "Abono Indústria",
+      "Salário Jeans",
+      "PJ Jean",
+      "Facção"
+    ]
+  },
+  {
+    "chave": "royalties",
+    "label": "Royalties",
+    "sinal": "-",
+    "itens": [
+      "Royalties"
+    ]
+  },
+  {
+    "chave": "despesas_adm",
+    "label": "Despesas ADM / Industria (+ Pessoal + Pró-labore)",
+    "sinal": "-",
+    "itens": [
+      "Aluguel Sala",
+      "IPTU",
+      "Emasa (Agua e esgoto)",
+      "Celesc (Energia Eletrica)",
+      "Taxa de Lixo (Ambiental)",
+      "Alvará PMBC, Bombeiro, Sanitário e outros",
+      "Faxina",
+      "Material Copa/Cozinha/Limpeza",
+      "Material de Papelaria",
+      "Manutenção do Imovel",
+      "Manutenção Móveis",
+      "Contabilidade",
+      "Certificado Digital",
+      "Alterações Contratuais",
+      "Despesas documentais",
+      "Uber / Combustivel / Aluguel Carro",
+      "Despesas de Software",
+      "Equipamentos de Informatica",
+      "Manutenção de Informatica",
+      "Telefone Fixo",
+      "Telefone Celular",
+      "Internet",
+      "Honorários Advocatícios",
+      "Despesas Processos Juridicos",
+      "Seguro da Sede",
+      "Equipamentos de Segurança Bombeiros",
+      "Despesas Serasa",
+      "Incentivos",
+      "Seg Trabalho/Admissão",
+      "Implantação Sistemas e Treinamentos",
+      "Anúncios",
+      "Sindicato",
+      "Plano Odontológico/Saúde",
+      "Embalagem Comercial",
+      "BPO Financeiro",
+      "Claudia (Adm)",
+      "Claudia (Bonificação)",
+      "Bruno",
+      "Exame Adm e Demissional",
+      "Horas Extras/Freelancer",
+      "FGTS",
+      "GPS (INSS)",
+      "Férias",
+      "1/3 sobre Férias",
+      "FGTS Sobre Férias",
+      "GPS Sobre Férias",
+      "13 Salario",
+      "FGTS Sobre 13",
+      "GPS Sobre 13",
+      "Aviso Prévio/Rescisão",
+      "FGTS Sobre Aviso",
+      "Multa FGTS",
+      "PJ Adm",
+      "Maria Tirloni (RT)",
+      "Ricardo",
+      "Timeless",
+      "Aluguel Galpão + IPTU",
+      "Diesel (Gerador)",
+      "Despesas com Bolo, Niver (Pessoal)",
+      "Medicina do Trabalho",
+      "Seguro da Industria",
+      "Frete Produção",
+      "Frete Manuntenção",
+      "Manutenção Maquinas",
+      "Levits BPO",
+      "Controle e Segurança patrimonial",
+      "Anúncio Vagas",
+      "Consultoria/Treinamento",
+      "Serviços Diretoria",
+      "Caçamba/Aterro/Lixo",
+      "Porteiro",
+      "Mecânico",
+      "Expedição",
+      "Faxineira",
+      "PCP",
+      "Aux Adm",
+      "Assiduidade",
+      "Abono",
+      "Premio Produtividade",
+      "Horas Extras",
+      "13 salário",
+      "FGTS Sobre Aviso Prévio",
+      "GPS Sobre Aviso Prévio",
+      "EMP SYBELI E RICHARD",
+      "PPR PCP",
+      "LEO",
+      "GERALDO",
+      "Pro Labore Sócio"
+    ]
+  },
+  {
+    "chave": "despesas_comerciais",
+    "label": "Despesas Comerciais (+ Frete + Pessoal)",
+    "sinal": "-",
+    "itens": [
+      "Site USA",
+      "Edição de Videos/Fotos",
+      "Patrocinado Face",
+      "Google E-mail WorkBussines",
+      "Patrocinado Google",
+      "Artes/Amostras",
+      "Registro BR GoDaddy",
+      "Marketing",
+      "Comissão Representantes/Franquias",
+      "Taxas MarktPlace",
+      "Consultoria",
+      "Software Ecommerce",
+      "CRM/GURU",
+      "Bonificações",
+      "LinkTree Registro Anual",
+      "Despesas de Eventos/BL",
+      "Despesas de Viagens",
+      "Frete Pago pelo Cliente",
+      "Frete pago pela KMNO",
+      "Patricia",
+      "Gabriel",
+      "Leticia",
+      "Yasmin",
+      "Cláudio",
+      "Auxiliar de Vendas"
+    ]
+  },
+  {
+    "chave": "despesas_financeiras",
+    "label": "Despesas Financeiras",
+    "sinal": "-",
+    "itens": [
+      "(-)Aluguel Maquinas de Cartões",
+      "(-)Taxas Maquina cartão",
+      "(-)Manutenção de Contas Bancárias",
+      "(-)Tarifas de TED/DOC",
+      "(-)Anuidade Cartão",
+      "(-)Tarifa Boletos",
+      "(-) Juros Bancários",
+      "(-) Juros Emprestimos",
+      "(-) Juros de Antecipações Cartões",
+      "(-) Outras despesas financeiras",
+      "(-) IOF",
+      "(-) Juros Emprestimos para Terceiros",
+      "(-) Cotas Capital",
+      "(-)Tarifa de Boletos",
+      "(-) Taxa Cartão (Vexpenses)",
+      "(-) Juros Antecipação Boletos",
+      "(-) Juros Bancários/Boletos",
+      "(-) Devoluções de Produtos"
+    ]
+  },
+  {
+    "chave": "receitas_financeiras",
+    "label": "Receitas Financeiras",
+    "sinal": "+",
+    "itens": [
+      "(+)Juros Recebidos",
+      "(+)Descontos Recebidos/Devoluções Recebidas",
+      "Rendimentos de Aplicações",
+      "Descontos Recebidos",
+      "Outras Entradas",
+      "Clientes - Venda de Ativo"
+    ]
+  },
+  {
+    "chave": "distribuicao",
+    "label": "Distribuição de Lucros",
+    "sinal": "-",
+    "itens": [
+      "RICARDO"
+    ]
+  },
+  {
+    "chave": "capex",
+    "label": "Capex",
+    "sinal": "-",
+    "itens": [
+      "(-) Compra Maquinas e Equipamentos",
+      "(-) Reforma Patrimonio",
+      "Maquina de Bordado",
+      "(-) Reforma Patrimonio GALPÃO",
+      "(+) Venda Maquinas e Equipamentos",
+      "Maquinas e Equipamentos",
+      "Móveis"
+    ]
+  },
+  {
+    "chave": "refis_outros",
+    "label": "Outros (Refis)",
+    "sinal": "-",
+    "itens": [
+      "REFIS (INSS - STC)",
+      "REFIS (SIMPLES)/ICMS",
+      "STANCE"
+    ]
+  }
+];
+
+function normalizarTextoCategoria(s) {
+  return (s || '')
+    .toString()
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[()]/g, ' ')
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+const DRE_WATERFALL_GRUPOS_NORM = DRE_WATERFALL_GRUPOS.map(g => ({
+  ...g,
+  itensNorm: g.itens.map(normalizarTextoCategoria).filter(Boolean),
+}));
+
+// Duas passadas, pra evitar que uma palavra genérica curta (ex: "FGTS")
+// case bata por acidente com uma frase composta de outro grupo (ex:
+// "FGTS sobre Férias") só porque uma contém a outra. 1ª passada: só
+// igualdade exata (em todos os grupos, na ordem). 2ª passada (só se a
+// 1ª não achou nada): substring nos dois sentidos, como fallback.
+function encontrarGrupoWaterfall(descricaoCategoria) {
+  const norm = normalizarTextoCategoria(descricaoCategoria);
+  if (!norm) return null;
+  for (const g of DRE_WATERFALL_GRUPOS_NORM) {
+    if (g.itensNorm.includes(norm)) return g.chave;
+  }
+  for (const g of DRE_WATERFALL_GRUPOS_NORM) {
+    for (const item of g.itensNorm) {
+      if (norm.includes(item) || item.includes(norm)) return g.chave;
+    }
+  }
+  return null;
+}
+
+// Agrega os lançamentos reais (financialMovementsCache) do período
+// De/Até selecionado, das 3 empresas do grupo, categoria por categoria,
+// nos mesmos grupos nomeados da planilha. Convenção de sinal: soma o
+// valor com o sinal natural do caixa (Recebimento = positivo, Pagamento
+// = negativo) — por isso todo subtotal é só SOMA dos grupos que o
+// compõem (sem precisar inverter sinal manualmente em cada fórmula).
+function buildWaterfallDreCaixa(categories, movements, monthStart, monthEnd) {
+  const catByKey = buildCatByEmpresaCodigo(categories);
+  const porGrupo = {};
+  DRE_WATERFALL_GRUPOS.forEach(g => { porGrupo[g.chave] = { total: 0, categorias: {} }; });
+  let receitaTotal = 0;
+  const receitaCategorias = {};
+  let naoClassificadoTotal = 0;
+  const naoClassificado = {};
+
+  (movements || []).forEach(m => {
+    if (!GRUPO_DFC_EMPRESAS.includes(m._empresa)) return;
+    if (!m.dt_pagamento) return;
+    const d = dayjs(m.dt_pagamento);
+    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
+    const cat = m.cod_categoria ? catByKey[`${m._empresa}|${m.cod_categoria}`] : null;
+    if (isExcludedFromDfc(cat)) return;
+
+    const vAbs = Number(m.val_pago || m.val_liquido || 0);
+    if (!vAbs) return;
+    const valor = m.natureza === 'R' ? vAbs : (m.natureza === 'P' ? -vAbs : 0);
+    if (!valor) return;
+
+    const descricao = decodeHtmlEntities((cat && cat.descricao) || 'Sem categoria');
+    const grupoChave = encontrarGrupoWaterfall(descricao);
+
+    if (grupoChave) {
+      porGrupo[grupoChave].total += valor;
+      porGrupo[grupoChave].categorias[descricao] = (porGrupo[grupoChave].categorias[descricao] || 0) + valor;
+    } else if (cat && cat.conta_receita) {
+      receitaTotal += valor;
+      receitaCategorias[descricao] = (receitaCategorias[descricao] || 0) + valor;
+    } else {
+      naoClassificadoTotal += valor;
+      naoClassificado[descricao] = (naoClassificado[descricao] || 0) + valor;
+    }
+  });
+
+  const g = key => porGrupo[key].total;
+  const receitaLiquida = receitaTotal + g('impostos') + g('devolucoes');
+  const cmv = g('custo_materia_prima') + g('custo_servicos') + g('custo_mao_de_obra');
+  const margemContribuicao = receitaLiquida + cmv + g('royalties');
+  const ebtida = margemContribuicao + g('despesas_adm') + g('despesas_comerciais');
+  const lucroLiquido = ebtida + g('despesas_financeiras') + g('receitas_financeiras');
+  const saldoLiquido = lucroLiquido + g('distribuicao') + g('capex') + g('refis_outros');
+
+  return {
+    porGrupo, receitaTotal, receitaCategorias, naoClassificadoTotal, naoClassificado,
+    subtotais: { receitaLiquida, cmv, margemContribuicao, ebtida, lucroLiquido, saldoLiquido },
+  };
+}
+
+function renderWaterfallDreCaixa(monthStart, monthEnd) {
+  const tbody = document.getElementById('waterfallDreCaixaBody');
+  if (!tbody || !categoriesCache || !financialMovementsCache) return;
+
+  const w = buildWaterfallDreCaixa(categoriesCache, financialMovementsCache, monthStart, monthEnd);
+  const base = w.receitaTotal || 1;
+  const pct = v => (v / base * 100).toFixed(1).replace('.', ',') + '%';
+  const valTd = v => {
+    const negativo = v < 0;
+    return `<td class="num" style="${negativo ? 'color:var(--red);' : ''}">${negativo ? `(${fmtBRL(Math.abs(v))})` : fmtBRL(v)}</td>`;
+  };
+
+  const linhas = [];
+  let waterfallGrupoSeq = 0;
+  // Cada grupo some as categorias por padrão (só o subtotal fica visível)
+  // — clicar no cabeçalho do grupo expande/recolhe as categorias dele.
+  // Isso evita a tabela nascer com 500+ linhas na tela.
+  const linhaGrupo = (label, total, categorias, classeExtra) => {
+    const key = 'wf' + (waterfallGrupoSeq++);
+    const itens = Object.entries(categorias).filter(([, v]) => v).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}" onclick="toggleWaterfallGrupo('${key}')"><td><span class="waterfall-toggle-icon" id="wfIcon-${key}">▸</span>${label} <span class="waterfall-count">(${itens.length} categoria${itens.length === 1 ? '' : 's'})</span></td>${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
+    itens.forEach(([desc, v]) => {
+      linhas.push(`<tr class="waterfall-item" data-grupo="${key}" style="display:none;"><td>${desc}</td>${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
+    });
+  };
+  const linhaSubtotal = (label, v) => {
+    linhas.push(`<tr class="waterfall-subtotal"><td>${label}</td>${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
+  };
+
+  linhaGrupo('(+) Receita (Recebimento)', w.receitaTotal, w.receitaCategorias);
+  linhaGrupo('(-) Impostos', w.porGrupo.impostos.total, w.porGrupo.impostos.categorias);
+  linhaGrupo('(-) Devoluções', w.porGrupo.devolucoes.total, w.porGrupo.devolucoes.categorias);
+  linhaSubtotal('(=) Receita Líquida', w.subtotais.receitaLiquida);
+  linhaGrupo('(-) Custo de Insumos e Matéria-Prima', w.porGrupo.custo_materia_prima.total, w.porGrupo.custo_materia_prima.categorias);
+  linhaGrupo('(-) Custo de Serviços', w.porGrupo.custo_servicos.total, w.porGrupo.custo_servicos.categorias);
+  linhaGrupo('(-) Custo Mão de Obra', w.porGrupo.custo_mao_de_obra.total, w.porGrupo.custo_mao_de_obra.categorias);
+  linhaSubtotal('(=) CMV', w.subtotais.cmv);
+  linhaGrupo('(-) Royalties', w.porGrupo.royalties.total, w.porGrupo.royalties.categorias);
+  linhaSubtotal('(=) Margem de Contribuição', w.subtotais.margemContribuicao);
+  linhaGrupo('(-) Despesas ADM / Indústria (+ Pessoal + Pró-labore)', w.porGrupo.despesas_adm.total, w.porGrupo.despesas_adm.categorias);
+  linhaGrupo('(-) Despesas Comerciais (+ Frete + Pessoal)', w.porGrupo.despesas_comerciais.total, w.porGrupo.despesas_comerciais.categorias);
+  linhaSubtotal('(=) Resultado Operacional (EBTIDA)', w.subtotais.ebtida);
+  linhaGrupo('(-) Despesas Financeiras', w.porGrupo.despesas_financeiras.total, w.porGrupo.despesas_financeiras.categorias);
+  linhaGrupo('(+) Receitas Financeiras', w.porGrupo.receitas_financeiras.total, w.porGrupo.receitas_financeiras.categorias);
+  linhaSubtotal('(=) Resultado Líquido (Lucro Líquido)', w.subtotais.lucroLiquido);
+  linhaGrupo('(-) Distribuição de Lucros', w.porGrupo.distribuicao.total, w.porGrupo.distribuicao.categorias);
+  linhaGrupo('(-) Capex', w.porGrupo.capex.total, w.porGrupo.capex.categorias);
+  linhaGrupo('(-) Outros (Refis)', w.porGrupo.refis_outros.total, w.porGrupo.refis_outros.categorias);
+  linhaSubtotal('(=) Saldo Líquido', w.subtotais.saldoLiquido);
+
+  if (w.naoClassificadoTotal) {
+    linhaGrupo('⚠ Não Classificado (fora dos grupos mapeados — provavelmente RT ou categoria nova)', w.naoClassificadoTotal, w.naoClassificado, 'waterfall-naoclass');
+  }
+
+  tbody.innerHTML = linhas.join('');
+}
+
+// Expande/recolhe as categorias de um grupo da waterfall (ver
+// renderWaterfallDreCaixa). Cada grupo nasce recolhido pra tabela não
+// abrir com 500+ linhas na tela.
+function toggleWaterfallGrupo(key) {
+  const icon = document.getElementById(`wfIcon-${key}`);
+  const linhas = document.querySelectorAll(`tr.waterfall-item[data-grupo="${key}"]`);
+  if (!linhas.length) return;
+  const estaEscondido = linhas[0].style.display === 'none';
+  linhas.forEach(l => { l.style.display = estaEscondido ? 'table-row' : 'none'; });
+  if (icon) icon.textContent = estaEscondido ? '▾' : '▸';
 }
 
 function renderGrupoDfc(monthStart, monthEnd) {
@@ -11486,24 +11910,17 @@ function renderGrupoDfc(monthStart, monthEnd) {
   if (!rootEl || !categoriesCache || !movementsCache) return; // section ainda não existe / dados não carregados
 
   const { porEmpresa, grupo } = buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, monthStart, monthEnd);
-  const dfcPeriodo = buildDfc(categoriesCache || [], financialMovementsCache || [], monthStart, monthEnd);
-
   renderResumoCapital(monthStart, monthEnd);
+  renderWaterfallDreCaixa(monthStart, monthEnd);
 
   // ---- Cards do topo ----
   document.getElementById('grupoDfcReceitaBruta').textContent = fmtBRL(grupo.receitaBruta);
-  document.getElementById('grupoDfcReceitaLiquida').textContent = fmtBRL(grupo.receitaLiquida);
   document.getElementById('grupoDfcCmv').textContent = fmtBRL(grupo.cmv);
   document.getElementById('grupoDfcMargem').textContent = fmtBRL(grupo.margemContribuicao);
   document.getElementById('grupoDfcEbitda').textContent = fmtBRL(grupo.ebitda);
-  document.getElementById('grupoDfcLucroLiquido').textContent = fmtBRL(grupo.lucroLiquido);
   document.getElementById('grupoDfcSaldoLiquido').textContent = fmtBRL(grupo.saldoLiquido);
-  document.getElementById('grupoDfcCaixaPeriodo').textContent = fmtBRL(dfcPeriodo.saldo);
-
   // ---- Geração de Caixa Acumulada (desde 01/jan até o fim do período) ----
   const inicioAno = monthStart.startOf('year');
-  const dfcAcumulado = buildDfc(categoriesCache || [], financialMovementsCache || [], inicioAno, monthEnd);
-  document.getElementById('grupoDfcCaixaAcumulado').textContent = fmtBRL(dfcAcumulado.saldo);
 
   // ---- Margens & Indicadores (% s/ Receita Bruta) ----
   const base = grupo.receitaBruta || 1; // evita divisão por zero
@@ -11558,13 +11975,13 @@ function renderGrupoDfc(monthStart, monthEnd) {
   const evolucaoMensal = meses.map(m => {
     const fimMes = m.add(1, 'month');
     const { grupo: metricasMes } = buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, m, fimMes);
-    const dfcMes = buildDfc(categoriesCache || [], financialMovementsCache || [], m, fimMes);
     return {
       mes: m,
       receitaBruta: metricasMes.receitaBruta,
+      cmv: metricasMes.cmv,
+      margemContribuicao: metricasMes.margemContribuicao,
       ebitda: metricasMes.ebitda,
-      lucroLiquido: metricasMes.lucroLiquido,
-      geracaoCaixa: dfcMes.saldo,
+      saldoLiquido: metricasMes.saldoLiquido,
     };
   });
 
@@ -11572,9 +11989,10 @@ function renderGrupoDfc(monthStart, monthEnd) {
   if (evolucaoBody) {
     const linhasEvolucao = [
       { label: 'Receita Bruta', chave: 'receitaBruta' },
+      { label: 'CMV', chave: 'cmv' },
+      { label: 'Margem de Contribuição', chave: 'margemContribuicao' },
       { label: 'EBITDA', chave: 'ebitda' },
-      { label: 'Lucro Líquido', chave: 'lucroLiquido' },
-      { label: 'Geração de Caixa', chave: 'geracaoCaixa' },
+      { label: 'Saldo Líquido', chave: 'saldoLiquido' },
     ];
     evolucaoBody.innerHTML = linhasEvolucao.map(l => `
       <tr>
@@ -11616,9 +12034,10 @@ function renderGrupoDfcChart(evolucaoMensal) {
   });
   const datasets = [
     dataset('Receita Bruta', 'receitaBruta', CHART_COLORS.blue),
-    dataset('EBITDA', 'ebitda', CHART_COLORS.green),
-    dataset('Lucro Líquido', 'lucroLiquido', '#C9A227'),
-    dataset('Geração de Caixa', 'geracaoCaixa', CHART_COLORS.red),
+    dataset('CMV', 'cmv', '#C9A227'),
+    dataset('Margem de Contribuição', 'margemContribuicao', CHART_COLORS.green),
+    dataset('EBITDA', 'ebitda', CHART_COLORS.red),
+    dataset('Saldo Líquido', 'saldoLiquido', '#8E6FCE'),
   ];
   if (chartGrupoDfc) chartGrupoDfc.destroy();
   chartGrupoDfc = new Chart(canvas.getContext('2d'), {
@@ -12088,7 +12507,7 @@ const SIDEBAR_BLOCKS = [
   { id: 'sectionProjections', label: 'Projeção, Tendência e Metas' },
   { group: 'Gráficos' },
   { id: 'chartCardDre',     label: 'Gráfico DRE — Receitas x Despesas' },
-  { id: 'chartCardDfc',     label: 'Gráfico DFC — Saldo de Caixa' },
+  { id: 'chartCardDfc',     label: 'Gráfico DRE Caixa — Saldo de Caixa' },
   { id: 'chartCardStacked', label: 'Despesas por Categoria (empilhado)' },
   { id: 'chartCardDonut',   label: 'Receitas por Categoria (donut)' },
   { id: 'chartCardInOut',   label: 'Entradas x Saídas (donut + últimas)' },
