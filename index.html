@@ -7636,7 +7636,10 @@ function buildBlocoArvore(blocoDef, totalPorLabel) {
   return { id: blocoDef.id, nome: blocoDef.nome, natureza: blocoDef.natureza, itens, total };
 }
 
-function buildBlocoImpostosKMNO(totalRecebimentos) {
+// Usada só na coluna Orçado (projeção estática da planilha não separa os
+// impostos reais por categoria) — mantém a estimativa por % sobre a
+// receita, igual sempre foi.
+function buildBlocoImpostosKMNOFormula(totalRecebimentos) {
   const t = KMNO_IMPOSTOS_TAXAS;
   const base = totalRecebimentos * t.baseLucroPresumido;
   const irpj = base * t.irpj;
@@ -7656,7 +7659,22 @@ function buildBlocoImpostosKMNO(totalRecebimentos) {
     { nome: `ICMS (${fmtPct(t.icms)} da receita)`, natureza: 'P', val: icms },
   ];
   const total = irpj + adicionalIrpj + csll + pis + cofins + difal + icms;
-  return { id: 'impostos', nome: 'Impostos (Lucro Presumido)', natureza: 'P', itens, total };
+  return { id: 'impostos', nome: 'Impostos (projeção % s/ receita)', natureza: 'P', itens, total };
+}
+
+// Realizado: usa os valores reais lançados no Omie (categorias 2.06.01
+// DIFAL / 2.06.03 PIS-COFINS / 2.06.05 IRPJ-CSLL / 2.06.07 ICMS) em vez
+// da estimativa por % — confirmado em 21/07/2026 que os 4 nomes batem
+// 1:1 com categorias reais do KMNO (sem necessidade de combinar códigos).
+function buildBlocoImpostosKMNOReal(totalPorLabel) {
+  const nomes = ['IRPJ / CSLL', 'PIS / COFINS', 'DIFAL', 'ICMS'];
+  const itens = nomes.map(nome => ({
+    nome,
+    natureza: 'P',
+    val: totalPorLabel[normalizarLabelCategoria(nome)] || 0,
+  }));
+  const total = itens.reduce((acc, it) => acc + it.val, 0);
+  return { id: 'impostos', nome: 'Impostos', natureza: 'P', itens, total };
 }
 
 function calcDepreciacao(empresa, receitaBase) {
@@ -7715,7 +7733,6 @@ function buildTodosBlocosDe(empresa, totalPorLabelPorBloco) {
   const defs = DRE_ARVORE_BLOCOS[empresa] || [];
   const B = {};
   defs.forEach(def => { B[def.id] = buildBlocoArvore(def, totalPorLabelPorBloco(def.id)); });
-  if (empresa === 'KMNO') B.impostos = buildBlocoImpostosKMNO(B.faturamento.total);
   return B;
 }
 
@@ -7723,6 +7740,11 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
   // pré-calcula uma vez só (mesmo mapa serve pra todos os blocos daquele mês)
   const totalPorLabel = buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStart, monthEnd);
   const B = buildTodosBlocosDe(empresa, () => totalPorLabel);
+  // Impostos KMNO: realizado usa os valores reais lançados no Omie (não a
+  // estimativa por %) — confirmado com Lucas em 21/07/2026. Fica na mesma
+  // posição de antes (logo após os blocos de DRE_ARVORE_BLOCOS, antes dos
+  // blocos operacionais abaixo).
+  if (empresa === 'KMNO') B.impostos = buildBlocoImpostosKMNOReal(totalPorLabel);
   // Blocos operacionais (não vêm de categoria Omie) — CMV por produto e
   // faturamento por unidades vendidas, alimentados manualmente no
   // dashboard, substituindo a antiga planilha DRE_2026_KMNO_e_NOVAH.
@@ -7732,7 +7754,12 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
 }
 
 function buildTodosBlocosOrcado(empresa, chave) {
-  return buildTodosBlocosDe(empresa, (blocoId) => totalPorLabelOrcado(empresa, blocoId, chave));
+  const B = buildTodosBlocosDe(empresa, (blocoId) => totalPorLabelOrcado(empresa, blocoId, chave));
+  // Orçado: a planilha estática não separa os impostos por categoria real,
+  // então mantém a projeção por % sobre a receita orçada (nunca teve dado
+  // melhor pra isso).
+  if (empresa === 'KMNO') B.impostos = buildBlocoImpostosKMNOFormula(B.faturamento.total);
+  return B;
 }
 
 // ---- Resumo (waterfall) — mesma fórmula de antes, uma linha por marco ----
