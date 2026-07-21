@@ -2185,6 +2185,33 @@
   </div>
 </div>
 
+<!-- ===== Trocar senha (admin: direto / viewer: solicita) ===== -->
+<div class="request-overlay hidden" id="passwordOverlay">
+  <div class="request-box">
+    <div class="eyebrow">BPO Financeiro</div>
+    <h2>Senha da conta</h2>
+    <div class="req-error" id="pwError"></div>
+    <div class="req-success" id="pwSuccess"></div>
+    <div id="pwContent"><!-- Preenchido por JS conforme o role --></div>
+    <div class="req-actions">
+      <button type="button" class="req-cancel" onclick="closePasswordModal()">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Admin: solicitações de troca de senha ===== -->
+<div class="requests-overlay hidden" id="passwordRequestsOverlay">
+  <div class="requests-box">
+    <div class="requests-box-header">
+      <h2>Solicitações de troca de senha</h2>
+      <button type="button" class="req-close" onclick="closePasswordRequestsPanel()">&times;</button>
+    </div>
+    <div id="passwordRequestsList">
+      <div class="requests-empty">Carregando…</div>
+    </div>
+  </div>
+</div>
+
 <div class="wrap hidden" id="dashboardWrap">
 
   <header>
@@ -2195,6 +2222,8 @@
     <div style="display:flex; align-items:center; gap:14px; flex-wrap: wrap;">
       <div class="user-info" id="userInfo"></div>
       <button type="button" class="btn-requests hidden" id="btnRequests" onclick="openRequestsPanel()">🔔 Solicitações<span class="req-badge hidden" id="requestsBadge">0</span></button>
+      <button type="button" class="btn-requests hidden" id="btnPasswordRequests" onclick="openPasswordRequestsPanel()">🔑 Senhas<span class="req-badge hidden" id="passwordRequestsBadge">0</span></button>
+      <button type="button" class="btn-logout" id="btnTrocarSenha" onclick="openPasswordModal()">🔑 Senha</button>
       <button type="button" class="btn-logout" id="btnLogout" onclick="handleLogout()">⎋ Sair</button>
       <span class="status-pill"><span class="status-dot" id="statusDot"></span><span id="statusText">conectando…</span></span>
       <div class="period-controls">
@@ -3289,11 +3318,15 @@ function showDashboard() {
 
   // Botão de solicitações pendentes — só visível para admin
   const btnReq = document.getElementById('btnRequests');
+  const btnPwReq = document.getElementById('btnPasswordRequests');
   if (currentProfile && currentProfile.role === 'admin') {
     btnReq.classList.remove('hidden');
     refreshRequestsBadge();
+    btnPwReq.classList.remove('hidden');
+    refreshPasswordRequestsBadge();
   } else {
     btnReq.classList.add('hidden');
+    btnPwReq.classList.add('hidden');
   }
 }
 
@@ -3457,6 +3490,260 @@ async function approveRequest(id, btn) {
     resultEl.textContent = 'Falha de conexão ao criar a conta: ' + String(e);
     item.querySelectorAll('button').forEach(b => b.disabled = false);
     btn.textContent = '✓ Aprovar e criar conta';
+  }
+}
+
+// ─── Trocar senha: admin troca direto, viewer solicita ─────
+function openPasswordModal() {
+  document.getElementById('passwordOverlay').classList.remove('hidden');
+  document.getElementById('pwError').classList.remove('show');
+  document.getElementById('pwSuccess').classList.remove('show');
+
+  const content = document.getElementById('pwContent');
+  const isAdmin = currentProfile && currentProfile.role === 'admin';
+
+  if (isAdmin) {
+    content.innerHTML = `
+      <div class="login-sub">Você é admin — a troca é aplicada na hora, sem precisar de aprovação.</div>
+      <form id="pwChangeForm" onsubmit="return handleChangePassword(event)">
+        <label for="pwNova">Nova senha</label>
+        <input type="password" id="pwNova" autocomplete="new-password" required minlength="6">
+        <label for="pwConfirma">Confirmar nova senha</label>
+        <input type="password" id="pwConfirma" autocomplete="new-password" required minlength="6">
+        <div class="req-actions">
+          <button type="submit" id="pwSubmitBtn">Trocar senha</button>
+        </div>
+      </form>
+    `;
+  } else {
+    content.innerHTML = `
+      <div class="login-sub">Sua conta é viewer — a troca de senha precisa ser aprovada por um admin. Ao solicitar, uma senha temporária será gerada e repassada a você com segurança.</div>
+      <div class="req-actions">
+        <button type="button" id="pwRequestBtn" onclick="handleRequestPasswordChange()">Solicitar troca de senha</button>
+      </div>
+    `;
+  }
+}
+
+function closePasswordModal() {
+  document.getElementById('passwordOverlay').classList.add('hidden');
+}
+
+async function handleChangePassword(e) {
+  e.preventDefault();
+  const nova = document.getElementById('pwNova').value;
+  const confirma = document.getElementById('pwConfirma').value;
+  const errEl = document.getElementById('pwError');
+  const okEl = document.getElementById('pwSuccess');
+  const btn = document.getElementById('pwSubmitBtn');
+
+  errEl.classList.remove('show');
+  okEl.classList.remove('show');
+
+  if (nova !== confirma) {
+    errEl.textContent = 'As senhas não coincidem.';
+    errEl.classList.add('show');
+    return false;
+  }
+  if (nova.length < 6) {
+    errEl.textContent = 'A senha precisa ter pelo menos 6 caracteres.';
+    errEl.classList.add('show');
+    return false;
+  }
+
+  btn.disabled = true;
+  btn.textContent = 'Trocando…';
+
+  const { error } = await supabaseClient.auth.updateUser({ password: nova });
+
+  btn.disabled = false;
+  btn.textContent = 'Trocar senha';
+
+  if (error) {
+    errEl.textContent = 'Não foi possível trocar: ' + error.message;
+    errEl.classList.add('show');
+    return false;
+  }
+
+  okEl.textContent = 'Senha trocada com sucesso!';
+  okEl.classList.add('show');
+  document.getElementById('pwChangeForm').reset();
+  setTimeout(closePasswordModal, 1800);
+  return false;
+}
+
+async function handleRequestPasswordChange() {
+  const errEl = document.getElementById('pwError');
+  const okEl = document.getElementById('pwSuccess');
+  const btn = document.getElementById('pwRequestBtn');
+
+  errEl.classList.remove('show');
+  okEl.classList.remove('show');
+  btn.disabled = true;
+  btn.textContent = 'Enviando…';
+
+  const { error } = await supabaseClient.from('solicitacoes_troca_senha').insert({
+    user_id: currentSession.user.id,
+    email: currentSession.user.email,
+  });
+
+  btn.disabled = false;
+  btn.textContent = 'Solicitar troca de senha';
+
+  if (error) {
+    errEl.textContent = error.code === '23505'
+      ? 'Você já tem uma solicitação de troca de senha pendente.'
+      : ('Não foi possível enviar: ' + error.message);
+    errEl.classList.add('show');
+    return;
+  }
+
+  okEl.textContent = 'Solicitação enviada! Um admin vai aprovar e te repassar a senha temporária.';
+  okEl.classList.add('show');
+  setTimeout(closePasswordModal, 2500);
+}
+
+// ─── Admin: gerenciar solicitações de troca de senha ───────
+async function refreshPasswordRequestsBadge() {
+  try {
+    const { count } = await supabaseClient
+      .from('solicitacoes_troca_senha')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pendente');
+    const badge = document.getElementById('passwordRequestsBadge');
+    if (count && count > 0) {
+      badge.textContent = count;
+      badge.classList.remove('hidden');
+    } else {
+      badge.classList.add('hidden');
+    }
+  } catch (e) {
+    console.error('Erro ao buscar contagem de solicitações de troca de senha:', e);
+  }
+}
+
+async function openPasswordRequestsPanel() {
+  document.getElementById('passwordRequestsOverlay').classList.remove('hidden');
+  await renderPasswordRequestsList();
+}
+
+function closePasswordRequestsPanel() {
+  document.getElementById('passwordRequestsOverlay').classList.add('hidden');
+}
+
+async function renderPasswordRequestsList() {
+  const listEl = document.getElementById('passwordRequestsList');
+  listEl.innerHTML = '<div class="requests-empty">Carregando…</div>';
+
+  const { data, error } = await supabaseClient
+    .from('solicitacoes_troca_senha')
+    .select('*')
+    .eq('status', 'pendente')
+    .order('criado_em', { ascending: true });
+
+  if (error) {
+    listEl.innerHTML = `<div class="requests-empty">Erro ao carregar: ${error.message}</div>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    listEl.innerHTML = '<div class="requests-empty">Nenhuma solicitação pendente.</div>';
+    return;
+  }
+
+  listEl.innerHTML = '';
+  data.forEach((sol) => {
+    const item = document.createElement('div');
+    item.className = 'request-item';
+    item.dataset.id = sol.id;
+
+    item.innerHTML = `
+      <div class="req-item-top">
+        <div>
+          <div class="req-email">${sol.email}</div>
+        </div>
+        <div class="req-date">${fmtReqDate(sol.criado_em)}</div>
+      </div>
+      <div class="req-actions">
+        <button type="button" class="req-approve" onclick="approvePasswordChange('${sol.id}', this)">✓ Aprovar e gerar senha</button>
+        <button type="button" class="req-reject" onclick="rejectPasswordChange('${sol.id}', this)">✕ Rejeitar</button>
+      </div>
+      <div class="req-result" id="pw-req-result-${sol.id}"></div>
+    `;
+    listEl.appendChild(item);
+  });
+}
+
+async function rejectPasswordChange(id, btn) {
+  const item = btn.closest('.request-item');
+  item.querySelectorAll('button').forEach(b => b.disabled = true);
+
+  const { error } = await supabaseClient
+    .from('solicitacoes_troca_senha')
+    .update({ status: 'rejeitado', decidido_em: new Date().toISOString(), decidido_por: currentSession.user.id })
+    .eq('id', id);
+
+  const resultEl = document.getElementById(`pw-req-result-${id}`);
+  if (error) {
+    resultEl.className = 'req-result err show';
+    resultEl.textContent = 'Erro ao rejeitar: ' + error.message;
+    item.querySelectorAll('button').forEach(b => b.disabled = false);
+    return;
+  }
+
+  resultEl.className = 'req-result ok show';
+  resultEl.textContent = 'Solicitação rejeitada.';
+  setTimeout(() => { renderPasswordRequestsList(); refreshPasswordRequestsBadge(); }, 1200);
+}
+
+async function approvePasswordChange(id, btn) {
+  const item = btn.closest('.request-item');
+  item.querySelectorAll('button').forEach(b => b.disabled = true);
+  btn.textContent = 'Aprovando…';
+
+  const resultEl = document.getElementById(`pw-req-result-${id}`);
+
+  const { error: updErr } = await supabaseClient
+    .from('solicitacoes_troca_senha')
+    .update({ status: 'aprovado' })
+    .eq('id', id);
+
+  if (updErr) {
+    resultEl.className = 'req-result err show';
+    resultEl.textContent = 'Erro ao aprovar: ' + updErr.message;
+    item.querySelectorAll('button').forEach(b => b.disabled = false);
+    btn.textContent = '✓ Aprovar e gerar senha';
+    return;
+  }
+
+  try {
+    const res = await fetch(`${DASHBOARD.url}/functions/v1/approve-password-change`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${currentSession.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ solicitacao_id: id }),
+    });
+    const json = await res.json();
+
+    if (!res.ok || json.error) {
+      resultEl.className = 'req-result err show';
+      resultEl.textContent = 'Erro ao trocar a senha: ' + (json.error || res.statusText);
+      item.querySelectorAll('button').forEach(b => b.disabled = false);
+      btn.textContent = '✓ Aprovar e gerar senha';
+      return;
+    }
+
+    resultEl.className = 'req-result ok show';
+    resultEl.innerHTML = `Senha trocada! E-mail: <code>${json.email}</code> · Senha temporária: <code>${json.senha_temporaria}</code><br>Repasse essa senha ao usuário com segurança.`;
+    btn.textContent = 'Aprovado ✓';
+    refreshPasswordRequestsBadge();
+  } catch (e) {
+    resultEl.className = 'req-result err show';
+    resultEl.textContent = 'Falha de conexão ao trocar a senha: ' + String(e);
+    item.querySelectorAll('button').forEach(b => b.disabled = false);
+    btn.textContent = '✓ Aprovar e gerar senha';
   }
 }
 
