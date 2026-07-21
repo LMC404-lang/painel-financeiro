@@ -2254,6 +2254,26 @@
         <div class="desc">Fluxo de caixa consolidado (KMNO + Blue Line/Novah + RT), para o período De/Até selecionado no topo. Valores em R$.</div>
       </div>
 
+      <!-- RESUMO detalhado, linha a linha, igual à planilha (pedido
+           reunião 21.07, linha 6+28: "Em cima da Pag do BI começa com o
+           resumo" / "Depois vem o detalhado igual o EXCEL"). Jan-Mai/26
+           = valores fixos da planilha; Jun/26 em diante ainda não tem
+           fonte viva pra ESSE detalhe linha a linha (só os 5 KPIs acima
+           são espelhados ao vivo) — aparece "—" até isso ser fechado
+           com o Leo (ver linha 3 da aba: "fazer com o Leo os DREs de
+           Junho no BI"). -->
+      <div class="bloco-card" style="margin-bottom:14px;">
+        <div class="bloco-head"><div class="bloco-titulo">Resumo (Grupo, R$)</div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="grupoResumoDetalhadoHeader"><th>Descrição</th></tr>
+              <tbody id="grupoResumoDetalhadoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Cards de resumo -->
       <div class="grupo-dfc-cards">
         <div class="grupo-dfc-card">
@@ -2304,11 +2324,6 @@
         <canvas id="chartGrupoDfc" role="img" aria-label="Gráfico de evolução mensal do Grupo: Receita Bruta, CMV, Margem de Contribuição, EBITDA e Saldo Líquido">Evolução mensal do grupo.</canvas>
       </div>
 
-      <div class="chart-card-title" style="margin-top:18px;">Capex e Refis — Evolução Mensal (R$)</div>
-      <div style="position: relative; height: 320px;">
-        <canvas id="chartCapexRefis" role="img" aria-label="Gráfico de barras comparando Capex e Refis mês a mês">Capex e Refis mês a mês.</canvas>
-      </div>
-
       <!-- Waterfall detalhada "GRUPO DFC" — réplica linha por linha do
            Excel de referência (DRE 2026 KMNO e NOVAH 28.06.xlsx, abas
            Grupo DFC / KMNO DFC (caixa) / NOVAH DFC (caixa)). Ver
@@ -2344,6 +2359,7 @@
       </div>
       <div class="grupo-dfc-cards">
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagtos Impostos Atrasados / Refis (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalRefis">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Capex (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalCapex">R$ 0</div></div>
       </div>
     </div>
 
@@ -2363,6 +2379,29 @@
         </div>
       </div>
 
+      <!-- Reconectado ao menu em 21/07/2026 (pedido reunião 21.07) — a view
+           já existia no HTML (viewCharts) mas tinha ficado órfã (sem
+           nav-card) desde uma reorganização anterior. Reaproveitada aqui
+           e com as 3 análises novas da planilha adicionadas no topo dela
+           (ver renderAnalisesGraficoIndicadores). -->
+      <div class="nav-card" onclick="switchView('viewCharts')">
+        <div>
+          <div class="nav-card-title">Gráficos e Indicadores</div>
+          <div class="nav-card-desc">Peças Vendidas x Peças Faturadas, Vendas x Faturamento e Faturamento por Empresa ano a ano — mais os gráficos gerais de receitas, despesas e fluxo de caixa.</div>
+        </div>
+      </div>
+
+      <!-- Novo card pedido na reunião 21.07 ("Impostos e Análises"). Dados
+           hoje são os da planilha (Jan-Mai/26 Excel, copiados 1:1) — ainda
+           sem pipeline vivo do Omie pra Impostos mês a mês; ver nota no
+           topo da view. -->
+      <div class="nav-card" onclick="switchView('viewImpostos')">
+        <div>
+          <div class="nav-card-title">Impostos e Análises</div>
+          <div class="nav-card-desc">IRPJ, CSLL, PIS, COFINS, Difal e ICMS mês a mês x Receita Bruta (KMNO).</div>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -2373,6 +2412,48 @@
   <div id="viewCharts" class="view-container">
     <div class="btn-back-container">
       <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+    </div>
+
+    <!-- Vendas x Faturamento (comparativo 3 empresas, mês a mês) —
+         realocado pra cá em 21/07/2026: na aba "Reunião 21.07" da
+         planilha, essa tabela (imagem linha 182) aparece dentro do
+         card "Gráficos e Indicadores" (linha 179), não dentro de "DRE
+         por Competência" onde estava antes. -->
+    <div class="section-head">
+      <h2 style="font-size:18px;">Vendas x Faturamento</h2>
+      <div class="desc">Receita bruta (Vendas) comparada ao Resultado Líquido (Faturamento) de cada empresa, mês a mês.</div>
+    </div>
+    <div id="vendasFaturamentoWrap"></div>
+
+    <!-- 3 análises pedidas na reunião 21.07 (aba "Reunião 21.07" da
+         planilha Resumo BI Grupo). Dados hoje são os valores da planilha
+         Fat e Vendas (Jan-Mai/26 = Excel, copiado 1:1; Jun/26 = já estava
+         lançado na planilha na época). NÃO vêm do Supabase/Omie ainda —
+         ver ANALISES_GRAFICO_INDICADORES no bloco de script abaixo pra
+         atualizar/estender quando entrar dado vivo. -->
+    <div class="section-head">
+      <h2>Análises — Peças, Vendas e Faturamento</h2>
+      <div class="desc">Fonte: planilha "Fat e Vendas" (reunião 21.07). Jan–Mai/2026 = Excel; a partir de Jun/2026 precisa ser mantido manualmente até termos pipeline do Omie pra essas 3 métricas.</div>
+    </div>
+    <div class="chart-grid-3" id="sectionAnalisesIndicadores">
+      <div class="chart-card" id="chartCardPecasVendidasFaturadas">
+        <div class="chart-card-title">Peças Vendidas x Peças Faturadas (R$ por peça)</div>
+        <div style="position: relative; height: 230px; flex: 1;">
+          <canvas id="chartPecasVendidasFaturadas" role="img" aria-label="Gráfico de linha comparando saída de caixa por peça e faturamento por peça, mês a mês">Peças vendidas x faturadas, R$ por peça.</canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="chartCardVendasFaturamentoAnalise">
+        <div class="chart-card-title">Vendas x Faturamento (KMNO, R$)</div>
+        <div style="position: relative; height: 230px; flex: 1;">
+          <canvas id="chartVendasFaturamentoAnalise" role="img" aria-label="Gráfico de barras comparando vendas e faturamento da KMNO mês a mês">Vendas x Faturamento KMNO.</canvas>
+        </div>
+      </div>
+      <div class="chart-card" id="chartCardFaturamentoEmpresasAno">
+        <div class="chart-card-title">Faturamento do Grupo — ano a ano</div>
+        <div style="position: relative; height: 230px; flex: 1;">
+          <canvas id="chartFaturamentoEmpresasAno" role="img" aria-label="Gráfico de linha comparando o faturamento mensal do grupo em 2024, 2025 e 2026">Faturamento do grupo, ano a ano.</canvas>
+        </div>
+      </div>
     </div>
 
     <div class="chart-grid" id="sectionCharts1">
@@ -2694,17 +2775,6 @@
           <div class="desc">Árvore de contas por empresa (mesma estrutura da DRE gerencial), com valores ao vivo. Usa o mesmo período De/Até selecionado no topo da página. Ranking do maior para o menor valor dentro de cada bloco.</div>
         </div>
 
-        <!-- Vendas x Faturamento: visão rápida comparando as 3 empresas
-             lado a lado (Receita Bruta x Resultado Líquido, mês a mês)
-             antes de entrar na aba de uma empresa específica abaixo.
-             Migrou de "Operacional & Estoque" pra cá — mesma
-             família de dado (DRE), fazia mais sentido junto. -->
-        <div class="section-head" style="margin-top:22px;">
-          <h2 style="font-size:18px;">Vendas x Faturamento</h2>
-          <div class="desc">Receita bruta (Vendas) comparada ao Resultado Líquido (Faturamento) de cada empresa, mês a mês.</div>
-        </div>
-        <div id="vendasFaturamentoWrap"></div>
-
         <div class="dre-empresa-tabs" id="dreEmpresaTabs"></div>
         <!-- Confirmado com Lucas em 17/07/2026: a árvore nativa (por
              codigo_dre, igual ao relatório oficial do Omie) virou a
@@ -2753,6 +2823,48 @@
 
         <div class="dre-empresa-tabs" id="dfcEmpresaTabs"></div>
         <div id="dfcArvoreBody"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VIEW: IMPOSTOS E ANÁLISES (novo card, reunião 21.07) =====
+       Fonte: planilha "Impostos Analise KMNO" (só KMNO por enquanto — é
+       a única empresa com essa aba na planilha original). Valores
+       Ago/25 a Mai/26 = Excel (histórico fixo); Jun/26 em diante
+       precisa ser mantido manualmente até termos os impostos vindo do
+       Omie por categoria (naoExibirDRE etc. já filtram o DRE normal,
+       mas o cálculo de imposto presumido em si não é uma categoria
+       Omie — é calculado à parte na planilha). ===== -->
+  <div id="viewImpostos" class="view-container">
+    <div class="blocks-inner">
+      <div class="btn-back-container">
+        <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+      </div>
+
+      <div class="section" id="sectionImpostos">
+        <div class="section-head">
+          <h2>Impostos e Análises</h2>
+          <div class="desc">IRPJ Presumido, CSLL Presumido, PIS, COFINS, Difal e ICMS — KMNO, mês a mês, comparado à Receita Bruta (Total de Recebimentos). Fonte: planilha (Ago/2025–Mai/2026); ainda sem pipeline vivo do Omie para impostos.</div>
+        </div>
+
+        <div class="grupo-dfc-cards" id="impostosResumoCards"></div>
+
+        <div class="chart-card-title" style="margin-top:18px;">Impostos x Receita Bruta — mês a mês (KMNO, R$)</div>
+        <div style="position: relative; height: 280px;">
+          <canvas id="chartImpostosReceita" role="img" aria-label="Gráfico de barras empilhadas mostrando cada imposto mês a mês, com linha de receita bruta">Impostos x Receita Bruta mês a mês.</canvas>
+        </div>
+
+        <div class="bloco-card" style="margin-top:18px;">
+          <div class="bloco-head"><div class="bloco-titulo">Detalhe mensal</div></div>
+          <div class="bloco-body">
+            <div class="dre-tbl-wrap">
+              <table class="fin-tbl" id="impostosDetalheTbl">
+                <tr id="impostosDetalheHeader"><th>Categoria</th></tr>
+                <tbody id="impostosDetalheBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -3058,6 +3170,28 @@ function switchView(viewId, options = {}) {
     força o Chart.js a redesenhar todos os gráficos perfeitamente assim que a View abre.
   */
   if (viewId === 'viewCharts') {
+    try { renderAnalisesGraficoIndicadores(); } catch (e) { console.error('renderAnalisesGraficoIndicadores falhou:', e); }
+    // "Vendas x Faturamento" foi realocado pra cá (era da DRE por
+    // Competência) — depende do mesmo cache carregado lá
+    // (dreArvoreCategoriesCache/dreArvoreMovementsCache). Se o usuário
+    // abrir "Gráficos e Indicadores" sem nunca ter aberto "DRE por
+    // Competência" antes, o cache ainda não existe — dispara o load aqui
+    // também nesse caso.
+    (async () => {
+      try {
+        if (!dreArvoreCategoriesCache || !dreArvoreMovementsCache) {
+          await carregarDadosDreArvoreTodasEmpresas();
+        }
+        renderVendasFaturamento();
+      } catch (e) { console.error('renderVendasFaturamento (viewCharts) falhou:', e); }
+    })();
+    setTimeout(() => {
+      window.dispatchEvent(new Event('resize'));
+    }, 60);
+  }
+
+  if (viewId === 'viewImpostos') {
+    try { renderImpostosView(); } catch (e) { console.error('renderImpostosView falhou:', e); }
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 60);
@@ -4314,6 +4448,61 @@ function numeroCurtoDre(codigo) {
   return partes[partes.length - 1];
 }
 
+// Árvore consolidada (Grupo — 3 empresas somadas), SEM detalhe de
+// subcategoria — pedido reunião 21.07, linha 115: "Linha por linha só
+// por empresa (quando eu agrupar as empresas eu não preciso ver linha
+// por linha)". Reaproveita buildArvoreNativaDre por empresa (mesma
+// fonte/regra de cada uma) e soma tipo/grupo/conta por código (taxonomia
+// codigo_dre é a mesma nas 3 empresas) — só que troca "categorias" por
+// [] em vez de somar os labels (que são específicos de cada empresa e
+// não fazem sentido misturados no card agrupado).
+function buildArvoreNativaDreConsolidado(categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas) {
+  const empresas = ['KMNO', 'NOVAH', 'RT'];
+  const arvoresPorEmpresa = {};
+  empresas.forEach(emp => {
+    arvoresPorEmpresa[emp] = buildArvoreNativaDre(emp, categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas);
+  });
+  const arvores = empresas.map(emp => arvoresPorEmpresa[emp]);
+
+  const somaArrays = (arrs) => {
+    const out = new Array(meses.length).fill(0);
+    arrs.forEach(arr => arr.forEach((v, i) => { out[i] += v; }));
+    return out;
+  };
+
+  const tipos = arvores[0].tipos.map((tipoBase, ti) => {
+    const grupos = tipoBase.grupos.map((grupoBase, gi) => {
+      const contas = grupoBase.contas.map((contaBase, ci) => {
+        const mesesConta = somaArrays(arvores.map(a => a.tipos[ti].grupos[gi].contas[ci].meses));
+        return {
+          codigo: contaBase.codigo,
+          numero: contaBase.numero,
+          label: contaBase.label,
+          categorias: [], // agrupado = sem subcategoria, só o resultado
+          meses: mesesConta,
+          total: mesesConta.reduce((a, b) => a + b, 0),
+        };
+      });
+      const mesesGrupo = somaArrays(contas.map(c => c.meses));
+      return { codigo: grupoBase.codigo, numero: grupoBase.numero, label: grupoBase.label, contas, meses: mesesGrupo, total: mesesGrupo.reduce((a, b) => a + b, 0) };
+    });
+    const mesesTipo = somaArrays(grupos.map(g => g.meses));
+    return { codigo: tipoBase.codigo, numero: tipoBase.numero, label: tipoBase.label, grupos, meses: mesesTipo, total: mesesTipo.reduce((a, b) => a + b, 0) };
+  });
+
+  const mesesTotal = somaArrays(tipos.map(t => t.meses));
+
+  // Depreciação é % sobre a receita bruta DE CADA EMPRESA (percentuais
+  // diferentes por empresa) — soma o valor já calculado por empresa em
+  // vez de aplicar um % único sobre a receita bruta consolidada.
+  const depreciacaoConsolidada = empresas.reduce((acc, emp) => {
+    const receitaBrutaEmp = acharContaPorCodigo(arvoresPorEmpresa[emp], '1.01.01');
+    return acc + calcDepreciacao(emp, receitaBrutaEmp);
+  }, 0);
+
+  return { tipos, meses: mesesTotal, total: mesesTotal.reduce((a, b) => a + b, 0), depreciacaoConsolidada };
+}
+
 function buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas) {
   const catByCodigo = {};
   (categories || []).forEach(c => {
@@ -4589,7 +4778,7 @@ function renderCardEmprestimosDividendosHtml(linhas) {
   </table></div>`;
 }
 
-function buildResumoNativo(arvore, empresa) {
+function buildResumoNativo(arvore, empresa, depreciacaoOverride) {
   const receitaBruta = acharContaPorCodigo(arvore, '1.01.01');
   const impostos = acharContaPorCodigo(arvore, '1.01.02');
   const deducoes = acharContaPorCodigo(arvore, '1.01.03');
@@ -4611,7 +4800,7 @@ function buildResumoNativo(arvore, empresa) {
   const outrosTributos = acharContaPorCodigo(arvore, '2.11.05');
   const resultadoOperacional = margemContribuicao + despPessoal + despAdm + despVendas + outrosTributos;
 
-  const depreciacao = calcDepreciacao(empresa, receitaBruta);
+  const depreciacao = depreciacaoOverride != null ? depreciacaoOverride : calcDepreciacao(empresa, receitaBruta);
   const resultadoLiquido = resultadoOperacional - depreciacao + despFinanceiras;
 
   const investimentos = acharContaPorCodigo(arvore, '3.01.01') + acharContaPorCodigo(arvore, '3.01.02');
@@ -4636,7 +4825,7 @@ function buildResumoNativo(arvore, empresa) {
     { label: '(-) Despesas de Vendas e Marketing', val: despVendas, cls: 'item' },
     { label: '(-) Outros Tributos', val: outrosTributos, cls: 'item' },
     { label: '(=) Resultado Operacional', val: resultadoOperacional, cls: 'total', destaque: true },
-    { label: `(-) Depreciação (${fmtPct(DRE_ARVORE_DEPRECIACAO_PCT[empresa] || 0)})`, val: -depreciacao, cls: 'item' },
+    { label: empresa === 'TODAS' ? '(-) Depreciação (soma por empresa)' : `(-) Depreciação (${fmtPct(DRE_ARVORE_DEPRECIACAO_PCT[empresa] || 0)})`, val: -depreciacao, cls: 'item' },
     { label: '(+/-) Despesas Financeiras', val: despFinanceiras, cls: 'item' },
     { label: '(=) Resultado Líquido', val: resultadoLiquido, cls: 'total', destaque: true },
     { label: '(+/-) Investimentos', val: investimentos, cls: 'item' },
@@ -4662,7 +4851,7 @@ async function renderDreArvoreNativa() {
     wrapEl.innerHTML = '<div class="bloco-vazio">Carregando dados das 3 empresas…</div>';
     await carregarDadosDreArvoreTodasEmpresas();
   }
-  const empresa = (dreArvoreEmpresaAtual && dreArvoreEmpresaAtual !== 'TODAS') ? dreArvoreEmpresaAtual : 'KMNO';
+  const empresa = (dreArvoreEmpresaAtual && dreArvoreEmpresaAtual !== 'TODAS') ? dreArvoreEmpresaAtual : (dreArvoreEmpresaAtual === 'TODAS' ? 'TODAS' : 'KMNO');
   const { de, ate } = getSelectedPeriodRange();
   const meses = [];
   let cursor = dayjs(de).startOf('month');
@@ -4672,10 +4861,14 @@ async function renderDreArvoreNativa() {
     cursor = cursor.add(1, 'month');
   }
   if (meses.length === 0) meses.push(dayjs().startOf('month'));
-  const arvore = buildArvoreNativaDre(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache);
-  const resumo = buildResumoNativo(arvore, empresa);
-  const emprestimosDividendos = buildCardEmprestimosDividendos(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo);
-  wrapEl.innerHTML = renderResumoNativoHtml(resumo) + renderCardEmprestimosDividendosHtml(emprestimosDividendos) + renderArvoreNativaDreHtml(arvore, meses);
+  // "TODAS" (Grupo) = consolidado, sem subcategoria (pedido reunião
+  // 21.07, linha 115). Empresa única = árvore normal, com subcategoria.
+  const arvore = empresa === 'TODAS'
+    ? buildArvoreNativaDreConsolidado(dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache)
+    : buildArvoreNativaDre(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache);
+  const resumo = buildResumoNativo(arvore, empresa, empresa === 'TODAS' ? arvore.depreciacaoConsolidada : null);
+  const emprestimosDividendos = empresa === 'TODAS' ? null : buildCardEmprestimosDividendos(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo);
+  wrapEl.innerHTML = renderResumoNativoHtml(resumo) + (emprestimosDividendos ? renderCardEmprestimosDividendosHtml(emprestimosDividendos) : '') + renderArvoreNativaDreHtml(arvore, meses);
 }
 
 function toggleVisaoDreNativa() {
@@ -10285,6 +10478,225 @@ const CHART_COLORS = {
   tickText: '#C9C2B2',
 };
 
+// ===================================================================
+// Dados das análises pedidas na reunião 21.07 (aba "Reunião 21.07" da
+// planilha Resumo BI Grupo, sheet "Fat e Vendas" e "Impostos Analise
+// KMNO"). Histórico fixo — Jan-Mai/2026 é Excel (planilha não muda mais
+// pra esse período), Jun/2026 é o valor que já estava lançado na
+// planilha na época da reunião. NÃO puxa de Supabase/Omie — precisa ser
+// atualizado manualmente mês a mês até existir um pipeline pra essas
+// métricas (Vendas x Faturamento por peça, Faturamento ano a ano do
+// Grupo, Impostos presumidos da KMNO).
+// ===================================================================
+const ANALISES_MESES_2026 = ['Jan/26', 'Fev/26', 'Mar/26', 'Abr/26', 'Mai/26', 'Jun/26'];
+
+// "Peças Vendidas x Peças Faturadas": R$ de saída de caixa por peça
+// (DFC/Caixa) x R$ de faturamento por peça (DRE/Competência) — mostra se
+// o que sai de caixa por unidade está alinhado com o que é faturado por
+// unidade, mês a mês.
+const ANALISE_PECAS_VENDIDAS_FATURADAS = {
+  saidaCaixaPorPeca:   [106.26, 90.68, 119.07, 98.91, 87.03, 99.19],
+  faturamentoPorPeca:  [107.11, 148.18, 127.32, 105.84, 112.36, 120.95],
+};
+
+// "Vendas x Faturamento" (KMNO — única empresa com esse detalhe na
+// planilha): Vendas = valor dos pedidos/vendas no período; Faturamento =
+// Resultado líquido de recebimento (DRE).
+const ANALISE_VENDAS_FATURAMENTO_KMNO = {
+  vendas:       [578012.66, 807035.75, 1028160.08, 948602.23, 787982.81, 0],
+  faturamento:  [469949.55, 877469.51, 783660.17, 750762.56, 889612.46, 873836.32],
+};
+
+// "Faturamento Empresas — ano a ano": faturamento mensal do Grupo (3
+// empresas somadas) em 2024, 2025 e 2026, pra comparar sazonalidade e
+// crescimento ano a ano.
+const ANALISE_FATURAMENTO_ANO_A_ANO = {
+  meses: ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'],
+  2024: [352848, 521739, 527646, 618128, 607595, 657411, 649226, 363916, 561571, 781398, 725219, 430528],
+  2025: [437042, 708319, 866081, 778993, 702000, 542000, 1185417, 883070, 963233, 1012948, 899716, 845474],
+  2026: [615375.10, 966406.96, 837280.18, 900264.36, 1047970.76, 1221127.12, null, null, null, null, null, null],
+};
+
+// Impostos presumidos da KMNO, mês a mês (planilha "Impostos Analise
+// KMNO"), Ago/25 a Jun/26, comparado à Receita Bruta (Total de
+// Recebimentos = Vendas KMNO).
+const IMPOSTOS_KMNO_MESES = ['ago/25', 'set/25', 'out/25', 'nov/25', 'dez/25', 'jan/26', 'fev/26', 'mar/26', 'abr/26', 'mai/26'];
+const IMPOSTOS_KMNO = {
+  receitaBruta:  [1084592.82, 815321.32, 897148.35, 870048.10, 757407.46, 468550.55, 720089.24, 800679.76, 750762.56, 889612.46],
+  irpj:          [0, 0, 70065.94, 0, 0, 70976.60, 0, 0, 62925.09, 0],
+  csll:          [0, 0, 0, 3092.58, 2758.00, 3043.19, 1408.38, 2648.75, 2005.38, 2412.88],
+  pis:           [3103.35, 3205.57, 4518.09, 4321.11, 4799.37, 4140.32, 2529.46, 4899.63, 4788.72, 4007.46],
+  cofins:        [14323.15, 14794.94, 20852.74, 19943.56, 22150.92, 19109.17, 11674.44, 22613.67, 19817.18, 18495.98],
+  difal:         [7739.38, 10087.00, 19629.93, 15956.78, 16233.40, 8660.58, 9569.70, 26074.37, 19652.26, 25862.80],
+  icms:          [0, 0, 46808.39, 24513.66, 26797.67, 22976.43, 14333.18, 26319.38, 25175.88, 23805.36],
+};
+
+let chartPecasVendidasFaturadas = null;
+function renderAnalisePecasVendidasFaturadas() {
+  const canvas = document.getElementById('chartPecasVendidasFaturadas');
+  if (!canvas) return;
+  if (chartPecasVendidasFaturadas) chartPecasVendidasFaturadas.destroy();
+  chartPecasVendidasFaturadas = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: ANALISES_MESES_2026,
+      datasets: [
+        { label: 'Saída Caixa / Peça', data: ANALISE_PECAS_VENDIDAS_FATURADAS.saidaCaixaPorPeca, borderColor: CHART_COLORS.red, backgroundColor: CHART_COLORS.red, tension: 0.3 },
+        { label: 'Faturamento / Peça', data: ANALISE_PECAS_VENDIDAS_FATURADAS.faturamentoPorPeca, borderColor: CHART_COLORS.blue, backgroundColor: CHART_COLORS.blue, tension: 0.3 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } },
+      },
+      scales: {
+        x: { ticks: { color: CHART_COLORS.tickText }, grid: { color: CHART_COLORS.gridLine } },
+        y: { ticks: { color: CHART_COLORS.tickText, callback: (v) => 'R$ ' + v }, grid: { color: CHART_COLORS.gridLine } },
+      },
+    },
+  });
+}
+
+let chartVendasFaturamentoAnalise = null;
+function renderAnaliseVendasFaturamento() {
+  const canvas = document.getElementById('chartVendasFaturamentoAnalise');
+  if (!canvas) return;
+  if (chartVendasFaturamentoAnalise) chartVendasFaturamentoAnalise.destroy();
+  chartVendasFaturamentoAnalise = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: ANALISES_MESES_2026,
+      datasets: [
+        { label: 'Vendas', data: ANALISE_VENDAS_FATURAMENTO_KMNO.vendas, backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 26 },
+        { label: 'Faturamento', data: ANALISE_VENDAS_FATURAMENTO_KMNO.faturamento, backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 26 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } },
+      },
+      scales: {
+        x: { ticks: { color: CHART_COLORS.tickText }, grid: { display: false } },
+        y: { ticks: { color: CHART_COLORS.tickText, callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0)+'k' : v) }, grid: { color: CHART_COLORS.gridLine } },
+      },
+    },
+  });
+}
+
+let chartFaturamentoEmpresasAno = null;
+function renderAnaliseFaturamentoAnoAAno() {
+  const canvas = document.getElementById('chartFaturamentoEmpresasAno');
+  if (!canvas) return;
+  if (chartFaturamentoEmpresasAno) chartFaturamentoEmpresasAno.destroy();
+  const d = ANALISE_FATURAMENTO_ANO_A_ANO;
+  chartFaturamentoEmpresasAno = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: d.meses,
+      datasets: [
+        { label: '2024', data: d[2024], borderColor: 'rgba(243,239,230,0.4)', backgroundColor: 'rgba(243,239,230,0.4)', tension: 0.3 },
+        { label: '2025', data: d[2025], borderColor: CHART_COLORS.blue, backgroundColor: CHART_COLORS.blue, tension: 0.3 },
+        { label: '2026', data: d[2026], borderColor: CHART_COLORS.green, backgroundColor: CHART_COLORS.green, tension: 0.3 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } },
+      },
+      scales: {
+        x: { ticks: { color: CHART_COLORS.tickText }, grid: { color: CHART_COLORS.gridLine } },
+        y: { ticks: { color: CHART_COLORS.tickText, callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0)+'k' : v) }, grid: { color: CHART_COLORS.gridLine } },
+      },
+    },
+  });
+}
+
+function renderAnalisesGraficoIndicadores() {
+  renderAnalisePecasVendidasFaturadas();
+  renderAnaliseVendasFaturamento();
+  renderAnaliseFaturamentoAnoAAno();
+}
+
+// ------- Impostos e Análises (KMNO) -------
+let chartImpostosReceita = null;
+function renderImpostosView() {
+  const d = IMPOSTOS_KMNO;
+  const n = IMPOSTOS_KMNO_MESES.length;
+
+  // Cards de resumo: total de cada imposto no acumulado exibido, e %
+  // médio sobre a receita bruta.
+  const totalImpostos = d.irpj.map((_, i) => d.irpj[i] + d.csll[i] + d.pis[i] + d.cofins[i] + d.difal[i] + d.icms[i]);
+  const somaImpostos = totalImpostos.reduce((a, b) => a + b, 0);
+  const somaReceita = d.receitaBruta.reduce((a, b) => a + b, 0);
+  const pctMedio = somaReceita ? (somaImpostos / somaReceita * 100) : 0;
+
+  const cardsEl = document.getElementById('impostosResumoCards');
+  if (cardsEl) {
+    cardsEl.innerHTML = `
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Receita Bruta (acumulado)</div><div class="grupo-dfc-card-val">${fmtBRL(somaReceita)}</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Total de Impostos (acumulado)</div><div class="grupo-dfc-card-val">${fmtBRL(somaImpostos)}</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Impostos / Receita (%, média)</div><div class="grupo-dfc-card-val">${pctMedio.toFixed(1)}%</div></div>
+    `;
+  }
+
+  // Tabela detalhe mensal
+  const header = document.getElementById('impostosDetalheHeader');
+  if (header) header.innerHTML = '<th>Categoria</th>' + IMPOSTOS_KMNO_MESES.map(m => `<th class="num">${m}</th>`).join('');
+  const linhas = [
+    ['Receita Bruta', d.receitaBruta],
+    ['IRPJ Presumido (15%)', d.irpj],
+    ['CSLL Presumido (9%)', d.csll],
+    ['PIS Presumido (0,65%)', d.pis],
+    ['COFINS Presumido (3%)', d.cofins],
+    ['Difal (2%)', d.difal],
+    ['ICMS (3%)', d.icms],
+    ['Total de Impostos', totalImpostos],
+  ];
+  const body = document.getElementById('impostosDetalheBody');
+  if (body) {
+    body.innerHTML = linhas.map(([label, vals]) => `
+      <tr${label === 'Total de Impostos' || label === 'Receita Bruta' ? ' style="font-weight:600;"' : ''}>
+        <td>${label}</td>${vals.map(v => `<td class="num">${fmtBRL(v)}</td>`).join('')}
+      </tr>`).join('');
+  }
+
+  const canvas = document.getElementById('chartImpostosReceita');
+  if (!canvas) return;
+  if (chartImpostosReceita) chartImpostosReceita.destroy();
+  chartImpostosReceita = new Chart(canvas.getContext('2d'), {
+    data: {
+      labels: IMPOSTOS_KMNO_MESES,
+      datasets: [
+        { type: 'bar', label: 'IRPJ', data: d.irpj, backgroundColor: CHART_COLORS.red, stack: 'impostos', maxBarThickness: 26 },
+        { type: 'bar', label: 'CSLL', data: d.csll, backgroundColor: '#C9A227', stack: 'impostos', maxBarThickness: 26 },
+        { type: 'bar', label: 'PIS', data: d.pis, backgroundColor: CHART_COLORS.blue, stack: 'impostos', maxBarThickness: 26 },
+        { type: 'bar', label: 'COFINS', data: d.cofins, backgroundColor: '#8E6FCE', stack: 'impostos', maxBarThickness: 26 },
+        { type: 'bar', label: 'Difal', data: d.difal, backgroundColor: '#3FA66A', stack: 'impostos', maxBarThickness: 26 },
+        { type: 'bar', label: 'ICMS', data: d.icms, backgroundColor: '#5A6B7A', stack: 'impostos', maxBarThickness: 26 },
+        { type: 'line', label: 'Receita Bruta', data: d.receitaBruta, borderColor: 'rgba(243,239,230,0.8)', backgroundColor: 'rgba(243,239,230,0.8)', yAxisID: 'y1', tension: 0.25 },
+      ],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } },
+      },
+      scales: {
+        x: { ticks: { color: CHART_COLORS.tickText }, grid: { display: false }, stacked: true },
+        y: { stacked: true, ticks: { color: CHART_COLORS.tickText, callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0)+'k' : v) }, grid: { color: CHART_COLORS.gridLine } },
+        y1: { position: 'right', ticks: { color: CHART_COLORS.tickText, callback: (v) => 'R$ ' + (Math.abs(v) >= 1000 ? (v/1000).toFixed(0)+'k' : v) }, grid: { display: false } },
+      },
+    },
+  });
+}
+
 function lastSixMonthKeys() {
   const now = dayjs();
   const keys = [];
@@ -11686,6 +12098,54 @@ function somarMetricas(lista) {
 
 // Métricas de todas as 3 empresas para um único período (mês ou
 // intervalo), mais o total do Grupo (soma das 3).
+// ===================================================================
+// ESPELHAMENTO EXCEL (Jan-Mai/2026) — pedido reunião 21.07: "ate maio
+// sera sempre excel sempre, após isso omie". Valores TIRADOS DIRETO da
+// aba "Grupo DFC" da planilha DRE_2026_KMNO_e_NOVAH (coluna TOTAL de
+// cada mês, linhas do resumo executivo) — histórico fixo, não muda mais.
+// A partir de Jun/2026 os números vêm do Supabase/Omie normalmente
+// (buildMetricasGrupoDfcPeriodo). Cobre só as 5 métricas do resumo
+// executivo do Grupo (cards do topo) — o comparativo por empresa e as
+// árvores de DRE/DFC por empresa AINDA calculam ao vivo mesmo para
+// Jan-Mai (ainda não espelhados; próximo passo).
+// ===================================================================
+const EXCEL_CONGELADO_ATE = dayjs('2026-06-01'); // meses >= isso usam Omie ao vivo
+const EXCEL_HISTORICO_GRUPO_DFC = {
+  '2026-01': { receitaBruta: 792233.50, receitaLiquida: 641485.23, cmv: 234207.79, margemContribuicao: 392576.75, custosFixos: 198803.57, ebitda: 193773.18, despesasFinanceiras: 11992.37, lucroLiquido: 181792.26, saldoLiquido: 158701.45 },
+  '2026-02': { receitaBruta: 785635.23, receitaLiquida: 712115.44, cmv: 308116.97, margemContribuicao: 400723.74, custosFixos: 194503.05, ebitda: 206220.69, despesasFinanceiras: 11979.83, lucroLiquido: 194277.66, saldoLiquido: 121368.27 },
+  '2026-03': { receitaBruta: 1073049.32, receitaLiquida: 969738.60, cmv: 372263.29, margemContribuicao: 592732.40, custosFixos: 290169.14, ebitda: 302563.26, despesasFinanceiras: 12515.78, lucroLiquido: 298210.70, saldoLiquido: 213424.79 },
+  '2026-04': { receitaBruta: 920915.46, receitaLiquida: 759035.95, cmv: 383835.20, margemContribuicao: 351706.62, custosFixos: 261248.33, ebitda: 90458.29, despesasFinanceiras: 10901.52, lucroLiquido: 87885.40, saldoLiquido: 32356.42 },
+  '2026-05': { receitaBruta: 863979.50, receitaLiquida: 761106.30, cmv: 417374.98, margemContribuicao: 340307.85, custosFixos: 278692.85, ebitda: 61615.00, despesasFinanceiras: 9364.18, lucroLiquido: 60530.14, saldoLiquido: -133071.24 },
+};
+
+// Soma as métricas do Grupo mês a mês dentro do período De/Até
+// selecionado, usando o valor congelado da planilha pros meses
+// Jan-Mai/2026 e o cálculo ao vivo (buildMetricasGrupoDfcPeriodo) pros
+// meses Jun/2026 em diante — pra não misturar as duas fontes num mesmo
+// mês nem exigir que o usuário escolha manualmente.
+function buildMetricasGrupoComExcel(categories, movements, monthStart, monthEnd) {
+  const campos = ['receitaBruta', 'receitaLiquida', 'cmv', 'margemContribuicao', 'custosFixos', 'ebitda', 'despesasFinanceiras', 'lucroLiquido', 'saldoLiquido'];
+  const acumulado = {}; campos.forEach(c => acumulado[c] = 0);
+
+  let cursor = monthStart.startOf('month');
+  const fim = monthEnd.startOf('month');
+  while (!cursor.isAfter(fim)) {
+    const chave = cursor.format('YYYY-MM');
+    const congelado = EXCEL_HISTORICO_GRUPO_DFC[chave];
+    if (congelado) {
+      campos.forEach(c => acumulado[c] += (congelado[c] || 0));
+    } else if (!cursor.isBefore(EXCEL_CONGELADO_ATE)) {
+      // Mês ao vivo (Jun/2026 em diante): recalcula só esse mês via Omie/Supabase.
+      const inicioMes = cursor;
+      const fimMes = cursor.endOf('month');
+      const { grupo: grupoMes } = buildMetricasGrupoDfcPeriodo(categories, movements, inicioMes, fimMes);
+      campos.forEach(c => acumulado[c] += (grupoMes[c] || 0));
+    }
+    cursor = cursor.add(1, 'month');
+  }
+  return acumulado;
+}
+
 function buildMetricasGrupoDfcPeriodo(categories, movements, monthStart, monthEnd) {
   const porEmpresa = {};
   GRUPO_DFC_EMPRESAS.forEach(emp => {
@@ -11706,31 +12166,56 @@ function renderResumoCapital(monthStart, monthEnd) {
   const elSaldoInicio = document.getElementById('resumoCapitalSaldoInicio');
   if (!elSaldoInicio || !contasCorrentesCache || !categoriesCache || !financialMovementsCache) return;
 
-  // Saldo Bancos passou a ser fixo (não depende mais do período De/Até
-  // selecionado no topo): início = abertura de 01/01/2026, fim = último
-  // dia do mês anterior ao mês atual (hoje).
-  const inicioAnoFixo = dayjs('2026-01-01');
+  // Saldo Bancos em 01.01.2026: valor FIXO da planilha (Manual/Excel,
+  // pedido reunião 21.07 — "Saldo Bancos em 01.01.2026 ... Manual
+  // (Excel)"). Não recalcula mais via rollback do Supabase.
+  const SALDO_BANCOS_INICIO_EXCEL = -3382509;
+  // Saldo Bancos Último Dia do Mês Anterior: continua Omie/ao vivo
+  // (rollback a partir do saldo_atual de hoje).
   const fimMesAnteriorFixo = dayjs().startOf('month');
-  const saldoInicio = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', inicioAnoFixo);
+  const saldoInicio = SALDO_BANCOS_INICIO_EXCEL;
   const saldoFim = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', fimMesAnteriorFixo);
 
   document.getElementById('resumoCapitalSaldoInicio').textContent = fmtBRL(saldoInicio);
   document.getElementById('resumoCapitalSaldoFim').textContent = fmtBRL(saldoFim);
   document.getElementById('resumoCapitalSaldoDiff').textContent = fmtBRL(saldoFim - saldoInicio);
 
+  // Capex e Pagtos Impostos Atrasados/Refis (Período): "Até Maio Excel,
+  // pós 06 Omie" (pedido reunião 21.07). Soma mês a mês dentro do
+  // período De/Até selecionado, usando o valor congelado da planilha
+  // (RESUMO_DETALHADO_MESES, mesma fonte do card Resumo) pros meses
+  // Jan-Mai/2026, e o cálculo ao vivo (por código de categoria) pros
+  // meses Jun/2026 em diante.
   let capex = 0, refis = 0;
-  (financialMovementsCache || []).forEach(mv => {
-    if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
-    const d = dayjs(mv.dt_registro || mv.dt_emissao);
-    if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
-    const v = Number(mv.val_pago || mv.val_liquido || 0);
-    if (!v) return;
-    if (CAPEX_CODIGOS.includes(mv.cod_categoria)) capex += v;
-    const refisCodigos = REFIS_CODIGOS_POR_EMPRESA[mv._empresa] || [];
-    if (refisCodigos.includes(mv.cod_categoria)) refis += v;
-  });
+  let cursorCR = monthStart.startOf('month');
+  const fimCR = monthEnd.startOf('month');
+  let guardCR = 0;
+  while (!cursorCR.isAfter(fimCR) && guardCR < 24) {
+    const chave = cursorCR.format('YYYY-MM');
+    const congelado = RESUMO_DETALHADO_MESES[chave];
+    if (congelado) {
+      capex += congelado.capex || 0;
+      refis += congelado.refis || 0;
+    } else if (!cursorCR.isBefore(EXCEL_CONGELADO_ATE)) {
+      const inicioMes = cursorCR, fimMes = cursorCR.endOf('month');
+      (financialMovementsCache || []).forEach(mv => {
+        if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
+        const d = dayjs(mv.dt_registro || mv.dt_emissao);
+        if (d.isBefore(inicioMes) || d.isAfter(fimMes)) return;
+        const v = Number(mv.val_pago || mv.val_liquido || 0);
+        if (!v) return;
+        if (CAPEX_CODIGOS.includes(mv.cod_categoria)) capex += v;
+        const refisCodigos = REFIS_CODIGOS_POR_EMPRESA[mv._empresa] || [];
+        if (refisCodigos.includes(mv.cod_categoria)) refis += v;
+      });
+    }
+    cursorCR = cursorCR.add(1, 'month');
+    guardCR++;
+  }
 
   document.getElementById('resumoCapitalRefis').textContent = fmtBRL(refis);
+  const elCapex = document.getElementById('resumoCapitalCapex');
+  if (elCapex) elCapex.textContent = fmtBRL(capex);
 }
 
 // TODO(meta): Receita Bruta/CMV/Margem/EBITDA/Saldo Líquido ganharam um
@@ -12312,6 +12797,121 @@ function toggleWaterfallGrupo(key) {
   if (icon) icon.textContent = estaEscondido ? '▾' : '▸';
 }
 
+// ---------------------------------------------------------------
+// Metas do Grupo DRE Caixa (pedido reunião 21.07 — "admins podem setar
+// meta manualmente para todos os usuário verem"). Por enquanto é um
+// valor fixo no código pra validar a exibição (Meta + Percentual) —
+// ainda NÃO é editável pela interface nem salva log de quem editou.
+// Pra virar o recurso completo (ADM edita, todo mundo vê, log de
+// alterações no Supabase) precisa criar uma tabela nova (ex.:
+// dash_metas) — avisar antes de mexer no schema.
+// null = sem meta definida (mostra "-----" como hoje).
+// ---------------------------------------------------------------
+const GRUPO_DFC_METAS = {
+  receitaBruta: 7500000,
+  cmv: null,
+  margemContribuicao: null,
+  ebitda: null,
+  saldoLiquido: null,
+};
+
+function renderGrupoDfcMetas(grupo) {
+  const campos = [
+    { chave: 'receitaBruta', metaEl: 'grupoDfcReceitaBrutaMeta', pctEl: 'grupoDfcReceitaBrutaPct', valor: grupo.receitaBruta },
+    { chave: 'cmv', metaEl: 'grupoDfcCmvMeta', pctEl: 'grupoDfcCmvPct', valor: grupo.cmv },
+    { chave: 'margemContribuicao', metaEl: 'grupoDfcMargemMeta', pctEl: 'grupoDfcMargemPct', valor: grupo.margemContribuicao },
+    { chave: 'ebitda', metaEl: 'grupoDfcEbitdaMeta', pctEl: 'grupoDfcEbitdaPct', valor: grupo.ebitda },
+    { chave: 'saldoLiquido', metaEl: 'grupoDfcSaldoLiquidoMeta', pctEl: 'grupoDfcSaldoLiquidoPct', valor: grupo.saldoLiquido },
+  ];
+  campos.forEach(c => {
+    const meta = GRUPO_DFC_METAS[c.chave];
+    const metaEl = document.getElementById(c.metaEl);
+    const pctEl = document.getElementById(c.pctEl);
+    if (meta == null) {
+      if (metaEl) metaEl.textContent = 'R$-----';
+      if (pctEl) pctEl.textContent = '-----%';
+      return;
+    }
+    if (metaEl) metaEl.textContent = fmtBRL(meta);
+    if (pctEl) pctEl.textContent = (meta ? (c.valor / meta * 100) : 0).toFixed(1).replace('.', ',') + '%';
+  });
+}
+
+// Resumo detalhado linha a linha (Grupo, R$) — mesma estrutura da
+// tabela "RESUMO" da planilha (aba Reunião 21.07, linha 6). Fonte:
+// aba "Grupo DFC" da planilha DRE_2026_KMNO_e_NOVAH, coluna TOTAL de
+// cada mês. Jan-Mai/2026 fixo; Jun/2026+ ainda sem fonte (fica "—" até
+// fechar com o Leo — ver linha 3 da aba "Reunião 21.07").
+const RESUMO_DETALHADO_LINHAS = [
+  { label: '(+) Receita Produtos',                                  chave: 'receitaProdutos' },
+  { label: '(+) Receita de Mercadorias (Site)',                      chave: 'receitaMercadorias' },
+  { label: '(+) Receita de Serviços',                                chave: 'receitaServicos' },
+  { label: '(=) Receita (Recebimento)',                              chave: 'receita', destaque: true },
+  { label: '(-) Deduções de Vendas (Impostos + Devolução)',          chave: 'deducoes' },
+  { label: '(=) Receita Líquida',                                    chave: 'receitaLiquida', destaque: true },
+  { label: '(-) Custo de Insumos e Matéria-Prima',                   chave: 'custoInsumos' },
+  { label: '(-) Custo de Serviços',                                  chave: 'custoServicos' },
+  { label: '(-) Custo Mão de Obra',                                  chave: 'custoMaoObra' },
+  { label: '(-) CMV',                                                chave: 'cmv', destaque: true },
+  { label: '(-) Royalties',                                          chave: 'royalties' },
+  { label: '(=) Margem de Contribuição',                             chave: 'margemContribuicao', destaque: true },
+  { label: '(-) Custo ADM - Indústria',                              chave: 'custoAdm' },
+  { label: '(-) Despesas Comerciais',                                chave: 'despesasComerciais' },
+  { label: '(-) Resultado Operacional (EBITDA)',                     chave: 'ebitda', destaque: true },
+  { label: '(-) Despesas Financeiras',                               chave: 'despesasFinanceiras' },
+  { label: '(+) Receitas Financeiras',                               chave: 'receitasFinanceiras' },
+  { label: '(-) Resultado Líquido (Lucro Líquido)',                  chave: 'lucroLiquido', destaque: true },
+  { label: '(-) Distribuição de Lucros',                             chave: 'distribuicao' },
+  { label: '(-) Capex',                                              chave: 'capex' },
+  { label: '(-) Outros (Refis)',                                     chave: 'refis' },
+  { label: '(=) Saldo Líquido',                                      chave: 'saldoLiquido', destaque: true },
+  { label: '(+) Recebimento Empréstimos',                            chave: 'recebimentoEmprestimos' },
+  { label: '(-) Pagamento de Empréstimos',                           chave: 'pagamentoEmprestimos' },
+  { label: '(=) Saldo de Caixa',                                     chave: 'saldoCaixa', destaque: true },
+];
+
+const RESUMO_DETALHADO_MESES = {
+  '2026-01': { receitaProdutos: 726555.21, receitaMercadorias: 0, receitaServicos: 65678.29, receita: 792233.50, deducoes: 150748.27, receitaLiquida: 641485.23, custoInsumos: 91454.93, custoServicos: 9643.50, custoMaoObra: 133109.36, cmv: 234207.79, royalties: 14700.69, margemContribuicao: 392576.75, custoAdm: 113139.27, despesasComerciais: 85664.30, ebitda: 193773.18, despesasFinanceiras: 11992.37, receitasFinanceiras: 11.45, lucroLiquido: 181792.26, distribuicao: 2865.03, capex: 11344.21, refis: 8881.57, saldoLiquido: 158701.45, recebimentoEmprestimos: 26660.28, pagamentoEmprestimos: 17783.13, saldoCaixa: 167578.60 },
+  '2026-02': { receitaProdutos: 720089.24, receitaMercadorias: 0, receitaServicos: 65545.99, receita: 785635.23, deducoes: 73519.79, receitaLiquida: 712115.44, custoInsumos: 133063.74, custoServicos: 21515.00, custoMaoObra: 153538.23, cmv: 308116.97, royalties: 3274.73, margemContribuicao: 400723.74, custoAdm: 134235.69, despesasComerciais: 60267.36, ebitda: 206220.69, despesasFinanceiras: 11979.83, receitasFinanceiras: 36.80, lucroLiquido: 194277.66, distribuicao: 3221.07, capex: 12704.05, refis: 56984.27, saldoLiquido: 121368.27, recebimentoEmprestimos: 50065.15, pagamentoEmprestimos: 57230.73, saldoCaixa: 114202.69 },
+  '2026-03': { receitaProdutos: 922993.69, receitaMercadorias: 0, receitaServicos: 150055.63, receita: 1073049.32, deducoes: 103310.72, receitaLiquida: 969738.60, custoInsumos: 208300.49, custoServicos: 18895.00, custoMaoObra: 145067.80, cmv: 372263.29, royalties: 4742.91, margemContribuicao: 592732.40, custoAdm: 181556.75, despesasComerciais: 108612.39, ebitda: 302563.26, despesasFinanceiras: 12515.78, receitasFinanceiras: 8163.22, lucroLiquido: 298210.70, distribuicao: 1586.98, capex: 63947.06, refis: 19251.87, saldoLiquido: 213424.79, recebimentoEmprestimos: 18932.34, pagamentoEmprestimos: 34590.79, saldoCaixa: 197766.34 },
+  '2026-04': { receitaProdutos: 831676.46, receitaMercadorias: 0, receitaServicos: 89239.00, receita: 920915.46, deducoes: 161879.51, receitaLiquida: 759035.95, custoInsumos: 202103.80, custoServicos: 26790.89, custoMaoObra: 154940.51, cmv: 383835.20, royalties: 23494.13, margemContribuicao: 351706.62, custoAdm: 175755.90, despesasComerciais: 85492.43, ebitda: 90458.29, despesasFinanceiras: 10901.52, receitasFinanceiras: 8328.63, lucroLiquido: 87885.40, distribuicao: 2993.84, capex: 32446.92, refis: 20088.22, saldoLiquido: 32356.42, recebimentoEmprestimos: 30355.99, pagamentoEmprestimos: 42932.46, saldoCaixa: 19779.95 },
+  '2026-05': { receitaProdutos: 765706.88, receitaMercadorias: 0, receitaServicos: 98272.62, receita: 863979.50, deducoes: 102873.20, receitaLiquida: 761106.30, custoInsumos: 185879.84, custoServicos: 46022.02, custoMaoObra: 185473.12, cmv: 417374.98, royalties: 3423.47, margemContribuicao: 340307.85, custoAdm: 183718.70, despesasComerciais: 94974.15, ebitda: 61615.00, despesasFinanceiras: 9364.18, receitasFinanceiras: 8279.32, lucroLiquido: 60530.14, distribuicao: 3175.97, capex: 21106.63, refis: 169318.78, saldoLiquido: -133071.24, recebimentoEmprestimos: 69042.12, pagamentoEmprestimos: 80967.20, saldoCaixa: -144996.32 },
+};
+
+function renderGrupoResumoDetalhado(monthStart, monthEnd) {
+  const header = document.getElementById('grupoResumoDetalhadoHeader');
+  const body = document.getElementById('grupoResumoDetalhadoBody');
+  if (!header || !body) return;
+
+  // Meses dentro do período De/Até selecionado (limitado ao ano
+  // corrente, igual à "Evolução Mensal" — a planilha só cobre 2026).
+  const meses = [];
+  let cursor = monthStart.startOf('month');
+  const fim = monthEnd.startOf('month');
+  let guard = 0;
+  while (!cursor.isAfter(fim) && guard < 24) { meses.push(cursor); cursor = cursor.add(1, 'month'); guard++; }
+
+  header.innerHTML = '<th>Descrição</th>' + meses.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.month()]}</th>`).join('') + '<th>Total</th><th>Média</th>';
+
+  body.innerHTML = RESUMO_DETALHADO_LINHAS.map(linha => {
+    const valoresMeses = meses.map(m => {
+      const dado = RESUMO_DETALHADO_MESES[m.format('YYYY-MM')];
+      return dado ? dado[linha.chave] : null; // null = ainda sem fonte (Jun/26+, pendente Leo)
+    });
+    const valoresValidos = valoresMeses.filter(v => v !== null);
+    const total = valoresValidos.reduce((a, b) => a + b, 0);
+    const media = valoresValidos.length ? total / valoresValidos.length : 0;
+    const cls = linha.destaque ? ' style="font-weight:600;"' : '';
+    return `
+      <tr${cls}>
+        <td>${linha.label}</td>
+        ${valoresMeses.map(v => `<td class="num">${v === null ? '—' : fmtBRL(v)}</td>`).join('')}
+        <td class="num">${valoresValidos.length ? fmtBRL(total) : '—'}</td>
+        <td class="num">${valoresValidos.length ? fmtBRL(media) : '—'}</td>
+      </tr>`;
+  }).join('');
+}
+
 function renderGrupoDfc(monthStart, monthEnd) {
   // A tela separada "viewGrupoDfc" não existe mais — esse resumo agora
   // vive direto no topo do menu principal (viewMenu). Guard atualizado
@@ -12319,7 +12919,13 @@ function renderGrupoDfc(monthStart, monthEnd) {
   const rootEl = document.getElementById('sectionGrupoDfc');
   if (!rootEl || !categoriesCache || !movementsCache) return; // section ainda não existe / dados não carregados
 
-  const { porEmpresa, grupo } = buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, monthStart, monthEnd);
+  const { porEmpresa, grupo: grupoAoVivo } = buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, monthStart, monthEnd);
+  // Cards do topo (resumo executivo) usam a versão espelhada Excel
+  // (Jan-Mai/2026) + Omie (Jun/2026+) — pedido reunião 21.07. O
+  // comparativo por empresa abaixo continua ao vivo (ainda não
+  // espelhado por empresa, só o total do Grupo).
+  const grupo = buildMetricasGrupoComExcel(categoriesCache, movementsCache, monthStart, monthEnd);
+  renderGrupoResumoDetalhado(monthStart, monthEnd);
   renderResumoCapital(monthStart, monthEnd);
   renderWaterfallDreCaixa(monthStart, monthEnd);
 
@@ -12329,6 +12935,7 @@ function renderGrupoDfc(monthStart, monthEnd) {
   document.getElementById('grupoDfcMargem').textContent = fmtBRL(grupo.margemContribuicao);
   document.getElementById('grupoDfcEbitda').textContent = fmtBRL(grupo.ebitda);
   document.getElementById('grupoDfcSaldoLiquido').textContent = fmtBRL(grupo.saldoLiquido);
+  renderGrupoDfcMetas(grupo);
   // ---- Geração de Caixa Acumulada (desde 01/jan até o fim do período) ----
   const inicioAno = monthStart.startOf('year');
 
@@ -12383,8 +12990,10 @@ function renderGrupoDfc(monthStart, monthEnd) {
     guard++;
   }
   const evolucaoMensal = meses.map(m => {
+    const chave = m.format('YYYY-MM');
+    const congelado = EXCEL_HISTORICO_GRUPO_DFC[chave];
     const fimMes = m.add(1, 'month');
-    const { grupo: metricasMes } = buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, m, fimMes);
+    const metricasMes = congelado || buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, m, fimMes).grupo;
     return {
       mes: m,
       receitaBruta: metricasMes.receitaBruta,
@@ -12422,11 +13031,6 @@ function renderGrupoDfc(monthStart, monthEnd) {
   }
 
   renderGrupoDfcChart(evolucaoMensal);
-
-  // Capex e Refis — mesma lista de meses (Jan até o mês selecionado do
-  // ano corrente), lida direto de movementsCache por código de categoria.
-  const capexRefisMensal = buildCapexRefisMensal(movementsCache, meses, categoriesCache);
-  renderCapexRefisChart(capexRefisMensal);
 }
 
 let chartGrupoDfc = null;
