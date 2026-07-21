@@ -4161,8 +4161,8 @@ function buildDfcArvoreBlocos(empresa, categories, cashMovements, transferencias
     .filter(f => f.val !== 0)
     .sort((a, b) => b.val - a.val);
 
-  const filhosReceitas = buildDfcDetalheCategoriaAgrupado('R', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd, empresa === 'TODAS');
-  const filhosDespesasBruto = buildDfcDetalheCategoriaAgrupado('P', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd, empresa === 'TODAS');
+  const filhosReceitas = buildDfcDetalheCategoriaAgrupado('R', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd);
+  const filhosDespesasBruto = buildDfcDetalheCategoriaAgrupado('P', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd);
   const filhosDespesas = filhosDespesasBruto.map(g => ({
     label: g.label,
     val: -g.val, // despesa aparece negativa, igual a linha-pai
@@ -4206,12 +4206,7 @@ function encontrarGrupoCategoria(cat, catByKey) {
 // nao_fluxo, AGRUPADO pelo grupo nativo do Omie (categoria_superior) —
 // usado como detalhamento (filhos, com um 2º nível de itens dentro de
 // cada grupo) dos blocos de Receitas e Despesas do DFC.
-// `consolidarGrupo` (pedido reunião 21.07, linha 115): quando true
-// (empresa === 'TODAS'), agrupa só por código do grupo nativo — SEM
-// separar por empresa e SEM detalhar subcategoria (itens fica vazio),
-// mostrando só o resultado. Quando false (empresa única), mantém
-// separado por empresa e com subcategoria, como já era.
-function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, monthStart, monthEnd, consolidarGrupo) {
+function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, monthStart, monthEnd) {
   const catByKey = buildCatByEmpresaCodigo(categories);
   const porCategoria = {}; // "empresa|codigo" -> { val, cat, empresa, codigo }
 
@@ -4228,23 +4223,20 @@ function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, month
     porCategoria[key].val += v;
   });
 
-  const grupos = {}; // chave -> { label, val, itens: [] }
+  const grupos = {}; // "empresa|codigoGrupo" -> { label, val, itens: [] }
 
   Object.values(porCategoria).forEach(({ val, cat, empresa, codigo }) => {
     const grupoCat = encontrarGrupoCategoria(cat, catByKey);
     const grupoCodigo = grupoCat ? grupoCat.codigo : codigo;
     const grupoLabel = grupoCat ? decodeHtmlEntities(grupoCat.descricao) : (cat ? decodeHtmlEntities(cat.descricao) : codigo);
-    // Consolidado (TODAS): chave só pelo código do grupo, junta as 3
-    // empresas na mesma linha. Empresa única: chave por empresa+código,
-    // igual antes.
-    const grupoKey = consolidarGrupo ? grupoCodigo : `${empresa}|${grupoCodigo}`;
+    const grupoKey = `${empresa}|${grupoCodigo}`;
     const itemLabel = cat ? decodeHtmlEntities(cat.descricao) : codigo;
 
     if (!grupos[grupoKey]) grupos[grupoKey] = { label: grupoLabel, val: 0, itens: [] };
     grupos[grupoKey].val += val;
-    // Consolidado = sem subcategoria (só o resultado do grupo). Empresa
-    // única = mantém o detalhe por categoria, como já era.
-    if (!consolidarGrupo && (!grupoCat || grupoCat.codigo !== codigo)) {
+    // Só entra como item-filho se não for a própria categoria de grupo
+    // (evita duplicar quando o lançamento já está direto na categoria-grupo).
+    if (!grupoCat || grupoCat.codigo !== codigo) {
       grupos[grupoKey].itens.push({ label: itemLabel, val });
     }
   });
@@ -10384,7 +10376,6 @@ async function loadCompanyData() {
 
 lastFetchHadErrors = false;
 try {
-  carregarDashMetas(); // não precisa esperar — não bloqueia o resto, renderiza quando chegar
   const [categories, movements, receivable, payable, clients, contasCorrentes] = await Promise.all([
     sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa,natureza,transferencia,nao_exibir,nao_fluxo,categoria_superior'),
     sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_registro,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo'),
@@ -12808,86 +12799,41 @@ function toggleWaterfallGrupo(key) {
 
 // ---------------------------------------------------------------
 // Metas do Grupo DRE Caixa (pedido reunião 21.07 — "admins podem setar
-// meta manualmente para todos os usuário verem as metas, salva no log
-// do supabase quem editou oque"). Vem da tabela dash_metas (Supabase,
-// projeto consolidado) — RLS: qualquer usuário autenticado VÊ, só
-// admin EDITA. Toda alteração é logada em dash_metas_log (trigger
-// log_dash_metas_change, com quem editou + valor antigo/novo).
-// null = sem meta definida (mostra "-----").
+// meta manualmente para todos os usuário verem"). Por enquanto é um
+// valor fixo no código pra validar a exibição (Meta + Percentual) —
+// ainda NÃO é editável pela interface nem salva log de quem editou.
+// Pra virar o recurso completo (ADM edita, todo mundo vê, log de
+// alterações no Supabase) precisa criar uma tabela nova (ex.:
+// dash_metas) — avisar antes de mexer no schema.
+// null = sem meta definida (mostra "-----" como hoje).
 // ---------------------------------------------------------------
-let dashMetasCache = {};
-
-async function carregarDashMetas() {
-  try {
-    const { data, error } = await supabaseClient.from('dash_metas').select('metrica, valor');
-    if (error) throw error;
-    dashMetasCache = {};
-    (data || []).forEach(r => { dashMetasCache[r.metrica] = r.valor === null ? null : Number(r.valor); });
-    // Se o resumo do Grupo já tinha renderizado antes da meta chegar
-    // (fetch em paralelo, sem await), atualiza só a parte da meta agora.
-    if (window._ultimoGrupoMetricas) renderGrupoDfcMetas(window._ultimoGrupoMetricas);
-  } catch (e) {
-    console.error('Erro ao carregar dash_metas:', e);
-  }
-}
-
-// Admin edita a meta de uma métrica (prompt simples) — grava direto na
-// dash_metas; o trigger no Supabase já cuida do log (quem editou,
-// valor antigo/novo) e do updated_by/updated_at.
-async function editarMetaGrupo(chave, labelBonito) {
-  if (!currentProfile || currentProfile.role !== 'admin') return;
-  const atual = dashMetasCache[chave];
-  const entrada = prompt(`Nova meta para "${labelBonito}" (R$, só números, vazio para remover):`, atual != null ? String(atual) : '');
-  if (entrada === null) return; // cancelou
-  const novoValor = entrada.trim() === '' ? null : Number(entrada.replace(/\./g, '').replace(',', '.'));
-  if (entrada.trim() !== '' && (isNaN(novoValor) || novoValor < 0)) {
-    alert('Valor inválido.');
-    return;
-  }
-  try {
-    const { error } = await supabaseClient.from('dash_metas').update({ valor: novoValor }).eq('metrica', chave);
-    if (error) throw error;
-    dashMetasCache[chave] = novoValor;
-    renderGrupoDfcMetas(window._ultimoGrupoMetricas || {});
-  } catch (e) {
-    console.error('Erro ao salvar meta:', e);
-    alert('Não foi possível salvar a meta. Tente novamente.');
-  }
-}
+const GRUPO_DFC_METAS = {
+  receitaBruta: 7500000,
+  cmv: null,
+  margemContribuicao: null,
+  ebitda: null,
+  saldoLiquido: null,
+};
 
 function renderGrupoDfcMetas(grupo) {
-  window._ultimoGrupoMetricas = grupo; // reaproveitado por editarMetaGrupo pra re-renderizar sem refazer todo o cálculo
-  const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
   const campos = [
-    { chave: 'receitaBruta', metaEl: 'grupoDfcReceitaBrutaMeta', pctEl: 'grupoDfcReceitaBrutaPct', valor: grupo.receitaBruta, label: 'Receita Bruta' },
-    { chave: 'cmv', metaEl: 'grupoDfcCmvMeta', pctEl: 'grupoDfcCmvPct', valor: grupo.cmv, label: 'CMV' },
-    { chave: 'margemContribuicao', metaEl: 'grupoDfcMargemMeta', pctEl: 'grupoDfcMargemPct', valor: grupo.margemContribuicao, label: 'Margem de Contribuição' },
-    { chave: 'ebitda', metaEl: 'grupoDfcEbitdaMeta', pctEl: 'grupoDfcEbitdaPct', valor: grupo.ebitda, label: 'EBITDA' },
-    { chave: 'saldoLiquido', metaEl: 'grupoDfcSaldoLiquidoMeta', pctEl: 'grupoDfcSaldoLiquidoPct', valor: grupo.saldoLiquido, label: 'Saldo Líquido' },
+    { chave: 'receitaBruta', metaEl: 'grupoDfcReceitaBrutaMeta', pctEl: 'grupoDfcReceitaBrutaPct', valor: grupo.receitaBruta },
+    { chave: 'cmv', metaEl: 'grupoDfcCmvMeta', pctEl: 'grupoDfcCmvPct', valor: grupo.cmv },
+    { chave: 'margemContribuicao', metaEl: 'grupoDfcMargemMeta', pctEl: 'grupoDfcMargemPct', valor: grupo.margemContribuicao },
+    { chave: 'ebitda', metaEl: 'grupoDfcEbitdaMeta', pctEl: 'grupoDfcEbitdaPct', valor: grupo.ebitda },
+    { chave: 'saldoLiquido', metaEl: 'grupoDfcSaldoLiquidoMeta', pctEl: 'grupoDfcSaldoLiquidoPct', valor: grupo.saldoLiquido },
   ];
   campos.forEach(c => {
-    const meta = dashMetasCache[c.chave];
+    const meta = GRUPO_DFC_METAS[c.chave];
     const metaEl = document.getElementById(c.metaEl);
     const pctEl = document.getElementById(c.pctEl);
     if (meta == null) {
       if (metaEl) metaEl.textContent = 'R$-----';
       if (pctEl) pctEl.textContent = '-----%';
-    } else {
-      if (metaEl) metaEl.textContent = fmtBRL(meta);
-      if (pctEl) pctEl.textContent = (meta ? (c.valor / meta * 100) : 0).toFixed(1).replace('.', ',') + '%';
+      return;
     }
-    // Botão de edição só aparece pra admin — adiciona uma vez (evita
-    // duplicar o botão a cada re-render).
-    if (ehAdmin && metaEl && !document.getElementById('editMeta-' + c.chave)) {
-      const btn = document.createElement('button');
-      btn.id = 'editMeta-' + c.chave;
-      btn.type = 'button';
-      btn.textContent = '✎';
-      btn.title = 'Editar meta (admin)';
-      btn.style.cssText = 'background:none;border:none;color:var(--blue-belt-light);cursor:pointer;margin-left:6px;font-size:11px;padding:0;';
-      btn.onclick = () => editarMetaGrupo(c.chave, c.label);
-      metaEl.parentElement.appendChild(btn);
-    }
+    if (metaEl) metaEl.textContent = fmtBRL(meta);
+    if (pctEl) pctEl.textContent = (meta ? (c.valor / meta * 100) : 0).toFixed(1).replace('.', ',') + '%';
   });
 }
 
