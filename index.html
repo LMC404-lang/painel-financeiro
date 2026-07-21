@@ -4161,8 +4161,8 @@ function buildDfcArvoreBlocos(empresa, categories, cashMovements, transferencias
     .filter(f => f.val !== 0)
     .sort((a, b) => b.val - a.val);
 
-  const filhosReceitas = buildDfcDetalheCategoriaAgrupado('R', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd);
-  const filhosDespesasBruto = buildDfcDetalheCategoriaAgrupado('P', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd);
+  const filhosReceitas = buildDfcDetalheCategoriaAgrupado('R', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd, empresa === 'TODAS');
+  const filhosDespesasBruto = buildDfcDetalheCategoriaAgrupado('P', categoriesEmpresa, movementsEmpresa, monthStart, monthEnd, empresa === 'TODAS');
   const filhosDespesas = filhosDespesasBruto.map(g => ({
     label: g.label,
     val: -g.val, // despesa aparece negativa, igual a linha-pai
@@ -4206,7 +4206,12 @@ function encontrarGrupoCategoria(cat, catByKey) {
 // nao_fluxo, AGRUPADO pelo grupo nativo do Omie (categoria_superior) —
 // usado como detalhamento (filhos, com um 2º nível de itens dentro de
 // cada grupo) dos blocos de Receitas e Despesas do DFC.
-function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, monthStart, monthEnd) {
+// `consolidarGrupo` (pedido reunião 21.07, linha 115): quando true
+// (empresa === 'TODAS'), agrupa só por código do grupo nativo — SEM
+// separar por empresa e SEM detalhar subcategoria (itens fica vazio),
+// mostrando só o resultado. Quando false (empresa única), mantém
+// separado por empresa e com subcategoria, como já era.
+function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, monthStart, monthEnd, consolidarGrupo) {
   const catByKey = buildCatByEmpresaCodigo(categories);
   const porCategoria = {}; // "empresa|codigo" -> { val, cat, empresa, codigo }
 
@@ -4223,20 +4228,23 @@ function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, month
     porCategoria[key].val += v;
   });
 
-  const grupos = {}; // "empresa|codigoGrupo" -> { label, val, itens: [] }
+  const grupos = {}; // chave -> { label, val, itens: [] }
 
   Object.values(porCategoria).forEach(({ val, cat, empresa, codigo }) => {
     const grupoCat = encontrarGrupoCategoria(cat, catByKey);
     const grupoCodigo = grupoCat ? grupoCat.codigo : codigo;
     const grupoLabel = grupoCat ? decodeHtmlEntities(grupoCat.descricao) : (cat ? decodeHtmlEntities(cat.descricao) : codigo);
-    const grupoKey = `${empresa}|${grupoCodigo}`;
+    // Consolidado (TODAS): chave só pelo código do grupo, junta as 3
+    // empresas na mesma linha. Empresa única: chave por empresa+código,
+    // igual antes.
+    const grupoKey = consolidarGrupo ? grupoCodigo : `${empresa}|${grupoCodigo}`;
     const itemLabel = cat ? decodeHtmlEntities(cat.descricao) : codigo;
 
     if (!grupos[grupoKey]) grupos[grupoKey] = { label: grupoLabel, val: 0, itens: [] };
     grupos[grupoKey].val += val;
-    // Só entra como item-filho se não for a própria categoria de grupo
-    // (evita duplicar quando o lançamento já está direto na categoria-grupo).
-    if (!grupoCat || grupoCat.codigo !== codigo) {
+    // Consolidado = sem subcategoria (só o resultado do grupo). Empresa
+    // única = mantém o detalhe por categoria, como já era.
+    if (!consolidarGrupo && (!grupoCat || grupoCat.codigo !== codigo)) {
       grupos[grupoKey].itens.push({ label: itemLabel, val });
     }
   });
