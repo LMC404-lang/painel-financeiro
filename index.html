@@ -2274,6 +2274,45 @@
         </div>
       </div>
 
+      <!-- Bancos — Saldo Primeiro dia do Mês (pedido reunião 21.07,
+           linha 28: "Depois vem o detalhado igual o EXCEL = BANCO mais
+           as linhas do DRE"). Dado 100% Manual/Excel — não vem do
+           Omie/Supabase (não existe relação lançamento→conta bancária
+           no banco de dados hoje, só dá pra fazer rollback do TOTAL, não
+           banco a banco — por isso esse card é fixo, igual a planilha). -->
+      <div class="bloco-card" style="margin-bottom:14px;">
+        <div class="bloco-head"><div class="bloco-titulo">Bancos — Saldo Primeiro dia do Mês (R$)</div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="grupoBancosHeader"><th>Banco</th></tr>
+              <tbody id="grupoBancosBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prova Real dos Caixas (pedido reunião 21.07, linha 42: "No DFC
+           terminar assim para prova real dos caixas"). Confere se
+           Saldo Inicial + Entradas − Saídas (calculado) bate com o
+           saldo REAL somado dos bancos no fim do mês — a diferença
+           mostra o quanto o fluxo de caixa calculado diverge da
+           realidade bancária. Dado Manual/Excel, mesma limitação do
+           card de Bancos acima (sem vínculo lançamento→conta no banco
+           de dados). -->
+      <div class="bloco-card" style="margin-bottom:14px;">
+        <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas (R$)</div></div>
+        <div class="bloco-body">
+          <div class="desc" style="padding:0 0 10px;">Saldo Inicial + Entradas − Saídas (calculado) x Saldo Real somado dos bancos no fim do mês. Diferença = Saldo Real − Saldo Calculado.</div>
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="grupoProvaRealHeader"><th>Descrição</th></tr>
+              <tbody id="grupoProvaRealBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- Cards de resumo -->
       <div class="grupo-dfc-cards">
         <div class="grupo-dfc-card">
@@ -12932,6 +12971,141 @@ const RESUMO_DETALHADO_MESES = {
   '2026-05': { receitaProdutos: 765706.88, receitaMercadorias: 0, receitaServicos: 98272.62, receita: 863979.50, deducoes: 102873.20, receitaLiquida: 761106.30, custoInsumos: 185879.84, custoServicos: 46022.02, custoMaoObra: 185473.12, cmv: 417374.98, royalties: 3423.47, margemContribuicao: 340307.85, custoAdm: 183718.70, despesasComerciais: 94974.15, ebitda: 61615.00, despesasFinanceiras: 9364.18, receitasFinanceiras: 8279.32, lucroLiquido: 60530.14, distribuicao: 3175.97, capex: 21106.63, refis: 169318.78, saldoLiquido: -133071.24, recebimentoEmprestimos: 69042.12, pagamentoEmprestimos: 80967.20, saldoCaixa: -144996.32 },
 };
 
+// Bancos — Saldo Primeiro dia do Mês (reunião 21.07, linha 28). Fonte:
+// planilha DRE_2026_KMNO_e_NOVAH, aba "KMNO DFC (caixa)", linhas 2-11 —
+// é o ÚNICO lugar na planilha com detalhe banco a banco (cobre o Grupo
+// todo: inclui contas da RT também, herança de quando RT e KMNO
+// operavam com bancos misturados). Manual/Excel — sem pipeline vivo.
+const BANCOS_SALDO_INICIO_MES = {
+  labels: ['Brasil KMNO', 'Brasil RT', 'Sicoob', 'Itaú', 'Caixinha', 'Sicredi KMNO', 'Sicredi RT', 'Omie Cash', 'BTG'],
+  meses: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05'],
+  valores: {
+    'Brasil KMNO':   [428235.60, 484562.06, 59433.68, 43968.19, 60263.26],
+    'Brasil RT':     [141586.31, 167326.40, 120095.48, 23253.18, 2140.81],
+    'Sicoob':        [7395.78, 3870.51, 3168.25, 1856.28, 124.96],
+    'Itaú':          [168406.81, 226862.19, 341288.91, 244530.09, -234.94],
+    'Caixinha':      [552.50, 7038.44, 3300.42, 880.56, 377.01],
+    'Sicredi KMNO':  [-168.40, -342.24, 947.91, 4648.75, 95910.90],
+    'Sicredi RT':    [0, 0, 500, 28, 28],
+    'Omie Cash':     [0, 0, 0, 60255.74, 57684.77],
+    'BTG':           [0, 0, 708103.04, 716206.08, 723019.10],
+  },
+  total: [746008.60, 889317.36, 1236837.69, 1095626.87, 939313.87],
+};
+
+function renderGrupoBancos(monthStart, monthEnd) {
+  const header = document.getElementById('grupoBancosHeader');
+  const body = document.getElementById('grupoBancosBody');
+  if (!header || !body) return;
+  const d = BANCOS_SALDO_INICIO_MES;
+
+  // Só mostra os meses do congelado (Jan-Mai/26) que estiverem dentro
+  // do período De/Até selecionado — fora disso não tem dado (fica
+  // vazio, não é card pra qualquer período, é histórico fixo).
+  const idxMeses = d.meses
+    .map((chave, i) => ({ chave, i }))
+    .filter(({ chave }) => {
+      const m = dayjs(chave + '-01');
+      return !m.isBefore(monthStart.startOf('month')) && !m.isAfter(monthEnd.startOf('month'));
+    });
+
+  if (!idxMeses.length) {
+    header.innerHTML = '<th>Banco</th>';
+    body.innerHTML = '<tr><td colspan="1" style="color:var(--bone-dim);">Sem dado congelado (Manual/Excel) para o período selecionado — só cobre Jan-Mai/2026.</td></tr>';
+    return;
+  }
+
+  header.innerHTML = '<th>Banco</th>' + idxMeses.map(({ chave }) => `<th>${DRE_ARVORE_NOMES_MES[dayjs(chave + '-01').month()]}</th>`).join('');
+  const linhasBancos = d.labels.map(label => `
+    <tr>
+      <td>${label}</td>
+      ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(d.valores[label][i])}</td>`).join('')}
+    </tr>`).join('');
+  const linhaTotal = `
+    <tr style="font-weight:600;">
+      <td>Saldo Primeiro dia do Mês (Total)</td>
+      ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(d.total[i])}</td>`).join('')}
+    </tr>`;
+  body.innerHTML = linhasBancos + linhaTotal;
+}
+
+// Prova Real dos Caixas (reunião 21.07, linha 42: "No DFC terminar
+// assim para prova real dos caixas"). Fonte: mesma aba "KMNO DFC
+// (caixa)", linhas 226-244 — confere Saldo Inicial + Entradas − Saídas
+// (calculado a partir dos lançamentos) contra o saldo REAL somado dos
+// bancos individuais no fim do mês (linhas 226-238). A diferença é a
+// "prova real": quanto o fluxo de caixa calculado diverge do saldo
+// bancário observado de verdade.
+const PROVA_REAL_CAIXAS = {
+  meses: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05'],
+  saldoInicial: [746008.60, 889317.36, 1236837.69, 1095626.87, 939313.87],
+  entradas:     [726555.21, 720089.24, 922993.69, 831676.46, 765706.88],
+  saidas:       [571320.37, 572260.35, 805345.64, 788009.82, 878080.12],
+  saldoCalculado: [901243.44, 1037146.25, 1354485.74, 1139293.51, 826940.63],
+  bancos: {
+    'Brasil KMNO':          [484562.10, 59433.68, 43968.19, 60263.26, 7041.95],
+    'Brasil RT':            [167326.40, 120095.48, 23253.18, 2140.81, 14490.12],
+    'Sicoob':               [3870.51, 3168.25, 1856.28, 124.96, 247.57],
+    'Itaú':                 [226862.19, 341288.91, 244530.09, -234.94, 36678.58],
+    'Caixinha':             [7038.44, 3300.42, 880.56, 377.01, 1611.97],
+    'Transferências':       [0, 0, 12300, 0, 0],
+    'Sicredi/BB (Investimentos)': [0, 500000, 250000, 200000, 0],
+    'Smart Difal':          [0, 0, 3940.09, 4542.24, 3679.44],
+    'Omie Cash':            [0, 0, 60255.74, 57684.77, 233686.86],
+    'Sicredi RT':           [0, 0, 28, 28, -15],
+    'Sicredi KMNO':         [-342.24, 947.91, 4648.75, 95910.90, 21697.19],
+    'BTG':                  [0, 0, 708103.04, 716206.08, 723019.10],
+  },
+  saldoReal:  [889317.40, 1028234.65, 645660.88, 1137043.09, 1042137.78],
+  diferenca:  [-11926.04, -8911.59, 3950.20, 5852.62, 7408.59],
+};
+
+function renderGrupoProvaReal(monthStart, monthEnd) {
+  const header = document.getElementById('grupoProvaRealHeader');
+  const body = document.getElementById('grupoProvaRealBody');
+  if (!header || !body) return;
+  const d = PROVA_REAL_CAIXAS;
+
+  const idxMeses = d.meses
+    .map((chave, i) => ({ chave, i }))
+    .filter(({ chave }) => {
+      const m = dayjs(chave + '-01');
+      return !m.isBefore(monthStart.startOf('month')) && !m.isAfter(monthEnd.startOf('month'));
+    });
+
+  if (!idxMeses.length) {
+    header.innerHTML = '<th>Descrição</th>';
+    body.innerHTML = '<tr><td colspan="1" style="color:var(--bone-dim);">Sem dado congelado (Manual/Excel) para o período selecionado — só cobre Jan-Mai/2026.</td></tr>';
+    return;
+  }
+
+  header.innerHTML = '<th>Descrição</th>' + idxMeses.map(({ chave }) => `<th>${DRE_ARVORE_NOMES_MES[dayjs(chave + '-01').month()]}</th>`).join('');
+
+  const linha = (label, arr, negrito) => `
+    <tr${negrito ? ' style="font-weight:600;"' : ''}>
+      <td>${label}</td>
+      ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(arr[i])}</td>`).join('')}
+    </tr>`;
+
+  let html = '';
+  html += linha('(+) Saldo Inicial', d.saldoInicial, false);
+  html += linha('(+) Entradas', d.entradas, false);
+  html += linha('(-) Saídas', d.saidas, false);
+  html += linha('(=) Saldo Calculado', d.saldoCalculado, true);
+  Object.keys(d.bancos).forEach(banco => {
+    html += linha(`&nbsp;&nbsp;${banco} (real)`, d.bancos[banco], false);
+  });
+  html += linha('(=) Saldo Real (soma dos bancos)', d.saldoReal, true);
+  html += `<tr style="font-weight:700;background:rgba(255,255,255,0.04);">
+    <td>(=) Diferença (Real − Calculado)</td>
+    ${idxMeses.map(({ i }) => {
+      const v = d.diferenca[i];
+      return `<td class="num" style="${v < 0 ? 'color:var(--red);' : ''}">${fmtBRL(v)}</td>`;
+    }).join('')}
+  </tr>`;
+  body.innerHTML = html;
+}
+
 function renderGrupoResumoDetalhado(monthStart, monthEnd) {
   const header = document.getElementById('grupoResumoDetalhadoHeader');
   const body = document.getElementById('grupoResumoDetalhadoBody');
@@ -12980,6 +13154,8 @@ function renderGrupoDfc(monthStart, monthEnd) {
   // espelhado por empresa, só o total do Grupo).
   const grupo = buildMetricasGrupoComExcel(categoriesCache, movementsCache, monthStart, monthEnd);
   renderGrupoResumoDetalhado(monthStart, monthEnd);
+  renderGrupoBancos(monthStart, monthEnd);
+  renderGrupoProvaReal(monthStart, monthEnd);
   renderResumoCapital(monthStart, monthEnd);
   renderWaterfallDreCaixa(monthStart, monthEnd);
 
