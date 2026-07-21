@@ -3620,7 +3620,7 @@ function isExcludedFromDre(cat, label) {
 }
 
 function isExcludedFromDfc(cat) {
-  return !!(cat && cat.nao_fluxo);
+  return !!(cat && (cat.nao_fluxo || cat.transferencia));
 }
 
 // Monta um mapa "empresa|codigo" -> categoria. Necessário porque cada
@@ -11481,7 +11481,12 @@ const DRE_WATERFALL_GRUPOS = [
       "Serviço Industrialização (Impressão/Costura/Corte)",
       "Embalagens Produção",
       "Embalagens Comerciais",
-      "Difal"
+      "Difal",
+      "Compras de Materia Prima",
+      "Adiantamento Fornecedores",
+      "Compra e Revenda de Produtos",
+      "Materia Prima",
+      "Materia Prima (EVA/Feltro/Patch/Tags)"
     ]
   },
   {
@@ -11531,7 +11536,9 @@ const DRE_WATERFALL_GRUPOS = [
       "Abono Indústria",
       "Salário Jeans",
       "PJ Jean",
-      "Facção"
+      "Facção",
+      "Industrialização Blue Line",
+      "Mão de Obra - Facções"
     ]
   },
   {
@@ -11634,7 +11641,14 @@ const DRE_WATERFALL_GRUPOS = [
       "PPR PCP",
       "LEO",
       "GERALDO",
-      "Pro Labore Sócio"
+      "Pro Labore Sócio",
+      "Cartão Corporativo",
+      "Aluguel",
+      "Água e Esgoto",
+      "Energia Elétrica",
+      "Telefonia",
+      "Material de Escritório",
+      "Manutenção de Imobilizado"
     ]
   },
   {
@@ -11666,7 +11680,10 @@ const DRE_WATERFALL_GRUPOS = [
       "Leticia",
       "Yasmin",
       "Cláudio",
-      "Auxiliar de Vendas"
+      "Auxiliar de Vendas",
+      "PJ Comercial",
+      "Comissões",
+      "Fotos e Vídeos"
     ]
   },
   {
@@ -11691,7 +11708,9 @@ const DRE_WATERFALL_GRUPOS = [
       "(-) Taxa Cartão (Vexpenses)",
       "(-) Juros Antecipação Boletos",
       "(-) Juros Bancários/Boletos",
-      "(-) Devoluções de Produtos"
+      "(-) Devoluções de Produtos",
+      "Tarifas Bancárias",
+      "Pagamento de Empréstimos"
     ]
   },
   {
@@ -11712,7 +11731,9 @@ const DRE_WATERFALL_GRUPOS = [
     "label": "Distribuição de Lucros",
     "sinal": "-",
     "itens": [
-      "RICARDO"
+      "RICARDO",
+      "Dividendo Sócio",
+      "Dividendos"
     ]
   },
   {
@@ -11736,7 +11757,33 @@ const DRE_WATERFALL_GRUPOS = [
     "itens": [
       "REFIS (INSS - STC)",
       "REFIS (SIMPLES)/ICMS",
-      "STANCE"
+      "STANCE",
+      "Despesas Colaboradores",
+      "INSS STC"
+    ]
+  },
+  {
+    "chave": "recebimento_emprestimos",
+    "label": "Recebimento de Empréstimos",
+    "sinal": "+",
+    "itens": [
+      "Empréstimos Bancários",
+      "Empréstimos Mútuo",
+      "Recebimento Emprestimo para Novah",
+      "Emprestimos de Terceiros",
+      "Emprestimos de Bancos"
+    ]
+  },
+  {
+    "chave": "pagamento_emprestimos",
+    "label": "Pagamento de Empréstimos",
+    "sinal": "-",
+    "itens": [
+      "Pagto Empréstimos Bancários",
+      "Pagto Empréstimos de Terceiros",
+      "Empréstimos para Terceiros",
+      "Empréstimos para Novah",
+      "Despesas Nova Trento"
     ]
   }
 ];
@@ -11826,10 +11873,11 @@ function buildWaterfallDreCaixa(categories, movements, monthStart, monthEnd) {
   const ebtida = margemContribuicao + g('despesas_adm') + g('despesas_comerciais');
   const lucroLiquido = ebtida + g('despesas_financeiras') + g('receitas_financeiras');
   const saldoLiquido = lucroLiquido + g('distribuicao') + g('capex') + g('refis_outros');
+  const saldoCaixa = saldoLiquido + g('recebimento_emprestimos') + g('pagamento_emprestimos');
 
   return {
     porGrupo, receitaTotal, receitaCategorias, naoClassificadoTotal, naoClassificado,
-    subtotais: { receitaLiquida, cmv, margemContribuicao, ebtida, lucroLiquido, saldoLiquido },
+    subtotais: { receitaLiquida, cmv, margemContribuicao, ebtida, lucroLiquido, saldoLiquido, saldoCaixa },
   };
 }
 
@@ -11882,6 +11930,9 @@ function renderWaterfallDreCaixa(monthStart, monthEnd) {
   linhaGrupo('(-) Capex', w.porGrupo.capex.total, w.porGrupo.capex.categorias);
   linhaGrupo('(-) Outros (Refis)', w.porGrupo.refis_outros.total, w.porGrupo.refis_outros.categorias);
   linhaSubtotal('(=) Saldo Líquido', w.subtotais.saldoLiquido);
+  linhaGrupo('(+) Recebimento de Empréstimos', w.porGrupo.recebimento_emprestimos.total, w.porGrupo.recebimento_emprestimos.categorias);
+  linhaGrupo('(-) Pagamento de Empréstimos', w.porGrupo.pagamento_emprestimos.total, w.porGrupo.pagamento_emprestimos.categorias);
+  linhaSubtotal('(=) Saldo de Caixa', w.subtotais.saldoCaixa);
 
   if (w.naoClassificadoTotal) {
     linhaGrupo('⚠ Não Classificado (fora dos grupos mapeados — provavelmente RT ou categoria nova)', w.naoClassificadoTotal, w.naoClassificado, 'waterfall-naoclass');
