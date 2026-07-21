@@ -2314,7 +2314,7 @@
            Grupo DFC / KMNO DFC (caixa) / NOVAH DFC (caixa)). Ver
            DRE_WATERFALL_GRUPOS + buildWaterfallDreCaixa() no JS. -->
       <div class="bloco-card" style="margin-top:18px;">
-        <div class="bloco-head"><div class="bloco-titulo">Grupo DRE Caixa — Detalhado</div></div>
+        <div class="bloco-head"><div class="bloco-titulo">Grupo DRE Caixa — Detalhado <span id="waterfallDreCaixaHint" style="font-size:11px;font-weight:400;color:var(--bone-dim);"></span></div></div>
         <div class="bloco-body">
           <div class="dre-tbl-wrap">
             <table class="fin-tbl">
@@ -9131,7 +9131,12 @@ function renderTabelaBloco(bloco, colunas) {
   // (preferências salvas de bloco escondido usam esse id como chave).
   const blocoId = (bloco.idPrefix ? bloco.idPrefix + '-' : '') + 'bloco-' + slugify(bloco.nome);
   const fmt = BLOCOS_UNIDADE.has(bloco.id) ? fmtUnid : fmtBRL;
-  const colapsavel = true;
+  // Subcategoria (itens do bloco) só aparece com 1 empresa selecionada —
+  // na aba "Todas as Empresas" (bloco.idPrefix vem preenchido, ver
+  // montarBlocosHtmlEmpresa) mostra só o total do bloco, sem drill-down,
+  // a pedido do Lucas (21/07/2026): itens de empresas diferentes com
+  // nomes iguais/parecidos ficavam confusos misturados no consolidado.
+  const colapsavel = !bloco.idPrefix;
   // Placeholder único pra qualquer valor sem validação/confirmação —
   // mesmo padrão (5 traços) já usado na prévia de CMV por Unidade,
   // pra não ter dois estilos de "sem dado" diferentes no dashboard.
@@ -9170,12 +9175,14 @@ function renderTabelaBloco(bloco, colunas) {
     return `<td class="${tipo}">${fmt(v)}</td>`;
   }).join('')}</tr>`;
 
-  // Quando colapsável, os itens ficam num <tbody> próprio, fechado por
-  // padrão (display:none via CSS .dre-tbl-itens), e a linha de Total —
-  // que sempre fica visível — funciona como a linha "pai" clicável.
+  // Quando colapsável (1 empresa selecionada), os itens ficam num <tbody>
+  // próprio, fechado por padrão (display:none via CSS .dre-tbl-itens), e
+  // a linha de Total — que sempre fica visível — funciona como a linha
+  // "pai" clicável. Na aba "Todas as Empresas" (não colapsável) os itens
+  // nem entram no HTML — só o total do bloco aparece.
   const tabelaHtml = colapsavel
     ? `<table class="dre-tbl"><tbody>${totalRow}</tbody><tbody class="dre-tbl-itens" id="itens-${blocoId}">${body}</tbody></table>`
-    : `<table class="dre-tbl">${body}${totalRow}</table>`;
+    : `<table class="dre-tbl"><tbody>${totalRow}</tbody></table>`;
 
   return `<div class="bloco-linha-wrap" id="${blocoId}"><div class="dre-tbl-wrap">${tabelaHtml}</div></div>`;
 }
@@ -12233,6 +12240,14 @@ function renderWaterfallDreCaixa(monthStart, monthEnd) {
     return `<td class="num" style="${negativo ? 'color:var(--red);' : ''}">${negativo ? `(${fmtBRL(Math.abs(v))})` : fmtBRL(v)}</td>`;
   };
 
+  // Subcategoria (itens de cada grupo) só aparece com 1 empresa
+  // selecionada — com "Todas as Empresas"/mais de uma marcada, categorias
+  // de empresas diferentes ficariam misturadas/confusas num único total,
+  // então mostra só o subtotal do grupo (a pedido do Lucas, 21/07/2026).
+  const mostrarSubcategorias = selectedCompanyKeys.length === 1;
+  const hintEl = document.getElementById('waterfallDreCaixaHint');
+  if (hintEl) hintEl.textContent = mostrarSubcategorias ? '' : '(selecione 1 empresa para ver as categorias de cada grupo)';
+
   const linhas = [];
   let waterfallGrupoSeq = 0;
   // Cada grupo some as categorias por padrão (só o subtotal fica visível)
@@ -12241,6 +12256,10 @@ function renderWaterfallDreCaixa(monthStart, monthEnd) {
   const linhaGrupo = (label, total, categorias, classeExtra) => {
     const key = 'wf' + (waterfallGrupoSeq++);
     const itens = Object.entries(categorias).filter(([, v]) => v).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    if (!mostrarSubcategorias) {
+      linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}"><td>${label}</td>${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
+      return;
+    }
     linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}" onclick="toggleWaterfallGrupo('${key}')"><td><span class="waterfall-toggle-icon" id="wfIcon-${key}">▸</span>${label} <span class="waterfall-count">(${itens.length} categoria${itens.length === 1 ? '' : 's'})</span></td>${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
     itens.forEach(([desc, v]) => {
       linhas.push(`<tr class="waterfall-item" data-grupo="${key}" style="display:none;"><td>${desc}</td>${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
