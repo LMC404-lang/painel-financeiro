@@ -2372,7 +2372,7 @@
         <div class="bloco-body">
           <div class="dre-tbl-wrap">
             <table class="fin-tbl">
-              <tr><th>Descrição</th><th class="num">Total do Período</th><th class="num">% Receita</th></tr>
+              <tr id="waterfallDreCaixaHeader"><th>Descrição</th><th class="num">Total do Período</th><th class="num">% Receita</th></tr>
               <tbody id="waterfallDreCaixaBody"></tbody>
             </table>
           </div>
@@ -2560,12 +2560,18 @@
         <div class="label">Saldo de Caixa (DRE Caixa)</div>
         <div class="value"><span id="sumCaixa">—</span><span class="delta" id="deltaCaixa"></span></div>
       </div>
-      <div class="summary-card" id="cardInadimplencia">
+      <!-- Ocultos do front-end a pedido de Lucas em 22/07/2026 (muitos
+           títulos aparecendo como "venceu há X dias" mesmo com status
+           "A VENCER" — investigar se é lag de sync ou dado real do Omie
+           antes de reexibir). JS/render (renderInadimplencia,
+           filterAtrasadoReceber, filterAVencerPagar) NÃO foi removido —
+           só a exibição destes 2 cards, via display:none. -->
+      <div class="summary-card" id="cardInadimplencia" style="display:none;">
         <div class="label">A Receber (A Vencer)</div>
         <div class="value" id="sumInadimplencia">—</div>
         <div class="sub" id="subInadimplencia"></div>
       </div>
-      <div class="summary-card" id="cardContasPagarVencidas">
+      <div class="summary-card" id="cardContasPagarVencidas" style="display:none;">
         <div class="label">A Pagar (A Vencer)</div>
         <div class="value" id="sumContasPagarVencidas">—</div>
         <div class="sub" id="subContasPagarVencidas"></div>
@@ -2582,7 +2588,9 @@
       </div>
     </div>
 
-    <div class="section" id="sectionInadimplenciaDetalhe">
+    <!-- Oculto do front-end a pedido de Lucas em 22/07/2026 (ver nota nos
+         cards-resumo acima) — seção mantida no HTML/JS, só não exibida. -->
+    <div class="section" id="sectionInadimplenciaDetalhe" style="display:none;">
       <div class="section-head">
         <div class="section-head-title">
           <h2>A Receber (A Vencer)</h2>
@@ -2594,7 +2602,9 @@
       </div>
     </div>
 
-    <div class="section" id="sectionContasPagarVencidasDetalhe">
+    <!-- Oculto do front-end a pedido de Lucas em 22/07/2026 (ver nota nos
+         cards-resumo acima) — seção mantida no HTML/JS, só não exibida. -->
+    <div class="section" id="sectionContasPagarVencidasDetalhe" style="display:none;">
       <div class="section-head">
         <div class="section-head-title">
           <h2>A Pagar (A Vencer)</h2>
@@ -12203,13 +12213,38 @@ function buildMetricasGrupoDfcPeriodo(categories, movements, monthStart, monthEn
   return { porEmpresa, grupo };
 }
 
+// Saldo em aberto (não recebido) de títulos a receber de bandeira de
+// cartão (RedeCard, único cliente cadastrado por empresa — ver
+// REDECARD_CODIGO_CLIENTE_POR_EMPRESA), numa data-alvo específica.
+// Reconstrução de snapshot no passado (mesmo princípio de aging): conta
+// o título se ele já existia (data_emissao/data_registro <= alvo) e
+// ainda não tinha sido recebido até aquela data (sem data_pagamento, ou
+// data_pagamento depois do alvo). Só KMNO e NOVAH têm cliente RedeCard
+// cadastrado (RT não tem — ver REDECARD_CODIGO_CLIENTE_POR_EMPRESA).
+function calcSaldoCartoesEmData(receivable, dataAlvo) {
+  let total = 0;
+  (receivable || []).forEach(m => {
+    const redecardCodigo = REDECARD_CODIGO_CLIENTE_POR_EMPRESA[m._empresa];
+    if (!redecardCodigo) return;
+    if (Number(m.codigo_cliente_fornecedor) !== redecardCodigo) return;
+    if (m.status_titulo === 'CANCELADO') return;
+    const dataEmissao = m.data_emissao || m.data_registro;
+    if (!dataEmissao) return;
+    if (dayjs(dataEmissao).isAfter(dataAlvo, 'day')) return; // título ainda não existia nessa data
+    if (m.data_pagamento && !dayjs(m.data_pagamento).isAfter(dataAlvo, 'day')) return; // já tinha sido recebido até essa data
+    total += Number(m.valor_documento || 0);
+  });
+  return total;
+}
+
 // Cards "Resumo de Capital" no topo da home: início x fim do período
 // De/Até selecionado. Saldo Bancos reaproveita o mesmo rollback usado no
 // DFC por Bloco (calcSaldoInicialRealizado, parte do saldo_atual de hoje
 // e desfaz os movimentos de caixa até a data alvo). Capex/Refis somam o
 // período inteiro, mesma lógica/categorias do gráfico "Capex e Refis".
-// Cartões a Receber (KMNO) fica como placeholder — fonte de dado ainda
-// não confirmada com Lucas.
+// Cartões a Receber: início Manual (Excel, planilha Grupo DFC BA33 —
+// confirmado com Lucas 22/07/2026) + fim Omie/ao vivo (KMNO + Blue
+// Line/Novah — confirmado com Lucas 22/07/2026).
 function renderResumoCapital(monthStart, monthEnd) {
   const elSaldoInicio = document.getElementById('resumoCapitalSaldoInicio');
   if (!elSaldoInicio || !contasCorrentesCache || !categoriesCache || !financialMovementsCache) return;
@@ -12227,6 +12262,32 @@ function renderResumoCapital(monthStart, monthEnd) {
   document.getElementById('resumoCapitalSaldoInicio').textContent = fmtBRL(saldoInicio);
   document.getElementById('resumoCapitalSaldoFim').textContent = fmtBRL(saldoFim);
   document.getElementById('resumoCapitalSaldoDiff').textContent = fmtBRL(saldoFim - saldoInicio);
+
+  // Saldo Cartões a Receber em 01.01.2026: valor FIXO da planilha
+  // (Manual/Excel — "Grupo DFC" BA33 "Saldo Cartões 01/01/2026",
+  // confirmado com Lucas 22/07/2026).
+  const SALDO_CARTOES_INICIO_EXCEL = 1247624.41;
+  // Saldo Cartões a Receber Último Dia do Mês Anterior: Omie/ao vivo —
+  // snapshot de títulos em aberto de RedeCard (KMNO + Blue Line/Novah),
+  // reconstruído na data-alvo (mesmo "fim do mês anterior" usado no
+  // Saldo Bancos acima).
+  const elCartoesInicio = document.getElementById('resumoCapitalCartoesInicio');
+  if (elCartoesInicio) {
+    if (receivableCache) {
+      const dataAlvoCartoes = fimMesAnteriorFixo.subtract(1, 'day');
+      const saldoCartoesInicio = SALDO_CARTOES_INICIO_EXCEL;
+      const saldoCartoesFim = calcSaldoCartoesEmData(receivableCache, dataAlvoCartoes);
+      elCartoesInicio.textContent = fmtBRL(saldoCartoesInicio);
+      document.getElementById('resumoCapitalCartoesFim').textContent = fmtBRL(saldoCartoesFim);
+      document.getElementById('resumoCapitalCartoesDiff').textContent = fmtBRL(saldoCartoesFim - saldoCartoesInicio);
+    } else {
+      // receivableCache ainda não carregou nesse ciclo de render — mantém
+      // placeholder em vez de mostrar um zero enganoso.
+      elCartoesInicio.textContent = 'R$ -----';
+      document.getElementById('resumoCapitalCartoesFim').textContent = 'R$ -----';
+      document.getElementById('resumoCapitalCartoesDiff').textContent = 'R$ -----';
+    }
+  }
 
   // Capex e Pagtos Impostos Atrasados/Refis (Período): "Até Maio Excel,
   // pós 06 Omie" (pedido reunião 21.07). Soma mês a mês dentro do
@@ -12763,7 +12824,24 @@ function buildWaterfallDreCaixa(categories, movements, monthStart, monthEnd) {
 
 function renderWaterfallDreCaixa(monthStart, monthEnd) {
   const tbody = document.getElementById('waterfallDreCaixaBody');
+  const header = document.getElementById('waterfallDreCaixaHeader');
   if (!tbody || !categoriesCache || !financialMovementsCache) return;
+
+  // Quebra mês a mês do período De/Até selecionado no cabeçalho — pedido
+  // Lucas 22/07/2026 ("para análise"): cada grupo/subtotal ganha uma
+  // coluna por mês, além do Total do Período e % Receita que já existiam.
+  // monthEnd chega como fim EXCLUSIVO (grupoAte = "Até" + 1 mês, ver
+  // renderForSelectedMonth), então o loop para ANTES de bater em monthEnd.
+  // Limitado a 24 meses (mesmo guard do Resumo Detalhado/Evolução Mensal
+  // do Grupo), pra tabela não explodir se o range selecionado for enorme.
+  const meses = [];
+  let cursor = monthStart.startOf('month');
+  const fimExclusivo = monthEnd.startOf('month');
+  let guardMeses = 0;
+  while (cursor.isBefore(fimExclusivo) && guardMeses < 24) { meses.push(cursor); cursor = cursor.add(1, 'month'); guardMeses++; }
+  if (!meses.length) meses.push(monthStart.startOf('month')); // salvaguarda: nunca renderiza sem nenhuma coluna de mês
+
+  const wMeses = meses.map(m => buildWaterfallDreCaixa(categoriesCache, financialMovementsCache, m, m.add(1, 'month')));
 
   const w = buildWaterfallDreCaixa(categoriesCache, financialMovementsCache, monthStart, monthEnd);
   const base = w.receitaTotal || 1;
@@ -12772,6 +12850,12 @@ function renderWaterfallDreCaixa(monthStart, monthEnd) {
     const negativo = v < 0;
     return `<td class="num" style="${negativo ? 'color:var(--red);' : ''}">${negativo ? `(${fmtBRL(Math.abs(v))})` : fmtBRL(v)}</td>`;
   };
+
+  if (header) {
+    header.innerHTML = '<th>Descrição</th>'
+      + meses.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.month()]}</th>`).join('')
+      + '<th class="num">Total do Período</th><th class="num">% Receita</th>';
+  }
 
   // Subcategoria (itens de cada grupo) só aparece com 1 empresa
   // selecionada — com "Todas as Empresas"/mais de uma marcada, categorias
@@ -12783,51 +12867,73 @@ function renderWaterfallDreCaixa(monthStart, monthEnd) {
 
   const linhas = [];
   let waterfallGrupoSeq = 0;
+
+  // Valor de um grupo (ou "receita"/"naoClassificado", que não vivem
+  // dentro de porGrupo) num mês específico — usado tanto pra linha-pai
+  // do grupo quanto pra cada subcategoria dele.
+  const totalGrupoMes = (chave, iMes) => {
+    if (chave === 'receita') return wMeses[iMes].receitaTotal;
+    if (chave === 'naoClassificado') return wMeses[iMes].naoClassificadoTotal;
+    return wMeses[iMes].porGrupo[chave] ? wMeses[iMes].porGrupo[chave].total : 0;
+  };
+  const itemMes = (chave, desc, iMes) => {
+    if (chave === 'receita') return wMeses[iMes].receitaCategorias[desc] || 0;
+    if (chave === 'naoClassificado') return wMeses[iMes].naoClassificado[desc] || 0;
+    const grupoMes = wMeses[iMes].porGrupo[chave];
+    return grupoMes ? (grupoMes.categorias[desc] || 0) : 0;
+  };
+
   // Cada grupo some as categorias por padrão (só o subtotal fica visível)
   // — clicar no cabeçalho do grupo expande/recolhe as categorias dele.
   // Isso evita a tabela nascer com 500+ linhas na tela.
-  const linhaGrupo = (label, total, categorias, classeExtra) => {
+  // "chave" identifica o grupo em porGrupo (ou 'receita'/'naoClassificado')
+  // — usada só pra buscar os valores mês a mês; total/categorias
+  // continuam vindo de w (agregado do período inteiro), como antes.
+  const linhaGrupo = (label, chave, total, categorias, classeExtra) => {
     const key = 'wf' + (waterfallGrupoSeq++);
     const itens = Object.entries(categorias).filter(([, v]) => v).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
+    const colsMeses = meses.map((_, i) => valTd(totalGrupoMes(chave, i))).join('');
     if (!mostrarSubcategorias) {
-      linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}"><td>${label}</td>${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
+      linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}"><td>${label}</td>${colsMeses}${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
       return;
     }
-    linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}" onclick="toggleWaterfallGrupo('${key}')"><td><span class="waterfall-toggle-icon" id="wfIcon-${key}">▸</span>${label} <span class="waterfall-count">(${itens.length} categoria${itens.length === 1 ? '' : 's'})</span></td>${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
+    linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}" onclick="toggleWaterfallGrupo('${key}')"><td><span class="waterfall-toggle-icon" id="wfIcon-${key}">▸</span>${label} <span class="waterfall-count">(${itens.length} categoria${itens.length === 1 ? '' : 's'})</span></td>${colsMeses}${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
     itens.forEach(([desc, v]) => {
-      linhas.push(`<tr class="waterfall-item" data-grupo="${key}" style="display:none;"><td>${desc}</td>${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
+      const colsMesesItem = meses.map((_, i) => valTd(itemMes(chave, desc, i))).join('');
+      linhas.push(`<tr class="waterfall-item" data-grupo="${key}" style="display:none;"><td>${desc}</td>${colsMesesItem}${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
     });
   };
-  const linhaSubtotal = (label, v) => {
-    linhas.push(`<tr class="waterfall-subtotal"><td>${label}</td>${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
+  const linhaSubtotal = (label, chaveSubtotal, v) => {
+    const colsMeses = meses.map((_, i) => valTd(wMeses[i].subtotais[chaveSubtotal])).join('');
+    linhas.push(`<tr class="waterfall-subtotal"><td>${label}</td>${colsMeses}${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
   };
 
-  linhaGrupo('(+) Receita (Recebimento)', w.receitaTotal, w.receitaCategorias);
-  linhaGrupo('(-) Impostos', w.porGrupo.impostos.total, w.porGrupo.impostos.categorias);
-  linhaGrupo('(-) Devoluções', w.porGrupo.devolucoes.total, w.porGrupo.devolucoes.categorias);
-  linhaSubtotal('(=) Receita Líquida', w.subtotais.receitaLiquida);
-  linhaGrupo('(-) Custo de Insumos e Matéria-Prima', w.porGrupo.custo_materia_prima.total, w.porGrupo.custo_materia_prima.categorias);
-  linhaGrupo('(-) Custo de Serviços', w.porGrupo.custo_servicos.total, w.porGrupo.custo_servicos.categorias);
-  linhaGrupo('(-) Custo Mão de Obra', w.porGrupo.custo_mao_de_obra.total, w.porGrupo.custo_mao_de_obra.categorias);
-  linhaSubtotal('(=) CMV', w.subtotais.cmv);
-  linhaGrupo('(-) Royalties', w.porGrupo.royalties.total, w.porGrupo.royalties.categorias);
-  linhaSubtotal('(=) Margem de Contribuição', w.subtotais.margemContribuicao);
-  linhaGrupo('(-) Despesas ADM / Indústria (+ Pessoal + Pró-labore)', w.porGrupo.despesas_adm.total, w.porGrupo.despesas_adm.categorias);
-  linhaGrupo('(-) Despesas Comerciais (+ Frete + Pessoal)', w.porGrupo.despesas_comerciais.total, w.porGrupo.despesas_comerciais.categorias);
-  linhaSubtotal('(=) Resultado Operacional (EBTIDA)', w.subtotais.ebtida);
-  linhaGrupo('(-) Despesas Financeiras', w.porGrupo.despesas_financeiras.total, w.porGrupo.despesas_financeiras.categorias);
-  linhaGrupo('(+) Receitas Financeiras', w.porGrupo.receitas_financeiras.total, w.porGrupo.receitas_financeiras.categorias);
-  linhaSubtotal('(=) Resultado Líquido (Lucro Líquido)', w.subtotais.lucroLiquido);
-  linhaGrupo('(-) Distribuição de Lucros', w.porGrupo.distribuicao.total, w.porGrupo.distribuicao.categorias);
-  linhaGrupo('(-) Capex', w.porGrupo.capex.total, w.porGrupo.capex.categorias);
-  linhaGrupo('(-) Outros (Refis)', w.porGrupo.refis_outros.total, w.porGrupo.refis_outros.categorias);
-  linhaSubtotal('(=) Saldo Líquido', w.subtotais.saldoLiquido);
-  linhaGrupo('(+) Recebimento de Empréstimos', w.porGrupo.recebimento_emprestimos.total, w.porGrupo.recebimento_emprestimos.categorias);
-  linhaGrupo('(-) Pagamento de Empréstimos', w.porGrupo.pagamento_emprestimos.total, w.porGrupo.pagamento_emprestimos.categorias);
-  linhaSubtotal('(=) Saldo de Caixa', w.subtotais.saldoCaixa);
+  linhaGrupo('(+) Receita (Recebimento)', 'receita', w.receitaTotal, w.receitaCategorias);
+  linhaGrupo('(-) Impostos', 'impostos', w.porGrupo.impostos.total, w.porGrupo.impostos.categorias);
+  linhaGrupo('(-) Devoluções', 'devolucoes', w.porGrupo.devolucoes.total, w.porGrupo.devolucoes.categorias);
+  linhaSubtotal('(=) Receita Líquida', 'receitaLiquida', w.subtotais.receitaLiquida);
+  linhaGrupo('(-) Custo de Insumos e Matéria-Prima', 'custo_materia_prima', w.porGrupo.custo_materia_prima.total, w.porGrupo.custo_materia_prima.categorias);
+  linhaGrupo('(-) Custo de Serviços', 'custo_servicos', w.porGrupo.custo_servicos.total, w.porGrupo.custo_servicos.categorias);
+  linhaGrupo('(-) Custo Mão de Obra', 'custo_mao_de_obra', w.porGrupo.custo_mao_de_obra.total, w.porGrupo.custo_mao_de_obra.categorias);
+  linhaSubtotal('(=) CMV', 'cmv', w.subtotais.cmv);
+  linhaGrupo('(-) Royalties', 'royalties', w.porGrupo.royalties.total, w.porGrupo.royalties.categorias);
+  linhaSubtotal('(=) Margem de Contribuição', 'margemContribuicao', w.subtotais.margemContribuicao);
+  linhaGrupo('(-) Despesas ADM / Indústria (+ Pessoal + Pró-labore)', 'despesas_adm', w.porGrupo.despesas_adm.total, w.porGrupo.despesas_adm.categorias);
+  linhaGrupo('(-) Despesas Comerciais (+ Frete + Pessoal)', 'despesas_comerciais', w.porGrupo.despesas_comerciais.total, w.porGrupo.despesas_comerciais.categorias);
+  linhaSubtotal('(=) Resultado Operacional (EBTIDA)', 'ebtida', w.subtotais.ebtida);
+  linhaGrupo('(-) Despesas Financeiras', 'despesas_financeiras', w.porGrupo.despesas_financeiras.total, w.porGrupo.despesas_financeiras.categorias);
+  linhaGrupo('(+) Receitas Financeiras', 'receitas_financeiras', w.porGrupo.receitas_financeiras.total, w.porGrupo.receitas_financeiras.categorias);
+  linhaSubtotal('(=) Resultado Líquido (Lucro Líquido)', 'lucroLiquido', w.subtotais.lucroLiquido);
+  linhaGrupo('(-) Distribuição de Lucros', 'distribuicao', w.porGrupo.distribuicao.total, w.porGrupo.distribuicao.categorias);
+  linhaGrupo('(-) Capex', 'capex', w.porGrupo.capex.total, w.porGrupo.capex.categorias);
+  linhaGrupo('(-) Outros (Refis)', 'refis_outros', w.porGrupo.refis_outros.total, w.porGrupo.refis_outros.categorias);
+  linhaSubtotal('(=) Saldo Líquido', 'saldoLiquido', w.subtotais.saldoLiquido);
+  linhaGrupo('(+) Recebimento de Empréstimos', 'recebimento_emprestimos', w.porGrupo.recebimento_emprestimos.total, w.porGrupo.recebimento_emprestimos.categorias);
+  linhaGrupo('(-) Pagamento de Empréstimos', 'pagamento_emprestimos', w.porGrupo.pagamento_emprestimos.total, w.porGrupo.pagamento_emprestimos.categorias);
+  linhaSubtotal('(=) Saldo de Caixa', 'saldoCaixa', w.subtotais.saldoCaixa);
 
   if (w.naoClassificadoTotal) {
-    linhaGrupo('⚠ Não Classificado (fora dos grupos mapeados — provavelmente RT ou categoria nova)', w.naoClassificadoTotal, w.naoClassificado, 'waterfall-naoclass');
+    linhaGrupo('⚠ Não Classificado', 'naoClassificado', w.naoClassificadoTotal, w.naoClassificado, 'waterfall-naoclass');
   }
 
   tbody.innerHTML = linhas.join('');
@@ -13367,6 +13473,17 @@ const BANCOS_SALDO_INICIO_MES = {
     'BTG':           [0, 0, 708103.04, 716206.08, 723019.10],
   },
   total: [746008.60, 889317.36, 1236837.69, 1095626.87, 939313.87],
+  // Linhas extras dentro da mesma tabela (pedido Lucas 22/07/2026) — NÃO
+  // entram no "Total" acima: são fluxo de RECEBIMENTO do mês por forma
+  // (quanto entrou via depósito/cartão naquele mês), não saldo de banco
+  // no 1º dia — mistura o Total desse jeito corromperia o número.
+  // Mesma planilha, aba "KMNO DFC (caixa)", bloco "DFC (CAIXA)"
+  // (linhas 14-15, "RECEBIMENTO" > "DEPOSITO"/"CARTÕES DE CRÉDITO").
+  labelsExtras: ['Depósito (Recebimento do Mês)', 'Cartões de Crédito (Recebimento do Mês)'],
+  valoresExtras: {
+    'Depósito (Recebimento do Mês)':          [459490.40, 477753.99, 632564.29, 396102.38, 410956.99],
+    'Cartões de Crédito (Recebimento do Mês)': [183118.02, 163552.31, 182125.57, 318839.29, 269617.21],
+  },
 };
 
 function renderGrupoBancos(monthStart, monthEnd) {
@@ -13402,7 +13519,12 @@ function renderGrupoBancos(monthStart, monthEnd) {
       <td>Saldo Primeiro dia do Mês (Total)</td>
       ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(d.total[i])}</td>`).join('')}
     </tr>`;
-  body.innerHTML = linhasBancos + linhaTotal;
+  const linhasExtras = d.labelsExtras.map((label, k) => `
+    <tr${k === 0 ? ' style="border-top:1px solid var(--line);"' : ''}>
+      <td style="color:var(--bone-dim);">${label}</td>
+      ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(d.valoresExtras[label][i])}</td>`).join('')}
+    </tr>`).join('');
+  body.innerHTML = linhasBancos + linhaTotal + linhasExtras;
 }
 
 // Prova Real dos Caixas (reunião 21.07, linha 42: "No DFC terminar
@@ -13412,12 +13534,43 @@ function renderGrupoBancos(monthStart, monthEnd) {
 // bancos individuais no fim do mês (linhas 226-238). A diferença é a
 // "prova real": quanto o fluxo de caixa calculado diverge do saldo
 // bancário observado de verdade.
+// Bloco Empréstimos + Saldo de Caixa (linhas 207-223 da mesma aba,
+// pedido Lucas 22/07/2026, print da mesma nota de reunião 21.07):
+// inserido entre "Saldo Calculado" e a lista de Bancos, na mesma ordem
+// da planilha. Puramente informativo — não entra na conta de Diferença
+// acima (que continua Saldo Real − Saldo Calculado, sem mudança).
 const PROVA_REAL_CAIXAS = {
   meses: ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05'],
   saldoInicial: [746008.60, 889317.36, 1236837.69, 1095626.87, 939313.87],
   entradas:     [726555.21, 720089.24, 922993.69, 831676.46, 765706.88],
   saidas:       [571320.37, 572260.35, 805345.64, 788009.82, 878080.12],
   saldoCalculado: [901243.44, 1037146.25, 1354485.74, 1139293.51, 826940.63],
+  // Bloco "Empréstimos" (linhas 207-223 da mesma aba, pedido Lucas
+  // 22/07/2026 — print com a nota da reunião 21.07 "No DFC terminar
+  // assim para prova real dos caixas"). NÃO é a mesma coisa que
+  // RESUMO_DETALHADO_MESES.saldoLiquido (aquele vem do waterfall DRE
+  // Caixa por categoria; este vem de uma seção separada da planilha,
+  // linha 207 "SALDO LIQUIDO" — os dois são conceitos/valores
+  // diferentes, ambos legítimos, só não devem ser confundidos).
+  // Fórmula confirmada batendo em todos os 5 meses:
+  //   Saldo de Caixa = Saldo Líquido + Total Recebimento Empréstimos − Total Pagamento Empréstimos
+  saldoLiquido: [149756.31, 187423.04, 143652.10, 84573.11, -33601.45],
+  recebimentoEmprestimos: {
+    'Empréstimos de Terceiros':            [0, 2538.66, 0, 0, 0],
+    'Empréstimos de Bancos':               [0, 0, 0, 0, 0],
+    'Recebimento Empréstimo para Novah':   [0, 0, 0, 0, 0],
+  },
+  totalRecebimentoEmprestimos: [0, 2538.66, 0, 0, 0],
+  pagamentoEmprestimos: {
+    'Empréstimos para Novah':                    [0, 40000, 15000, 28000, 65000],
+    'Pagto Empréstimos de Terceiros':            [0, 4596.89, 0, 0, 0],
+    'Pagto Empréstimos de Bancos':                [4682.80, 4682.80, 4682.80, 4682.80, 4054.05],
+    'Pagto Empréstimos para Terceiros (Carro)':  [1702.81, 1702.81, 1702.81, 1702.81, 1702.81],
+    'Outros':                                     [0, 0, 0, 0, 0],
+    'Nova Trento':                                [61.90, 61.90, 668.24, 668.24, 606.34],
+  },
+  totalPagamentoEmprestimos: [6447.51, 51044.40, 22053.85, 35053.85, 71363.20],
+  saldoDeCaixa: [143308.80, 138917.30, 121598.25, 49519.26, -104964.65],
   bancos: {
     'Brasil KMNO':          [484562.10, 59433.68, 43968.19, 60263.26, 7041.95],
     'Brasil RT':            [167326.40, 120095.48, 23253.18, 2140.81, 14490.12],
@@ -13468,6 +13621,16 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
   html += linha('(+) Entradas', d.entradas, false);
   html += linha('(-) Saídas', d.saidas, false);
   html += linha('(=) Saldo Calculado', d.saldoCalculado, true);
+  html += linha('(=) Saldo Líquido', d.saldoLiquido, true);
+  Object.keys(d.recebimentoEmprestimos).forEach(item => {
+    html += linha(`&nbsp;&nbsp;(+) ${item}`, d.recebimentoEmprestimos[item], false);
+  });
+  html += linha('(=) Total Recebimento Empréstimos', d.totalRecebimentoEmprestimos, true);
+  Object.keys(d.pagamentoEmprestimos).forEach(item => {
+    html += linha(`&nbsp;&nbsp;(-) ${item}`, d.pagamentoEmprestimos[item], false);
+  });
+  html += linha('(=) Total Pagamento Empréstimos', d.totalPagamentoEmprestimos, true);
+  html += linha('(=) Saldo de Caixa', d.saldoDeCaixa, true);
   Object.keys(d.bancos).forEach(banco => {
     html += linha(`&nbsp;&nbsp;${banco} (real)`, d.bancos[banco], false);
   });
