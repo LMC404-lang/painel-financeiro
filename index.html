@@ -13622,25 +13622,39 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
       ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(arr[i])}</td>`).join('')}
     </tr>`;
 
+  // Grupo colapsável: linha-pai (o total, sempre visível, com ▸/▾) +
+  // itens de detalhe escondidos por padrão — mesmo padrão/técnica do
+  // DRE Nativo (toggleDreNativoConta, corrigido 22/07/2026: usa
+  // data-grupo-conta em vez de id duplicado, e classe em vez de
+  // comparar display==='' que trava no falsy). Pedido Lucas 22/07/2026:
+  // "não era pra ser colapsável também?" — bancos e empréstimos aqui
+  // tinham a lista solta, sem esconder feito o resto do painel.
+  let provaRealGrupoSeq = 0;
+  const linhaColapsavel = (labelTotal, arrTotal, itens) => {
+    const id = `prova-real-grp-${provaRealGrupoSeq++}`;
+    const linhaTotal = `
+      <tr style="font-weight:600;" class="dre-tbl-row colapsavel" onclick="toggleDreNativoConta('${id}')" title="Clique para ver o detalhe">
+        <td><span class="dre-tbl-toggle-icon" id="icon-${id}">+</span>${labelTotal}</td>
+        ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(arrTotal[i])}</td>`).join('')}
+      </tr>`;
+    const linhasItens = Object.keys(itens).map(label => `
+      <tr style="display:none;" data-grupo-conta="${id}">
+        <td>&nbsp;&nbsp;${label}</td>
+        ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(itens[label][i])}</td>`).join('')}
+      </tr>`).join('');
+    return linhaTotal + linhasItens;
+  };
+
   let html = '';
   html += linha('(+) Saldo Inicial', d.saldoInicial, false);
   html += linha('(+) Entradas', d.entradas, false);
   html += linha('(-) Saídas', d.saidas, false);
   html += linha('(=) Saldo Calculado', d.saldoCalculado, true);
   html += linha('(=) Saldo Líquido', d.saldoLiquido, true);
-  Object.keys(d.recebimentoEmprestimos).forEach(item => {
-    html += linha(`&nbsp;&nbsp;(+) ${item}`, d.recebimentoEmprestimos[item], false);
-  });
-  html += linha('(=) Total Recebimento Empréstimos', d.totalRecebimentoEmprestimos, true);
-  Object.keys(d.pagamentoEmprestimos).forEach(item => {
-    html += linha(`&nbsp;&nbsp;(-) ${item}`, d.pagamentoEmprestimos[item], false);
-  });
-  html += linha('(=) Total Pagamento Empréstimos', d.totalPagamentoEmprestimos, true);
+  html += linhaColapsavel('(=) Total Recebimento Empréstimos', d.totalRecebimentoEmprestimos, d.recebimentoEmprestimos);
+  html += linhaColapsavel('(=) Total Pagamento Empréstimos', d.totalPagamentoEmprestimos, d.pagamentoEmprestimos);
   html += linha('(=) Saldo de Caixa', d.saldoDeCaixa, true);
-  Object.keys(d.bancos).forEach(banco => {
-    html += linha(`&nbsp;&nbsp;${banco} (real)`, d.bancos[banco], false);
-  });
-  html += linha('(=) Saldo Real (soma dos bancos)', d.saldoReal, true);
+  html += linhaColapsavel('(=) Saldo Real (soma dos bancos)', d.saldoReal, d.bancos);
   html += `<tr style="font-weight:700;background:rgba(255,255,255,0.04);">
     <td>(=) Diferença (Real − Calculado)</td>
     ${idxMeses.map(({ i }) => {
