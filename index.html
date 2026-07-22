@@ -4713,12 +4713,23 @@ function fmtDreNativoValor(v) {
   return fmtBRL(v);
 }
 
+// Corrigido 22/07/2026: usava el.style.display === '' pra saber se
+// estava aberto, mas '' é "falsy" em JS -- depois da primeira abertura,
+// o toggle achava pra sempre que ainda estava fechado e nunca recolhia
+// de volta (reportado pelo Lucas: "expando e não volta"). Agora usa uma
+// classe (.dre-cat-aberta) em vez de comparar o valor de display direto,
+// e alterna TODAS as linhas com o mesmo data-grupo (não só a 1ª que
+// getElementById acharia, já que categorias duplicadas compartilhavam
+// id -- ver fix em renderGrupoResumoPorEmpresa).
 function toggleDreNativoConta(id) {
-  const el = document.getElementById(id);
+  const linhas = document.querySelectorAll(`tr[data-grupo-conta="${id}"]`);
+  if (!linhas.length) return;
   const icon = document.getElementById('icon-' + id);
-  if (!el) return;
-  const abrindo = el.style.display === 'none' || !el.style.display;
-  el.style.display = abrindo ? '' : 'none';
+  const abrindo = !linhas[0].classList.contains('dre-cat-aberta');
+  linhas.forEach(l => {
+    l.classList.toggle('dre-cat-aberta', abrindo);
+    l.style.display = abrindo ? 'table-row' : 'none';
+  });
   if (icon) icon.textContent = abrindo ? '−' : '+';
 }
 
@@ -4747,7 +4758,7 @@ function renderArvoreNativaDreHtml(arvore, meses) {
         </tr>`);
         if (temCategorias) {
           conta.categorias.forEach(catg => {
-            linhas.push(`<tr class="dre-tbl-row" style="display:none;" id="${contaId}">
+            linhas.push(`<tr class="dre-tbl-row" style="display:none;" data-grupo-conta="${contaId}">
               <td class="dre-tbl-sticky" style="padding-left:60px;color:var(--bone-dim);font-size:12px;">${catg.label}</td>
               ${catg.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
               <td>${fmtDreNativoValor(catg.total)}</td>
@@ -13398,7 +13409,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       const totalCat = valoresCat.reduce((a, b) => a + b, 0);
       const mediaCat = valoresCat.length ? totalCat / valoresCat.length : 0;
       return `
-        <tr class="dre-tbl-row" style="display:none;" id="${rowId}">
+        <tr class="dre-tbl-row" style="display:none;" data-grupo-conta="${rowId}">
           <td style="padding-left:24px;color:var(--bone-dim);font-size:12px;">${catLabel}</td>
           ${valoresCat.map(v => `<td class="num">${fmtBRL(v)}</td>`).join('')}
           <td class="num">${fmtBRL(totalCat)}</td>
