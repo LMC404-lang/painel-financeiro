@@ -4351,11 +4351,11 @@ function renderDfcArvoreTabela() {
     const blocoId = `dfc-bloco-${i}`;
 
     if (!temFilhos) {
-      return `<tr class="dre-tbl-row"><td class="dre-tbl-sticky" style="${negrito ? 'font-weight:700;' : ''}">${l.label}</td>${linhaValorTd(l.val, negrito)}</tr>`;
+      return `<tr class="dre-tbl-row"><td class="dre-tbl-sticky" style="${negrito ? 'font-weight:700;' : ''}">${semPrefixoDre(l.label)}</td>${linhaValorTd(l.val, negrito)}</tr>`;
     }
 
     const paiHtml = `<tr class="dre-tbl-row colapsavel" onclick="toggleItensBloco('${blocoId}')" title="Clique para ver os itens deste bloco">
-      <td class="dre-tbl-sticky" style="${negrito ? 'font-weight:700;' : ''}"><span class="dre-tbl-toggle-icon" id="icon-${blocoId}">+</span>${l.label}</td>
+      <td class="dre-tbl-sticky" style="${negrito ? 'font-weight:700;' : ''}"><span class="dre-tbl-toggle-icon" id="icon-${blocoId}">+</span>${semPrefixoDre(l.label)}</td>
       ${linhaValorTd(l.val, negrito)}
     </tr>`;
     // Filho com "itens" próprios (grupo do Omie, ex: Receitas/Despesas por
@@ -4368,14 +4368,14 @@ function renderDfcArvoreTabela() {
     const filhosHtml = l.filhos.map((f, j) => {
       const temNetos = Array.isArray(f.itens) && f.itens.length > 0;
       if (!temNetos) {
-        return `<tr class="dre-tbl-row"><td class="dre-tbl-sticky" style="padding-left:28px;color:var(--bone-dim);">${f.label}</td>${linhaValorTd(f.val, false)}</tr>`;
+        return `<tr class="dre-tbl-row"><td class="dre-tbl-sticky" style="padding-left:28px;color:var(--bone-dim);">${semPrefixoDre(f.label)}</td>${linhaValorTd(f.val, false)}</tr>`;
       }
       const grupoId = `${blocoId}-grupo-${j}`;
       const grupoPaiHtml = `<tr class="dre-tbl-row colapsavel" data-grupo-pai="${grupoId}" onclick="event.stopPropagation(); toggleLinhaGrupo('${grupoId}')" title="Clique para ver as categorias deste grupo">
-        <td class="dre-tbl-sticky" style="padding-left:28px;"><span class="dre-tbl-toggle-icon" id="icon-${grupoId}">+</span>${f.label}</td>
+        <td class="dre-tbl-sticky" style="padding-left:28px;"><span class="dre-tbl-toggle-icon" id="icon-${grupoId}">+</span>${semPrefixoDre(f.label)}</td>
         ${linhaValorTd(f.val, false)}
       </tr>`;
-      const netosHtml = f.itens.map(it => `<tr class="dre-tbl-row linha-oculta" data-grupo-filho="${grupoId}"><td class="dre-tbl-sticky" style="padding-left:48px;color:var(--bone-dim);">${it.label}</td>${linhaValorTd(it.val, false)}</tr>`).join('');
+      const netosHtml = f.itens.map(it => `<tr class="dre-tbl-row linha-oculta" data-grupo-filho="${grupoId}"><td class="dre-tbl-sticky" style="padding-left:48px;color:var(--bone-dim);">${semPrefixoDre(it.label)}</td>${linhaValorTd(it.val, false)}</tr>`).join('');
       return grupoPaiHtml + netosHtml;
     }).join('');
 
@@ -4738,13 +4738,13 @@ function renderArvoreNativaDreHtml(arvore, meses) {
   const linhas = [];
   arvore.tipos.forEach((tipo, ti) => {
     linhas.push(`<tr class="dre-tbl-row" style="font-weight:700;background:rgba(255,255,255,0.04);">
-      <td class="dre-tbl-sticky">${tipo.numero}. ${tipo.label}</td>
+      <td class="dre-tbl-sticky">${tipo.numero}. ${semPrefixoDre(tipo.label)}</td>
       ${tipo.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
       <td>${fmtDreNativoValor(tipo.total)}</td>
     </tr>`);
     tipo.grupos.forEach((grupo, gi) => {
       linhas.push(`<tr class="dre-tbl-row" style="font-weight:600;">
-        <td class="dre-tbl-sticky" style="padding-left:20px;">${grupo.numero}. ${grupo.label}</td>
+        <td class="dre-tbl-sticky" style="padding-left:20px;">${grupo.numero}. ${semPrefixoDre(grupo.label)}</td>
         ${grupo.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
         <td>${fmtDreNativoValor(grupo.total)}</td>
       </tr>`);
@@ -4752,14 +4752,14 @@ function renderArvoreNativaDreHtml(arvore, meses) {
         const contaId = `dre-nativo-conta-${ti}-${gi}-${ci}`;
         const temCategorias = conta.categorias.length > 0;
         linhas.push(`<tr class="dre-tbl-row${temCategorias ? ' colapsavel' : ''}"${temCategorias ? ` onclick="toggleDreNativoConta('${contaId}')" title="Clique para ver as categorias desta conta"` : ''}>
-          <td class="dre-tbl-sticky" style="padding-left:40px;color:var(--bone-dim);">${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${contaId}">+</span>` : ''}${conta.numero}. ${conta.label}</td>
+          <td class="dre-tbl-sticky" style="padding-left:40px;color:var(--bone-dim);">${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${contaId}">+</span>` : ''}${conta.numero}. ${semPrefixoDre(conta.label)}</td>
           ${conta.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
           <td>${fmtDreNativoValor(conta.total)}</td>
         </tr>`);
         if (temCategorias) {
           conta.categorias.forEach(catg => {
             linhas.push(`<tr class="dre-tbl-row" style="display:none;" data-grupo-conta="${contaId}">
-              <td class="dre-tbl-sticky" style="padding-left:60px;color:var(--bone-dim);font-size:12px;">${catg.label}</td>
+              <td class="dre-tbl-sticky" style="padding-left:60px;color:var(--bone-dim);font-size:12px;">${semPrefixoDre(catg.label)}</td>
               ${catg.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
               <td>${fmtDreNativoValor(catg.total)}</td>
             </tr>`);
@@ -4903,7 +4903,7 @@ function buildResumoNativo(arvore, empresa, depreciacaoOverride) {
 
 function renderResumoNativoHtml(linhas) {
   const rows = linhas.map(l => `<tr class="dre-tbl-row${l.destaque ? '' : ''}" style="${l.cls === 'total' ? 'font-weight:700;' : ''}${l.destaque ? 'background:rgba(255,255,255,0.04);' : ''}">
-    <td class="dre-tbl-sticky">${l.label}</td>
+    <td class="dre-tbl-sticky">${semPrefixoDre(l.label)}</td>
     <td style="text-align:right;">${fmtBRL(l.val)}</td>
   </tr>`).join('');
   return `<div class="dre-tbl-wrap" style="margin-bottom:18px;"><table class="dre-tbl">
@@ -9331,7 +9331,7 @@ function renderTabelaResumo(linhas, colunas) {
     if (!g.filhos.length) {
       // marco isolado, sem detalhe pra esconder (ex: linha final do waterfall)
       const rowCls = ['dre-tbl-row', g.pai.cls]; if (g.pai.destaque) rowCls.push('destaque');
-      return `<tr class="${rowCls.join(' ')}"><td class="dre-tbl-sticky">${g.pai.label}</td>${tdsDe(g.pai)}</tr>`;
+      return `<tr class="${rowCls.join(' ')}"><td class="dre-tbl-sticky">${semPrefixoDre(g.pai.label)}</td>${tdsDe(g.pai)}</tr>`;
     }
     seq++;
     const groupId = `resumo-grp-${seq}`;
@@ -9339,13 +9339,13 @@ function renderTabelaResumo(linhas, colunas) {
     const paiHtml = `
       <tr class="${paiCls.join(' ')}" data-grupo-pai="${groupId}" onclick="toggleLinhaGrupo('${groupId}')" title="Clique para ver os itens deste bloco">
         <td class="dre-tbl-sticky">
-          <span class="dre-tbl-toggle-icon" id="icon-${groupId}">+</span>${g.pai.label}
+          <span class="dre-tbl-toggle-icon" id="icon-${groupId}">+</span>${semPrefixoDre(g.pai.label)}
         </td>
         ${tdsDe(g.pai)}
       </tr>`;
     const filhosHtml = g.filhos.map(f => {
       const rowCls = ['dre-tbl-row', f.cls, 'dre-tbl-row-filho', 'linha-oculta'];
-      return `<tr class="${rowCls.join(' ')}" data-grupo-filho="${groupId}"><td class="dre-tbl-sticky">${f.label}</td>${tdsDe(f)}</tr>`;
+      return `<tr class="${rowCls.join(' ')}" data-grupo-filho="${groupId}"><td class="dre-tbl-sticky">${semPrefixoDre(f.label)}</td>${tdsDe(f)}</tr>`;
     }).join('');
     return paiHtml + filhosHtml;
   }).join('');
@@ -9497,6 +9497,17 @@ const fmtBRL = (n) => {
   const v = Number(n || 0);
   return v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 });
 };
+
+// Tira o prefixo "(=) "/"(+) "/"(-) " só na hora de EXIBIR o rótulo —
+// pedido Lucas 22/07/2026 ("retirar os (=)(+)(-), mas só o texto, sem
+// tirar funcionalidade"). Aplicado no ponto de renderização (aqui),
+// não nas strings originais/chaves de RESUMO_DETALHADO_LINHAS,
+// RESUMO_POR_EMPRESA_LINHAS, DRE_ARVORE_BLOCOS, PROVA_REAL_CAIXAS etc.
+// — que continuam intactas, já que algumas são usadas como chave de
+// busca/match em outros lugares do código, não só texto de tela.
+function semPrefixoDre(s) {
+  return (typeof s === 'string') ? s.replace(/^\((?:=|\+\/-|\+|-)\)\s*/, '') : s;
+}
 
 // Alinha as colunas de TODAS as tabelas (barra fixa + resumo + cada
 // bloco) pra que fiquem exatamente na mesma largura — sem isso, cada
@@ -10354,12 +10365,12 @@ function exportResumoPeriodoToPdf() {
     dreBody.push([{ content: 'Receitas', styles: { fontStyle: 'bold' } },
                    { content: fmtBRL(dre.totalReceita), styles: { fontStyle: 'bold', halign: 'right' } }]);
     dre.receitaRows.forEach(r => {
-      dreBody.push([`   ${r.label}`, { content: fmtBRL(r.val), styles: { halign: 'right' } }]);
+      dreBody.push([`   ${semPrefixoDre(r.label)}`, { content: fmtBRL(r.val), styles: { halign: 'right' } }]);
     });
     dreBody.push([{ content: 'Despesas', styles: { fontStyle: 'bold' } },
                    { content: fmtBRL(dre.totalDespesa), styles: { fontStyle: 'bold', halign: 'right' } }]);
     dre.despesaRows.forEach(r => {
-      dreBody.push([`   ${r.label}`, { content: fmtBRL(r.val), styles: { halign: 'right' } }]);
+      dreBody.push([`   ${semPrefixoDre(r.label)}`, { content: fmtBRL(r.val), styles: { halign: 'right' } }]);
     });
     dreBody.push([
       { content: 'Resultado do período', styles: { fontStyle: 'bold', fillColor: [230, 230, 230] } },
@@ -12900,10 +12911,10 @@ function renderWaterfallDreCaixa(monthStart, monthEnd) {
     const itens = Object.entries(categorias).filter(([, v]) => v).sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]));
     const colsMeses = meses.map((_, i) => valTd(totalGrupoMes(chave, i))).join('');
     if (!mostrarSubcategorias) {
-      linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}"><td>${label}</td>${colsMeses}${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
+      linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}"><td>${semPrefixoDre(label)}</td>${colsMeses}${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
       return;
     }
-    linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}" onclick="toggleWaterfallGrupo('${key}')"><td><span class="waterfall-toggle-icon" id="wfIcon-${key}">▸</span>${label} <span class="waterfall-count">(${itens.length} categoria${itens.length === 1 ? '' : 's'})</span></td>${colsMeses}${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
+    linhas.push(`<tr class="waterfall-grupo${classeExtra ? ' ' + classeExtra : ''}" onclick="toggleWaterfallGrupo('${key}')"><td><span class="waterfall-toggle-icon" id="wfIcon-${key}">▸</span>${semPrefixoDre(label)} <span class="waterfall-count">(${itens.length} categoria${itens.length === 1 ? '' : 's'})</span></td>${colsMeses}${valTd(total)}<td class="num">${pct(total)}</td></tr>`);
     itens.forEach(([desc, v]) => {
       const colsMesesItem = meses.map((_, i) => valTd(itemMes(chave, desc, i))).join('');
       linhas.push(`<tr class="waterfall-item" data-grupo="${key}" style="display:none;"><td>${desc}</td>${colsMesesItem}${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
@@ -12911,7 +12922,7 @@ function renderWaterfallDreCaixa(monthStart, monthEnd) {
   };
   const linhaSubtotal = (label, chaveSubtotal, v) => {
     const colsMeses = meses.map((_, i) => valTd(wMeses[i].subtotais[chaveSubtotal])).join('');
-    linhas.push(`<tr class="waterfall-subtotal"><td>${label}</td>${colsMeses}${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
+    linhas.push(`<tr class="waterfall-subtotal"><td>${semPrefixoDre(label)}</td>${colsMeses}${valTd(v)}<td class="num">${pct(v)}</td></tr>`);
   };
 
   linhaGrupo('(+) Receita (Recebimento)', 'receita', w.receitaTotal, w.receitaCategorias);
@@ -13396,7 +13407,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
 
     const linhaPai = `
       <tr class="dre-tbl-row${temCategorias ? ' colapsavel' : ''}"${temCategorias ? ` onclick="toggleDreNativoConta('${rowId}')" title="Clique para ver as categorias"` : ''}>
-        <td>${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>` : ''}${l.label}</td>
+        <td>${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>` : ''}${semPrefixoDre(l.label)}</td>
         ${valoresMeses.map(v => `<td class="num">${fmtBRL(v)}</td>`).join('')}
         <td class="num">${fmtBRL(total)}</td>
         <td class="num">${fmtBRL(media)}</td>
@@ -13618,7 +13629,7 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
 
   const linha = (label, arr, negrito) => `
     <tr${negrito ? ' style="font-weight:600;"' : ''}>
-      <td>${label}</td>
+      <td>${semPrefixoDre(label)}</td>
       ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(arr[i])}</td>`).join('')}
     </tr>`;
 
@@ -13634,12 +13645,12 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
     const id = `prova-real-grp-${provaRealGrupoSeq++}`;
     const linhaTotal = `
       <tr style="font-weight:600;" class="dre-tbl-row colapsavel" onclick="toggleDreNativoConta('${id}')" title="Clique para ver o detalhe">
-        <td><span class="dre-tbl-toggle-icon" id="icon-${id}">+</span>${labelTotal}</td>
+        <td><span class="dre-tbl-toggle-icon" id="icon-${id}">+</span>${semPrefixoDre(labelTotal)}</td>
         ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(arrTotal[i])}</td>`).join('')}
       </tr>`;
     const linhasItens = Object.keys(itens).map(label => `
       <tr style="display:none;" data-grupo-conta="${id}">
-        <td>&nbsp;&nbsp;${label}</td>
+        <td>&nbsp;&nbsp;${semPrefixoDre(label)}</td>
         ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(itens[label][i])}</td>`).join('')}
       </tr>`).join('');
     return linhaTotal + linhasItens;
@@ -13691,7 +13702,7 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
     const cls = linha.destaque ? ' style="font-weight:600;"' : '';
     return `
       <tr${cls}>
-        <td>${linha.label}</td>
+        <td>${semPrefixoDre(linha.label)}</td>
         ${valoresMeses.map(v => `<td class="num">${v === null ? '—' : fmtBRL(v)}</td>`).join('')}
         <td class="num">${valoresValidos.length ? fmtBRL(total) : '—'}</td>
         <td class="num">${valoresValidos.length ? fmtBRL(media) : '—'}</td>
