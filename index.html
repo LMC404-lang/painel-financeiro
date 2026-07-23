@@ -10463,7 +10463,7 @@ try {
   carregarDashMetas(); // não precisa esperar — não bloqueia o resto, renderiza quando chegar
   const [categories, movements, receivable, payable, clients, contasCorrentes] = await Promise.all([
     sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa,natureza,transferencia,nao_exibir,nao_fluxo,categoria_superior'),
-    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_registro,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo'),
+    sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_registro,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo,cod_cc'),
     sbMultiPaged('dash_accounts_receivable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_accounts_payable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_clients?select=codigo_cliente_omie,nome_fantasia,razao_social'),
@@ -13647,43 +13647,100 @@ const BANCOS_SALDO_INICIO_MES = {
   },
 };
 
+// Rollback banco a banco (mesma lógica de calcSaldoInicialRealizado, só
+// que por conta individual em vez de agregado) — parte do saldo_atual
+// de HOJE de cada conta e desfaz os movimentos de caixa (por cod_cc)
+// entre a data-alvo e hoje. Usado no card "Bancos" pra meses ao vivo
+// (jun/2026+), reaproveitando cod_cc que já vem no financialMovements
+// (adicionado ao select em 23/07/2026 — sem precisar de tabela nova).
+function saldoBancosPorContaRollback(contasCorrentes, categories, financialMovements, empresas, dataAlvo) {
+  const contasAlvo = (contasCorrentes || []).filter(c => c.fluxo_caixa && empresas.includes(c._empresa));
+  const catByKey = buildCatByEmpresaCodigo(categories);
+  const amanha = dayjs().add(1, 'day');
+  const out = {};
+  contasAlvo.forEach(c => {
+    let movimentosDesdeInicio = 0;
+    (financialMovements || []).forEach(m => {
+      if (m._empresa !== c._empresa || Number(m.cod_cc) !== Number(c.n_cod_cc)) return;
+      if (!m.dt_pagamento) return;
+      const d = dayjs(m.dt_pagamento);
+      if (d.isBefore(dataAlvo) || !d.isBefore(amanha)) return;
+      if (m.cod_categoria) {
+        const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
+        if (isExcludedFromDfc(cat)) return;
+      }
+      const v = Number(m.val_pago || m.val_liquido || 0);
+      if (m.natureza === 'R') movimentosDesdeInicio += v;
+      else if (m.natureza === 'P') movimentosDesdeInicio -= v;
+    });
+    const label = `${c.descricao || 'Conta ' + c.n_cod_cc} (${c._empresa})`;
+    out[label] = Number(c.saldo_atual || 0) - movimentosDesdeInicio;
+  });
+  return out;
+}
+
 function renderGrupoBancos(monthStart, monthEnd) {
   const header = document.getElementById('grupoBancosHeader');
   const body = document.getElementById('grupoBancosBody');
   if (!header || !body) return;
+  if (!contasCorrentesCache || !categoriesCache || !financialMovementsCache) return;
   const d = BANCOS_SALDO_INICIO_MES;
 
-  // Só mostra os meses do congelado (Jan-Mai/26) que estiverem dentro
-  // do período De/Até selecionado — fora disso não tem dado (fica
-  // vazio, não é card pra qualquer período, é histórico fixo).
-  const idxMeses = d.meses
-    .map((chave, i) => ({ chave, i }))
-    .filter(({ chave }) => {
-      const m = dayjs(chave + '-01');
-      return !m.isBefore(monthStart.startOf('month')) && !m.isAfter(monthEnd.startOf('month'));
-    });
+  const mesesInfo = [];
+  let cursor = monthStart.startOf('month');
+  const fimLoop = monthEnd.startOf('month');
+  let guard = 0;
+  while (!cursor.isAfter(fimLoop) && guard < 24) {
+    const chave = cursor.format('YYYY-MM');
+    const live = !cursor.isBefore(EXCEL_CONGELADO_ATE);
+    mesesInfo.push({ chave, mesDayjs: cursor, live, frozenIdx: live ? -1 : d.meses.indexOf(chave) });
+    cursor = cursor.add(1, 'month');
+    guard++;
+  }
+  const mesesValidos = mesesInfo.filter(m => m.live || m.frozenIdx >= 0);
 
-  if (!idxMeses.length) {
+  if (!mesesValidos.length) {
     header.innerHTML = '<th>Banco</th>';
-    body.innerHTML = '<tr><td colspan="1" style="color:var(--bone-dim);">Sem dado congelado (Manual/Excel) para o período selecionado — só cobre Jan-Mai/2026.</td></tr>';
+    body.innerHTML = '<tr><td colspan="1" style="color:var(--bone-dim);">Sem dado (Excel nem Omie) pro período selecionado.</td></tr>';
     return;
   }
 
-  header.innerHTML = '<th>Banco</th>' + idxMeses.map(({ chave }) => `<th>${DRE_ARVORE_NOMES_MES[dayjs(chave + '-01').month()]}</th>`).join('');
-  const linhasBancos = d.labels.map(label => `
+  // Ao vivo: rollback banco a banco (KMNO+RT+NOVAH), 1x por mês.
+  const liveByMes = {};
+  mesesValidos.filter(m => m.live).forEach(m => {
+    liveByMes[m.chave] = saldoBancosPorContaRollback(contasCorrentesCache, categoriesCache, financialMovementsCache, ['KMNO', 'RT', 'NOVAH'], m.mesDayjs);
+  });
+
+  header.innerHTML = '<th>Banco</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('');
+
+  // União dos bancos que aparecem em qualquer mês (congelado ou ao
+  // vivo) — nomes de conta reais (ao vivo) não são necessariamente
+  // idênticos aos rótulos fixos do congelado.
+  const bancosSet = new Set(d.labels);
+  mesesValidos.filter(m => m.live).forEach(m => Object.keys(liveByMes[m.chave]).forEach(b => bancosSet.add(b)));
+
+  const valorBanco = (banco, m) => m.live ? Number(liveByMes[m.chave][banco] || 0) : Number((d.valores[banco] && d.valores[banco][m.frozenIdx]) || 0);
+
+  const linhasBancos = [...bancosSet].map(label => `
     <tr>
       <td>${label}</td>
-      ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(d.valores[label][i])}</td>`).join('')}
+      ${mesesValidos.map(m => `<td class="num">${fmtBRL(valorBanco(label, m))}</td>`).join('')}
     </tr>`).join('');
   const linhaTotal = `
     <tr style="font-weight:600;">
       <td>Saldo Primeiro dia do Mês (Total)</td>
-      ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(d.total[i])}</td>`).join('')}
+      ${mesesValidos.map(m => {
+        const total = m.live ? Object.values(liveByMes[m.chave]).reduce((s, v) => s + v, 0) : d.total[m.frozenIdx];
+        return `<td class="num">${fmtBRL(total)}</td>`;
+      }).join('')}
     </tr>`;
+  // Linhas extras (Depósito/Cartão de Crédito recebidos no mês) só têm
+  // fonte congelada (Excel) — meses ao vivo ficam sem essas 2 linhas,
+  // sem fonte confirmada no Omie ainda pra esse agrupamento específico.
   const linhasExtras = d.labelsExtras.map((label, k) => `
     <tr${k === 0 ? ' style="border-top:1px solid var(--line);"' : ''}>
       <td style="color:var(--bone-dim);">${label}</td>
-      ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(d.valoresExtras[label][i])}</td>`).join('')}
+      ${mesesValidos.map(m => `<td class="num">${m.live ? '—' : fmtBRL(d.valoresExtras[label][m.frozenIdx])}</td>`).join('')}
     </tr>`).join('');
   body.innerHTML = linhasBancos + linhaTotal + linhasExtras;
 }
@@ -13754,66 +13811,92 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
   const header = document.getElementById('grupoProvaRealHeader');
   const body = document.getElementById('grupoProvaRealBody');
   if (!header || !body) return;
-  const d = PROVA_REAL_CAIXAS;
+  if (!categoriesCache || !movementsCache || !contasCorrentesCache || !financialMovementsCache) return;
+  const congelado = PROVA_REAL_CAIXAS;
 
-  const idxMeses = d.meses
-    .map((chave, i) => ({ chave, i }))
-    .filter(({ chave }) => {
-      const m = dayjs(chave + '-01');
-      return !m.isBefore(monthStart.startOf('month')) && !m.isAfter(monthEnd.startOf('month'));
-    });
+  // Meses dentro do período — congelado (Jan-Mai) ou ao vivo (Jun+),
+  // mesmo padrão já usado em renderGrupoResumoPorEmpresa/Detalhado.
+  const mesesInfo = [];
+  let cursor = monthStart.startOf('month');
+  const fimLoop = monthEnd.startOf('month');
+  let guard = 0;
+  while (!cursor.isAfter(fimLoop) && guard < 24) {
+    const chave = cursor.format('YYYY-MM');
+    const live = !cursor.isBefore(EXCEL_CONGELADO_ATE);
+    mesesInfo.push({ chave, mesDayjs: cursor, live, frozenIdx: live ? -1 : congelado.meses.indexOf(chave) });
+    cursor = cursor.add(1, 'month');
+    guard++;
+  }
+  const mesesValidos = mesesInfo.filter(m => m.live || m.frozenIdx >= 0);
 
-  if (!idxMeses.length) {
+  if (!mesesValidos.length) {
     header.innerHTML = '<th>Descrição</th>';
-    body.innerHTML = '<tr><td colspan="1" style="color:var(--bone-dim);">Sem dado congelado (Manual/Excel) para o período selecionado — só cobre Jan-Mai/2026.</td></tr>';
+    body.innerHTML = '<tr><td colspan="1" style="color:var(--bone-dim);">Sem dado (Excel nem Omie) pro período selecionado.</td></tr>';
     return;
   }
 
-  header.innerHTML = '<th>Descrição</th>' + idxMeses.map(({ chave }) => `<th>${DRE_ARVORE_NOMES_MES[dayjs(chave + '-01').month()]}</th>`).join('');
+  // Ao vivo: calcula 1x por mês (reaproveitado pelas ~10 linhas abaixo).
+  const liveByMes = {};
+  mesesValidos.filter(m => m.live).forEach(m => {
+    liveByMes[m.chave] = buildProvaRealMesAoVivo(categoriesCache, movementsCache, contasCorrentesCache, financialMovementsCache, m.mesDayjs, m.mesDayjs.add(1, 'month'));
+  });
+  const dadoMes = (m, campo) => m.live ? liveByMes[m.chave][campo] : congelado[campo][m.frozenIdx];
 
-  const linha = (label, arr, negrito) => `
+  header.innerHTML = '<th>Descrição</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('');
+
+  const linha = (label, campo, negrito) => `
     <tr${negrito ? ' style="font-weight:600;"' : ''}>
       <td>${semPrefixoDre(label)}</td>
-      ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(arr[i])}</td>`).join('')}
+      ${mesesValidos.map(m => `<td class="num">${fmtBRL(dadoMes(m, campo))}</td>`).join('')}
     </tr>`;
 
   // Grupo colapsável: linha-pai (o total, sempre visível, com ▸/▾) +
   // itens de detalhe escondidos por padrão — mesmo padrão/técnica do
   // DRE Nativo (toggleDreNativoConta, corrigido 22/07/2026: usa
   // data-grupo-conta em vez de id duplicado, e classe em vez de
-  // comparar display==='' que trava no falsy). Pedido Lucas 22/07/2026:
-  // "não era pra ser colapsável também?" — bancos e empréstimos aqui
-  // tinham a lista solta, sem esconder feito o resto do painel.
+  // comparar display==='' que trava no falsy). Meses ao vivo sem
+  // detalhe disponível (itens null) ficam sem seta, só com o total.
   let provaRealGrupoSeq = 0;
-  const linhaColapsavel = (labelTotal, arrTotal, itens) => {
+  const linhaColapsavel = (labelTotal, campoTotal, campoItens) => {
     const id = `prova-real-grp-${provaRealGrupoSeq++}`;
+    const nomesItens = new Set();
+    mesesValidos.forEach(m => {
+      const itens = m.live ? liveByMes[m.chave][campoItens] : congelado[campoItens];
+      if (itens) Object.keys(itens).forEach(n => nomesItens.add(n));
+    });
+    const temItens = nomesItens.size > 0;
     const linhaTotal = `
-      <tr style="font-weight:600;" class="dre-tbl-row colapsavel" onclick="toggleDreNativoConta('${id}')" title="Clique para ver o detalhe">
-        <td><span class="dre-tbl-toggle-icon" id="icon-${id}">+</span>${semPrefixoDre(labelTotal)}</td>
-        ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(arrTotal[i])}</td>`).join('')}
+      <tr style="font-weight:600;" class="dre-tbl-row${temItens ? ' colapsavel' : ''}"${temItens ? ` onclick="toggleDreNativoConta('${id}')" title="Clique para ver o detalhe"` : ''}>
+        <td>${temItens ? `<span class="dre-tbl-toggle-icon" id="icon-${id}">+</span>` : ''}${semPrefixoDre(labelTotal)}</td>
+        ${mesesValidos.map(m => `<td class="num">${fmtBRL(dadoMes(m, campoTotal))}</td>`).join('')}
       </tr>`;
-    const linhasItens = Object.keys(itens).map(label => `
+    if (!temItens) return linhaTotal;
+    const linhasItens = [...nomesItens].sort().map(label => `
       <tr style="display:none;" data-grupo-conta="${id}">
         <td>&nbsp;&nbsp;${semPrefixoDre(label)}</td>
-        ${idxMeses.map(({ i }) => `<td class="num">${fmtBRL(itens[label][i])}</td>`).join('')}
+        ${mesesValidos.map(m => {
+          const itens = m.live ? liveByMes[m.chave][campoItens] : congelado[campoItens];
+          const v = itens && itens[label] !== undefined ? itens[label] : (m.frozenIdx >= 0 && congelado[campoItens][label] ? congelado[campoItens][label][m.frozenIdx] : 0);
+          return `<td class="num">${fmtBRL(Number(v) || 0)}</td>`;
+        }).join('')}
       </tr>`).join('');
     return linhaTotal + linhasItens;
   };
 
   let html = '';
-  html += linha('(+) Saldo Inicial', d.saldoInicial, false);
-  html += linha('(+) Entradas', d.entradas, false);
-  html += linha('(-) Saídas', d.saidas, false);
-  html += linha('(=) Saldo Calculado', d.saldoCalculado, true);
-  html += linha('(=) Saldo Líquido', d.saldoLiquido, true);
-  html += linhaColapsavel('(=) Total Recebimento Empréstimos', d.totalRecebimentoEmprestimos, d.recebimentoEmprestimos);
-  html += linhaColapsavel('(=) Total Pagamento Empréstimos', d.totalPagamentoEmprestimos, d.pagamentoEmprestimos);
-  html += linha('(=) Saldo de Caixa', d.saldoDeCaixa, true);
-  html += linhaColapsavel('(=) Saldo Real (soma dos bancos)', d.saldoReal, d.bancos);
+  html += linha('(+) Saldo Inicial', 'saldoInicial', false);
+  html += linha('(+) Entradas', 'entradas', false);
+  html += linha('(-) Saídas', 'saidas', false);
+  html += linha('(=) Saldo Calculado', 'saldoCalculado', true);
+  html += linha('(=) Saldo Líquido', 'saldoLiquido', true);
+  html += linhaColapsavel('(=) Total Recebimento Empréstimos', 'totalRecebimentoEmprestimos', 'recebimentoEmprestimos');
+  html += linhaColapsavel('(=) Total Pagamento Empréstimos', 'totalPagamentoEmprestimos', 'pagamentoEmprestimos');
+  html += linha('(=) Saldo de Caixa', 'saldoDeCaixa', true);
+  html += linhaColapsavel('(=) Saldo Real (soma dos bancos)', 'saldoReal', 'bancos');
   html += `<tr style="font-weight:700;background:rgba(255,255,255,0.04);">
     <td>(=) Diferença (Real − Calculado)</td>
-    ${idxMeses.map(({ i }) => {
-      const v = d.diferenca[i];
+    ${mesesValidos.map(m => {
+      const v = dadoMes(m, 'diferenca');
       return `<td class="num" style="${v < 0 ? 'color:var(--red);' : ''}">${fmtBRL(v)}</td>`;
     }).join('')}
   </tr>`;
@@ -13875,6 +13958,89 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     custoInsumos, custoServicos, custoMaoObra, cmv, royalties, margemContribuicao,
     custoAdm, despesasComerciais, ebitda, despesasFinanceiras, receitasFinanceiras, lucroLiquido,
     distribuicao, capex, refis, saldoLiquido, recebimentoEmprestimos, pagamentoEmprestimos, saldoCaixa,
+  };
+}
+
+// ===================================================================
+// Prova Real dos Caixas — versão AO VIVO (jun/2026+). Escopo KMNO+RT,
+// SEM Novah — confirmado abrindo a planilha original: o "RESULTADO
+// LIQUIDO"/"SALDO LIQUIDO" da aba "KMNO DFC (caixa)" (linhas 187-223)
+// é o P&L PADRÃO da KMNO sozinha (RT não tem dado real, contribui ~0),
+// e os "bancos" da prova real (Brasil KMNO/RT, Sicoob, Itaú, Sicredi
+// KMNO/RT, BTG etc.) são os mesmos do card "Bancos" MENOS a Novah.
+//
+// Fórmulas confirmadas batendo exato contra os 5 meses congelados
+// (Jan-Mai), linha a linha na planilha original:
+//   Saldo Líquido = RESULTADO LÍQUIDO(KMNO) − Distribuição − Capex − Refis
+//     onde RESULTADO LÍQUIDO = EBITDA − Desp.Financeiras + Rec.Financeiras
+//   Saldo de Caixa = Saldo Líquido + Recebimento Empréstimos − Pagamento Empréstimos
+//   Saídas = Deduções + CustoInsumos + CustoMãoObra + Royalties + CustoAdm
+//            + DespesasComerciais + ReceitasFinanceiras(somada, não subtraída
+//              — confirmado na fórmula original da planilha, célula J241)
+//            + Capex + PagamentoEmpréstimos + Distribuição + Refis
+//            (Despesas Financeiras NÃO entram nessa soma — confirmado
+//            comparando com a fórmula original, célula por célula)
+//   Saldo Calculado = Saldo Inicial + Entradas − Saídas
+//   Saldo Real(mês) = saldo bancário (KMNO+RT) no INÍCIO do mês seguinte
+//     (= mesmo conceito do "Saldo Primeiro dia do Mês", 1 mês à frente)
+//
+// NÃO implementado ainda pra meses ao vivo: o detalhe banco-a-banco
+// dentro de "Saldo Real" (fica só o total) — precisaria de uma nova
+// busca em dash_current_account_transactions (não usada hoje em
+// loadCompanyData) pra atribuir cada movimento a uma conta específica.
+// O total (que é o que importa pra pegar divergência) já funciona.
+function saldoBancarioRollback(contasCorrentes, categories, financialMovements, empresas, dataAlvo) {
+  const contasAlvo = (contasCorrentes || []).filter(c => c.fluxo_caixa && empresas.includes(c._empresa));
+  const saldoAtualTotal = contasAlvo.reduce((s, c) => s + Number(c.saldo_atual || 0), 0);
+  const catByKey = buildCatByEmpresaCodigo(categories);
+  const amanha = dayjs().add(1, 'day');
+  let movimentosDesdeInicio = 0;
+  (financialMovements || []).forEach(m => {
+    if (!empresas.includes(m._empresa)) return;
+    if (!m.dt_pagamento) return;
+    const d = dayjs(m.dt_pagamento);
+    if (d.isBefore(dataAlvo) || !d.isBefore(amanha)) return;
+    if (m.cod_categoria) {
+      const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
+      if (isExcludedFromDfc(cat)) return;
+    }
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (m.natureza === 'R') movimentosDesdeInicio += v;
+    else if (m.natureza === 'P') movimentosDesdeInicio -= v;
+  });
+  return saldoAtualTotal - movimentosDesdeInicio;
+}
+
+function buildProvaRealMesAoVivo(categories, movements, contasCorrentes, financialMovements, monthStart, monthEnd) {
+  const kmno = buildResumoCategoriasMes('KMNO', categories, movements, monthStart, monthEnd);
+  const soma = (chave) => Object.values(kmno[chave] || {}).reduce((s, v) => s + v, 0);
+
+  const entradas = soma('receita');
+  const ebitda = (soma('receita') - soma('deducoes')) - (soma('custoInsumos') + soma('custoMaoObra')) - soma('royalties') - soma('custoAdm') - soma('despesasComerciais');
+  const resultadoLiquido = ebitda - soma('despesasFinanceiras') + soma('receitasFinanceiras');
+  const saldoLiquido = resultadoLiquido - soma('distribuicao') - soma('capex') - soma('refis');
+  const recebimentoEmprestimos = soma('recebimentoEmprestimos');
+  const pagamentoEmprestimos = soma('pagamentoEmprestimos');
+  const saldoDeCaixa = saldoLiquido + recebimentoEmprestimos - pagamentoEmprestimos;
+
+  const saidas = soma('deducoes') + soma('custoInsumos') + soma('custoMaoObra') + soma('royalties') + soma('custoAdm')
+    + soma('despesasComerciais') + soma('receitasFinanceiras') + soma('capex') + pagamentoEmprestimos
+    + soma('distribuicao') + soma('refis');
+
+  const saldoInicial = saldoBancarioRollback(contasCorrentes, categories, financialMovements, ['KMNO', 'RT'], monthStart);
+  const saldoCalculado = saldoInicial + entradas - saidas;
+  const saldoReal = saldoBancarioRollback(contasCorrentes, categories, financialMovements, ['KMNO', 'RT'], monthEnd);
+  const diferenca = saldoReal - saldoCalculado;
+
+  return {
+    saldoInicial, entradas, saidas, saldoCalculado, saldoLiquido,
+    recebimentoEmprestimos: itensParaCategoria(Object.entries(kmno.recebimentoEmprestimos || {}).map(([nome, val]) => ({ nome, val, natureza: 'R' }))),
+    totalRecebimentoEmprestimos: recebimentoEmprestimos,
+    pagamentoEmprestimos: itensParaCategoria(Object.entries(kmno.pagamentoEmprestimos || {}).map(([nome, val]) => ({ nome, val, natureza: 'P' }))),
+    totalPagamentoEmprestimos: pagamentoEmprestimos,
+    saldoDeCaixa,
+    bancos: null, // sem detalhe banco-a-banco ao vivo ainda — ver nota acima
+    saldoReal, diferenca,
   };
 }
 
