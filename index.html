@@ -2400,57 +2400,15 @@
       </div>
     </div>
 
-    <div class="nav-menu-grid">
-
-      <div class="nav-card" onclick="switchView('viewBlocks')">
-        <div>
-          <div class="nav-card-title">DRE por Competência</div>
-          <div class="nav-card-desc">Árvore de contas completa por empresa (RT, KMNO, Blue Line/Novah), com ranking de categorias dentro de cada bloco.</div>
-        </div>
-      </div>
-
-      <div class="nav-card" onclick="switchView('viewDfcArvore')">
-        <div>
-          <div class="nav-card-title">DRE por Caixa</div>
-          <div class="nav-card-desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie: Saldo Inicial, Transferências, Receitas, Despesas, Resultado e Limite de Crédito.</div>
-        </div>
-      </div>
-
-      <!-- Reconectado ao menu em 21/07/2026 (pedido reunião 21.07) — a view
-           já existia no HTML (viewCharts) mas tinha ficado órfã (sem
-           nav-card) desde uma reorganização anterior. Reaproveitada aqui
-           e com as 3 análises novas da planilha adicionadas no topo dela
-           (ver renderAnalisesGraficoIndicadores). -->
-      <div class="nav-card" onclick="switchView('viewCharts')">
-        <div>
-          <div class="nav-card-title">Gráficos e Indicadores</div>
-          <div class="nav-card-desc">Peças Vendidas x Peças Faturadas, Vendas x Faturamento e Faturamento por Empresa ano a ano — mais os gráficos gerais de receitas, despesas e fluxo de caixa.</div>
-        </div>
-      </div>
-
-      <!-- Novo card pedido na reunião 21.07 ("Impostos e Análises"). Dados
-           hoje são os da planilha (Jan-Mai/26 Excel, copiados 1:1) — ainda
-           sem pipeline vivo do Omie pra Impostos mês a mês; ver nota no
-           topo da view. -->
-      <div class="nav-card" onclick="switchView('viewImpostos')">
-        <div>
-          <div class="nav-card-title">Impostos e Análises</div>
-          <div class="nav-card-desc">IRPJ, CSLL, PIS, COFINS, Difal e ICMS mês a mês x Receita Bruta (KMNO).</div>
-        </div>
-      </div>
-
-    </div>
-
-  </div>
-
-
-
-  <!-- ===== VIEW: GRÁFICOS E INDICADORES ===== -->
-  <div id="viewCharts" class="view-container">
-    <div class="btn-back-container">
-      <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
-    </div>
-
+    <!-- Movido pra cá em 23/07/2026 (pedido reunião): a página inicial
+         deve MOSTRAR os gráficos e indicadores direto, sem precisar
+         clicar em nenhum card — todo o conteúdo que antes vivia em
+         "viewCharts" (Gráficos e Indicadores) foi movido pra dentro do
+         Menu. O nav-card que levava lá foi removido (não faz mais
+         sentido, o conteúdo já está na própria página). Os cálculos
+         (renderAnalisesGraficoIndicadores, renderVendasFaturamento,
+         redraw dos gráficos) agora rodam direto no load do dashboard
+         em vez de esperar um switchView('viewCharts') — ver showDashboard(). -->
     <!-- Vendas x Faturamento (comparativo 3 empresas, mês a mês) —
          realocado pra cá em 21/07/2026: na aba "Reunião 21.07" da
          planilha, essa tabela (imagem linha 182) aparece dentro do
@@ -2617,7 +2575,13 @@
       </div>
     </div>
 
-    <div class="section" id="sectionContasPagarAnalises">
+    <!-- Escondido a pedido de Lucas em 23/07/2026 (mesmo critério do
+         "Previsão de Caixa 30/60 dias": "futuro não importa, só as
+         informações de agora/caixa" — Aging e previsão de pagamento são
+         sobre títulos AINDA NÃO vencidos/pagos, não caixa realizado.
+         JS/render (renderPagarAnalises) NÃO foi removido — só a
+         exibição, via display:none. Reativar se precisar. -->
+    <div class="section" id="sectionContasPagarAnalises" style="display:none;">
       <div class="section-head">
         <div class="section-head-title">
           <h2>Análises — Contas a Pagar (A Vencer)</h2>
@@ -2712,7 +2676,42 @@
       </div>
     </div>
 
+
+    <div class="nav-menu-grid">
+
+      <div class="nav-card" onclick="switchView('viewBlocks')">
+        <div>
+          <div class="nav-card-title">DRE por Competência</div>
+          <div class="nav-card-desc">Árvore de contas completa por empresa (RT, KMNO, Blue Line/Novah), com ranking de categorias dentro de cada bloco.</div>
+        </div>
+      </div>
+
+      <div class="nav-card" onclick="switchView('viewDfcArvore')">
+        <div>
+          <div class="nav-card-title">DRE por Caixa</div>
+          <div class="nav-card-desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie: Saldo Inicial, Transferências, Receitas, Despesas, Resultado e Limite de Crédito.</div>
+        </div>
+      </div>
+
+
+      <!-- Novo card pedido na reunião 21.07 ("Impostos e Análises"). Dados
+           hoje são os da planilha (Jan-Mai/26 Excel, copiados 1:1) — ainda
+           sem pipeline vivo do Omie pra Impostos mês a mês; ver nota no
+           topo da view. -->
+      <div class="nav-card" onclick="switchView('viewImpostos')">
+        <div>
+          <div class="nav-card-title">Impostos e Análises</div>
+          <div class="nav-card-desc">IRPJ, CSLL, PIS, COFINS, Difal e ICMS mês a mês x Receita Bruta (KMNO).</div>
+        </div>
+      </div>
+
+    </div>
+
   </div>
+
+
+
+  <!-- ===== VIEW: GRÁFICOS E INDICADORES ===== -->
 
   <!-- ===== VIEW: METAS & TENDÊNCIAS ===== -->
   <div id="viewProjections" class="view-container">
@@ -3519,11 +3518,6 @@ function showDashboard() {
   populateCompanyMultiselect();
   setupCompanyMultiselectToggle();
   loadCompanyData();
-
-  // Pedido reunião 23/07/2026: entrar no dashboard já em "Gráficos e
-  // Indicadores" em vez do Menu — switchView já cuida do carregamento
-  // de dados/redesenho de gráficos necessário pra essa view.
-  switchView('viewCharts');
 
   // Botão de solicitações pendentes — só visível para admin
   const btnReq = document.getElementById('btnRequests');
@@ -12151,6 +12145,20 @@ function renderForSelectedMonth() {
     renderInadimplencia(movementsCache, receivableCache, payableCache, grupoDe);
     renderPagarAnalises(payableCache, grupoDe);
   } catch (e) { console.error('renderGrupoDfc falhou:', e); }
+
+  // Conteúdo que antes só rodava ao clicar em "Gráficos e Indicadores"
+  // (switchView('viewCharts')) — movido pra dentro do Menu em
+  // 23/07/2026 (pedido reunião: página inicial já mostra os gráficos,
+  // sem precisar clicar em nada), então precisa rodar aqui direto.
+  try { renderAnalisesGraficoIndicadores(); } catch (e) { console.error('renderAnalisesGraficoIndicadores falhou:', e); }
+  (async () => {
+    try {
+      if (!dreArvoreCategoriesCache || !dreArvoreMovementsCache) {
+        await carregarDadosDreArvoreTodasEmpresas();
+      }
+      renderVendasFaturamento();
+    } catch (e) { console.error('renderVendasFaturamento falhou:', e); }
+  })();
 }
 
 // Preenche a view "Resumo Consolidado": números de DRE (competência) e DFC (caixa)
