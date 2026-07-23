@@ -2252,16 +2252,14 @@
       <div class="section-head">
         <h2>Grupo DRE Caixa — Dashboard Financeiro</h2>
         <div class="desc">Fluxo de caixa consolidado (KMNO + Blue Line/Novah + RT), para o período De/Até selecionado no topo. Valores em R$.</div>
+        <div class="desc" style="margin-top:4px;">Meses marcados com <strong>•</strong> no cabeçalho das tabelas abaixo são calculados ao vivo a partir do Omie/Supabase (jun/2026 em diante). Meses sem marcação são valores fixos, vindos da planilha Excel de referência (jan-mai/2026, que não é mais atualizada).</div>
       </div>
 
       <!-- RESUMO detalhado, linha a linha, igual à planilha (pedido
            reunião 21.07, linha 6+28: "Em cima da Pag do BI começa com o
            resumo" / "Depois vem o detalhado igual o EXCEL"). Jan-Mai/26
-           = valores fixos da planilha; Jun/26 em diante ainda não tem
-           fonte viva pra ESSE detalhe linha a linha (só os 5 KPIs acima
-           são espelhados ao vivo) — aparece "—" até isso ser fechado
-           com o Leo (ver linha 3 da aba: "fazer com o Leo os DREs de
-           Junho no BI"). -->
+           = valores fixos da planilha; Jun/26 em diante calculado ao
+           vivo (KMNO+NOVAH, buildResumoDetalhadoMesAoVivo — 23/07/2026). -->
       <div class="bloco-card" style="margin-bottom:14px;">
         <div class="bloco-head"><div class="bloco-titulo">Resumo (Grupo, R$)</div></div>
         <div class="bloco-body">
@@ -2276,10 +2274,10 @@
 
       <!-- Bancos — Saldo Primeiro dia do Mês (pedido reunião 21.07,
            linha 28: "Depois vem o detalhado igual o EXCEL = BANCO mais
-           as linhas do DRE"). Dado 100% Manual/Excel — não vem do
-           Omie/Supabase (não existe relação lançamento→conta bancária
-           no banco de dados hoje, só dá pra fazer rollback do TOTAL, não
-           banco a banco — por isso esse card é fixo, igual a planilha). -->
+           as linhas do DRE"). Jan-Mai/26 = fixo da planilha (inclui
+           Novah a partir de 23/07/2026). Jun/26+ = rollback banco a
+           banco ao vivo (KMNO+RT+NOVAH, saldoBancosPorContaRollback —
+           23/07/2026), usando cod_cc em dash_financial_movements. -->
       <div class="bloco-card" style="margin-bottom:14px;">
         <div class="bloco-head"><div class="bloco-titulo">Bancos — Saldo Primeiro dia do Mês (R$)</div></div>
         <div class="bloco-body">
@@ -2295,11 +2293,11 @@
       <!-- Prova Real dos Caixas (pedido reunião 21.07, linha 42: "No DFC
            terminar assim para prova real dos caixas"). Confere se
            Saldo Inicial + Entradas − Saídas (calculado) bate com o
-           saldo REAL somado dos bancos no fim do mês — a diferença
-           mostra o quanto o fluxo de caixa calculado diverge da
-           realidade bancária. Dado Manual/Excel, mesma limitação do
-           card de Bancos acima (sem vínculo lançamento→conta no banco
-           de dados). -->
+           saldo REAL somado dos bancos no fim do mês. Jan-Mai/26 = fixo
+           da planilha (KMNO+RT, sem Novah). Jun/26+ = calculado ao vivo
+           (buildProvaRealMesAoVivo — 23/07/2026); detalhe banco-a-banco
+           dentro de "Saldo Real" ainda não tem versão ao vivo (só o
+           total), precisaria de dash_current_account_transactions. -->
       <div class="bloco-card" style="margin-bottom:14px;">
         <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas (R$)</div></div>
         <div class="bloco-body">
@@ -2562,8 +2560,11 @@
       </div>
       <!-- Ocultos do front-end a pedido de Lucas em 22/07/2026 (muitos
            títulos aparecendo como "venceu há X dias" mesmo com status
-           "A VENCER" — investigar se é lag de sync ou dado real do Omie
-           antes de reexibir). JS/render (renderInadimplencia,
+           "A VENCER" — investigado em 23/07/2026: é status desatualizado
+           no próprio Omie, não é bug de sync/dashboard — 132 títulos KMNO
+           / 13 Novah em Contas a Receber nessa situação, valor real.
+           Mesmo assim, mantido oculto até Lucas decidir reexibir — não é
+           decisão do Claude. JS/render (renderInadimplencia,
            filterAtrasadoReceber, filterAVencerPagar) NÃO foi removido —
            só a exibição destes 2 cards, via display:none. -->
       <div class="summary-card" id="cardInadimplencia" style="display:none;">
