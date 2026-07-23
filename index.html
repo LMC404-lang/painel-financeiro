@@ -13985,11 +13985,9 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
 //   Saldo Real(mês) = saldo bancário (KMNO+RT) no INÍCIO do mês seguinte
 //     (= mesmo conceito do "Saldo Primeiro dia do Mês", 1 mês à frente)
 //
-// NÃO implementado ainda pra meses ao vivo: o detalhe banco-a-banco
-// dentro de "Saldo Real" (fica só o total) — precisaria de uma nova
-// busca em dash_current_account_transactions (não usada hoje em
-// loadCompanyData) pra atribuir cada movimento a uma conta específica.
-// O total (que é o que importa pra pegar divergência) já funciona.
+// Detalhe banco-a-banco dentro de "Saldo Real" implementado em
+// 23/07/2026, reaproveitando saldoBancosPorContaRollback (mesma função
+// do card "Bancos" — usa cod_cc já incluído no select).
 function saldoBancarioRollback(contasCorrentes, categories, financialMovements, empresas, dataAlvo) {
   const contasAlvo = (contasCorrentes || []).filter(c => c.fluxo_caixa && empresas.includes(c._empresa));
   const saldoAtualTotal = contasAlvo.reduce((s, c) => s + Number(c.saldo_atual || 0), 0);
@@ -14040,7 +14038,7 @@ function buildProvaRealMesAoVivo(categories, movements, contasCorrentes, financi
     pagamentoEmprestimos: itensParaCategoria(Object.entries(kmno.pagamentoEmprestimos || {}).map(([nome, val]) => ({ nome, val, natureza: 'P' }))),
     totalPagamentoEmprestimos: pagamentoEmprestimos,
     saldoDeCaixa,
-    bancos: null, // sem detalhe banco-a-banco ao vivo ainda — ver nota acima
+    bancos: saldoBancosPorContaRollback(contasCorrentes, categories, financialMovements, ['KMNO', 'RT'], monthEnd),
     saldoReal, diferenca,
   };
 }
