@@ -3339,6 +3339,12 @@ const DASHBOARD = {
 const supabaseClient = supabase.createClient(DASHBOARD.url, DASHBOARD.anonKey);
 let currentSession = null;
 let currentProfile = null;
+// O Supabase dispara onAuthStateChange (TOKEN_REFRESHED/INITIAL_SESSION/SIGNED_IN)
+// toda vez que a aba volta a ter foco (alt-tab, troca de aba, clique) — não só no
+// login de verdade. Sem essa trava, showDashboard() rodava de novo a cada foco,
+// resetando selectedCompanyKeys pro padrão e refazendo loadCompanyData() do zero
+// (por isso "carregando…" ficava piscando e a seleção de 1 empresa voltava pras 3).
+let dashboardInitialized = false;
 
 async function initAuth() {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -3346,6 +3352,7 @@ async function initAuth() {
     currentSession = session;
     await loadProfile(session.user.id);
     showDashboard();
+    dashboardInitialized = true;
   } else {
     showLogin();
   }
@@ -3353,10 +3360,13 @@ async function initAuth() {
   supabaseClient.auth.onAuthStateChange(async (event, session) => {
     currentSession = session;
     if (session) {
+      if (dashboardInitialized) return; // só revalida o token, não re-renderiza nem refaz fetch
       await loadProfile(session.user.id);
       showDashboard();
+      dashboardInitialized = true;
     } else {
       currentProfile = null;
+      dashboardInitialized = false;
       showLogin();
     }
   });
