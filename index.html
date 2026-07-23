@@ -429,7 +429,7 @@
     .fin-inad-grid { grid-template-columns: 1fr; }
   }
   table.fin-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; }
-  .fin-tbl th, .fin-tbl td { padding: 6px 8px; text-align: left; border-bottom: 1px solid var(--line); }
+  .fin-tbl th, .fin-tbl td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--line); }
   .fin-tbl th { color: var(--bone-dim); font-weight: 500; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; }
   .fin-tbl td.num { font-family: 'IBM Plex Mono', monospace; text-align: right; }
   .fin-tbl .status-pago { color: var(--green); }
@@ -791,7 +791,7 @@
     font-size: 11.5px;
   }
   .dre-tbl th, .dre-tbl td {
-    padding: 7px 10px;
+    padding: 10px 15px;
     text-align: right;
     white-space: nowrap;
     border-bottom: 1px solid var(--line-soft);
@@ -2682,7 +2682,12 @@
          representando o DFC aqui. O cálculo (buildDfc) segue em uso para
          o card-resumo "Saldo de Caixa" e o PDF de exportação do período. -->
 
-    <div class="section" id="sectionForecast">
+    <!-- Escondido a pedido de Lucas em 23/07/2026: "futuro não importa,
+         só as informações de agora/caixa" — previsão de 30/60 dias é
+         projeção (pode entrar/pode sair), não caixa realizado. JS/render
+         (forecast30Body/forecast60Body) NÃO foi removido — só a exibição,
+         via display:none. Reativar se algo precisar dessa informação. -->
+    <div class="section" id="sectionForecast" style="display:none;">
       <div class="section-head">
         <h2>Previsão de caixa</h2>
         <div class="desc">Contas a pagar e a receber já lançadas, com vencimento nos próximos 30 e 60 dias (ainda não liquidadas).</div>
@@ -3514,6 +3519,11 @@ function showDashboard() {
   populateCompanyMultiselect();
   setupCompanyMultiselectToggle();
   loadCompanyData();
+
+  // Pedido reunião 23/07/2026: entrar no dashboard já em "Gráficos e
+  // Indicadores" em vez do Menu — switchView já cuida do carregamento
+  // de dados/redesenho de gráficos necessário pra essa view.
+  switchView('viewCharts');
 
   // Botão de solicitações pendentes — só visível para admin
   const btnReq = document.getElementById('btnRequests');
@@ -4851,7 +4861,7 @@ function renderCardEmprestimosDividendosHtml(linhas) {
   }
   const total = linhas.reduce((s, l) => s + l.val, 0);
   const rows = linhas.map(l => `<tr class="dre-tbl-row"><td class="dre-tbl-sticky">${l.label}</td><td style="text-align:right;">${fmtBRL(l.val)}</td></tr>`).join('');
-  return `<div class="dre-tbl-wrap" style="margin-bottom:18px;"><table class="dre-tbl">
+  return `<div class="dre-tbl-wrap dre-tbl-wrap-nosync" style="margin-bottom:18px;"><table class="dre-tbl">
     <thead><tr><th>Empréstimos &amp; Dividendos <span style="font-weight:400;font-size:11px;color:var(--bone-dim);">(informativo — não entra no resultado)</span></th><th>Valor</th></tr></thead>
     <tbody>${rows}<tr class="dre-tbl-row" style="font-weight:700;"><td class="dre-tbl-sticky">Total</td><td style="text-align:right;">${fmtBRL(total)}</td></tr></tbody>
   </table></div>`;
@@ -4917,7 +4927,7 @@ function renderResumoNativoHtml(linhas) {
     <td class="dre-tbl-sticky">${semPrefixoDre(l.label)}</td>
     <td style="text-align:right;">${fmtBRL(l.val)}</td>
   </tr>`).join('');
-  return `<div class="dre-tbl-wrap" style="margin-bottom:18px;"><table class="dre-tbl">
+  return `<div class="dre-tbl-wrap dre-tbl-wrap-nosync" style="margin-bottom:18px;"><table class="dre-tbl">
     <thead><tr><th>Resumo (baseado no codigo_dre nativo do Omie)</th><th>Valor</th></tr></thead>
     <tbody>${rows}</tbody>
   </table></div>`;
@@ -9145,10 +9155,11 @@ async function renderComercial() {
 
     // ---- Gráfico: Ticket Médio — evolução mensal (ano corrente) ----
     const inicioAno = monthEnd.startOf('year');
+    const fimAno = monthEnd.subtract(1, 'month'); // monthEnd é exclusivo (1º dia do mês seguinte ao selecionado) — sem o subtract, incluía 1 mês a mais
     const mesesAno = [];
     let cursorMes = inicioAno;
     let guardMeses = 0;
-    while ((cursorMes.isBefore(monthEnd) || cursorMes.isSame(monthEnd, 'month')) && guardMeses < 12) {
+    while ((cursorMes.isBefore(fimAno) || cursorMes.isSame(fimAno, 'month')) && guardMeses < 12) {
       mesesAno.push(cursorMes);
       cursorMes = cursorMes.add(1, 'month');
       guardMeses++;
@@ -9643,9 +9654,14 @@ function ajustarStickyHeaderTabela(rootEl) {
     if (barraWrap && origem !== barraWrap) barraWrap.scrollLeft = scrollLeft;
     // Só sincroniza wraps que de fato contêm uma tabela .dre-tbl (meses/
     // Total/Média) — exclui .fin-tbl (Financiamentos/Inadimplência, que
-    // tem colunas totalmente diferentes e não deve rolar junto).
+    // tem colunas totalmente diferentes e não deve rolar junto) E exclui
+    // .dre-tbl-wrap-nosync (Resumo Cascata / Empréstimos-Dividendos —
+    // só têm 2 colunas, sem mês nenhum pra alinhar; sincronizar essas
+    // com a tabela grande de 13 colunas fazia o scrollLeft delas
+    // "estourar" pro fim, mostrando só vazio + barra de rolagem gigante
+    // — bug reportado na reunião 23/07, print confirmou).
     document.querySelectorAll('.dre-tbl-wrap').forEach(wrap => {
-      if (wrap === origem || !wrap.querySelector('table.dre-tbl')) return;
+      if (wrap === origem || wrap.classList.contains('dre-tbl-wrap-nosync') || !wrap.querySelector('table.dre-tbl')) return;
       wrap.scrollLeft = scrollLeft;
     });
     sincronizando = false;
@@ -9658,7 +9674,7 @@ function ajustarStickyHeaderTabela(rootEl) {
   if (container) {
     container.addEventListener('scroll', (e) => {
       const alvo = e.target;
-      if (alvo.classList?.contains('dre-tbl-wrap') && alvo.querySelector('table.dre-tbl')) {
+      if (alvo.classList?.contains('dre-tbl-wrap') && !alvo.classList.contains('dre-tbl-wrap-nosync') && alvo.querySelector('table.dre-tbl')) {
         sincronizar(alvo);
       }
     }, true);
@@ -12214,7 +12230,7 @@ function buildMetricasGrupoComExcel(categories, movements, monthStart, monthEnd)
   const acumulado = {}; campos.forEach(c => acumulado[c] = 0);
 
   let cursor = monthStart.startOf('month');
-  const fim = monthEnd.startOf('month');
+  const fim = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo (1º dia do mês seguinte ao selecionado) — sem o subtract, incluía 1 mês a mais
   while (!cursor.isAfter(fim)) {
     const chave = cursor.format('YYYY-MM');
     const congelado = EXCEL_HISTORICO_GRUPO_DFC[chave];
@@ -12281,9 +12297,13 @@ function renderResumoCapital(monthStart, monthEnd) {
   // pedido reunião 21.07 — "Saldo Bancos em 01.01.2026 ... Manual
   // (Excel)"). Não recalcula mais via rollback do Supabase.
   const SALDO_BANCOS_INICIO_EXCEL = -3382509;
-  // Saldo Bancos Último Dia do Mês Anterior: continua Omie/ao vivo
-  // (rollback a partir do saldo_atual de hoje).
-  const fimMesAnteriorFixo = dayjs().startOf('month');
+  // Saldo Bancos Último Dia do Mês Anterior: Omie/ao vivo (rollback a
+  // partir do saldo_atual de hoje). Corrigido 23/07/2026 (pedido
+  // reunião): antes usava sempre dayjs() (mês atual REAL), ignorando o
+  // período De/Até selecionado — o card "no Período" não respeitava o
+  // período. Agora usa o fim do período selecionado (monthEnd já é o
+  // 1º dia do mês seguinte ao "Até" escolhido).
+  const fimMesAnteriorFixo = monthEnd;
   const saldoInicio = SALDO_BANCOS_INICIO_EXCEL;
   const saldoFim = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', fimMesAnteriorFixo);
 
@@ -12325,7 +12345,7 @@ function renderResumoCapital(monthStart, monthEnd) {
   // meses Jun/2026 em diante.
   let capex = 0, refis = 0;
   let cursorCR = monthStart.startOf('month');
-  const fimCR = monthEnd.startOf('month');
+  const fimCR = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo — sem o subtract, incluía 1 mês a mais
   let guardCR = 0;
   while (!cursorCR.isAfter(fimCR) && guardCR < 24) {
     const chave = cursorCR.format('YYYY-MM');
@@ -13485,7 +13505,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const chavesFrozenOrdem = Object.keys(RESUMO_DETALHADO_MESES); // '2026-01'..'2026-05', pra achar o índice do array congelado
   const mesesInfo = [];
   let cursor = monthStart.startOf('month');
-  const fimLoop = monthEnd.startOf('month');
+  const fimLoop = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo (1º dia do mês seguinte) — sem o subtract, incluía 1 mês a mais
   let guard = 0;
   while (!cursor.isAfter(fimLoop) && guard < 24) {
     const chave = cursor.format('YYYY-MM');
@@ -13516,7 +13536,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     liveByMes[m.chave] = buildResumoCategoriasMes(empresaKey, categoriesCache, movementsCache, m.mesDayjs, m.mesDayjs.add(1, 'month'));
   });
 
-  header.innerHTML = '<th>Descrição</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('') + '<th>Total</th><th>Média</th>';
+  header.innerHTML = '<th class="dre-tbl-sticky">Descrição</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('') + '<th>Total</th><th>Média</th>';
 
   let seq = 0;
   const linhas = RESUMO_POR_EMPRESA_LINHAS.map(l => {
@@ -13544,7 +13564,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
 
     const linhaPai = `
       <tr class="dre-tbl-row${temCategorias ? ' colapsavel' : ''}"${temCategorias ? ` onclick="toggleDreNativoConta('${rowId}')" title="Clique para ver as categorias"` : ''}>
-        <td>${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>` : ''}${semPrefixoDre(l.label)}</td>
+        <td class="dre-tbl-sticky">${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>` : ''}${semPrefixoDre(l.label)}</td>
         ${valoresMeses.map(v => `<td class="num">${fmtBRL(v)}</td>`).join('')}
         <td class="num">${fmtBRL(total)}</td>
         <td class="num">${fmtBRL(media)}</td>
@@ -13560,7 +13580,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       const mediaCat = valoresCat.length ? totalCat / valoresCat.length : 0;
       return `
         <tr class="dre-tbl-row" style="display:none;" data-grupo-conta="${rowId}">
-          <td style="padding-left:24px;color:var(--bone-dim);font-size:12px;">${catLabel}</td>
+          <td class="dre-tbl-sticky" style="padding-left:24px;color:var(--bone-dim);font-size:12px;">${catLabel}</td>
           ${valoresCat.map(v => `<td class="num">${fmtBRL(v)}</td>`).join('')}
           <td class="num">${fmtBRL(totalCat)}</td>
           <td class="num">${fmtBRL(mediaCat)}</td>
@@ -13689,7 +13709,7 @@ function renderGrupoBancos(monthStart, monthEnd) {
 
   const mesesInfo = [];
   let cursor = monthStart.startOf('month');
-  const fimLoop = monthEnd.startOf('month');
+  const fimLoop = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo (1º dia do mês seguinte) — sem o subtract, incluía 1 mês a mais
   let guard = 0;
   while (!cursor.isAfter(fimLoop) && guard < 24) {
     const chave = cursor.format('YYYY-MM');
@@ -13712,7 +13732,7 @@ function renderGrupoBancos(monthStart, monthEnd) {
     liveByMes[m.chave] = saldoBancosPorContaRollback(contasCorrentesCache, categoriesCache, financialMovementsCache, ['KMNO', 'RT', 'NOVAH'], m.mesDayjs);
   });
 
-  header.innerHTML = '<th>Banco</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('');
+  header.innerHTML = '<th class="dre-tbl-sticky">Banco</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('');
 
   // União dos bancos que aparecem em qualquer mês (congelado ou ao
   // vivo) — nomes de conta reais (ao vivo) não são necessariamente
@@ -13724,12 +13744,12 @@ function renderGrupoBancos(monthStart, monthEnd) {
 
   const linhasBancos = [...bancosSet].map(label => `
     <tr>
-      <td>${label}</td>
+      <td class="dre-tbl-sticky">${label}</td>
       ${mesesValidos.map(m => `<td class="num">${fmtBRL(valorBanco(label, m))}</td>`).join('')}
     </tr>`).join('');
   const linhaTotal = `
     <tr style="font-weight:600;">
-      <td>Saldo Primeiro dia do Mês (Total)</td>
+      <td class="dre-tbl-sticky">Saldo Primeiro dia do Mês (Total)</td>
       ${mesesValidos.map(m => {
         const total = m.live ? Object.values(liveByMes[m.chave]).reduce((s, v) => s + v, 0) : d.total[m.frozenIdx];
         return `<td class="num">${fmtBRL(total)}</td>`;
@@ -13740,7 +13760,7 @@ function renderGrupoBancos(monthStart, monthEnd) {
   // sem fonte confirmada no Omie ainda pra esse agrupamento específico.
   const linhasExtras = d.labelsExtras.map((label, k) => `
     <tr${k === 0 ? ' style="border-top:1px solid var(--line);"' : ''}>
-      <td style="color:var(--bone-dim);">${label}</td>
+      <td class="dre-tbl-sticky" style="color:var(--bone-dim);">${label}</td>
       ${mesesValidos.map(m => `<td class="num">${m.live ? '—' : fmtBRL(d.valoresExtras[label][m.frozenIdx])}</td>`).join('')}
     </tr>`).join('');
   body.innerHTML = linhasBancos + linhaTotal + linhasExtras;
@@ -13819,7 +13839,7 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
   // mesmo padrão já usado em renderGrupoResumoPorEmpresa/Detalhado.
   const mesesInfo = [];
   let cursor = monthStart.startOf('month');
-  const fimLoop = monthEnd.startOf('month');
+  const fimLoop = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo (1º dia do mês seguinte) — sem o subtract, incluía 1 mês a mais
   let guard = 0;
   while (!cursor.isAfter(fimLoop) && guard < 24) {
     const chave = cursor.format('YYYY-MM');
@@ -13843,11 +13863,11 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
   });
   const dadoMes = (m, campo) => m.live ? liveByMes[m.chave][campo] : congelado[campo][m.frozenIdx];
 
-  header.innerHTML = '<th>Descrição</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('');
+  header.innerHTML = '<th class="dre-tbl-sticky">Descrição</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('');
 
   const linha = (label, campo, negrito) => `
     <tr${negrito ? ' style="font-weight:600;"' : ''}>
-      <td>${semPrefixoDre(label)}</td>
+      <td class="dre-tbl-sticky">${semPrefixoDre(label)}</td>
       ${mesesValidos.map(m => `<td class="num">${fmtBRL(dadoMes(m, campo))}</td>`).join('')}
     </tr>`;
 
@@ -13868,13 +13888,13 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
     const temItens = nomesItens.size > 0;
     const linhaTotal = `
       <tr style="font-weight:600;" class="dre-tbl-row${temItens ? ' colapsavel' : ''}"${temItens ? ` onclick="toggleDreNativoConta('${id}')" title="Clique para ver o detalhe"` : ''}>
-        <td>${temItens ? `<span class="dre-tbl-toggle-icon" id="icon-${id}">+</span>` : ''}${semPrefixoDre(labelTotal)}</td>
+        <td class="dre-tbl-sticky">${temItens ? `<span class="dre-tbl-toggle-icon" id="icon-${id}">+</span>` : ''}${semPrefixoDre(labelTotal)}</td>
         ${mesesValidos.map(m => `<td class="num">${fmtBRL(dadoMes(m, campoTotal))}</td>`).join('')}
       </tr>`;
     if (!temItens) return linhaTotal;
     const linhasItens = [...nomesItens].sort().map(label => `
       <tr style="display:none;" data-grupo-conta="${id}">
-        <td>&nbsp;&nbsp;${semPrefixoDre(label)}</td>
+        <td class="dre-tbl-sticky">&nbsp;&nbsp;${semPrefixoDre(label)}</td>
         ${mesesValidos.map(m => {
           const itens = m.live ? liveByMes[m.chave][campoItens] : congelado[campoItens];
           const v = itens && itens[label] !== undefined ? itens[label] : (m.frozenIdx >= 0 && congelado[campoItens][label] ? congelado[campoItens][label][m.frozenIdx] : 0);
@@ -13895,7 +13915,7 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
   html += linha('(=) Saldo de Caixa', 'saldoDeCaixa', true);
   html += linhaColapsavel('(=) Saldo Real (soma dos bancos)', 'saldoReal', 'bancos');
   html += `<tr style="font-weight:700;background:rgba(255,255,255,0.04);">
-    <td>(=) Diferença (Real − Calculado)</td>
+    <td class="dre-tbl-sticky">(=) Diferença (Real − Calculado)</td>
     ${mesesValidos.map(m => {
       const v = dadoMes(m, 'diferenca');
       return `<td class="num" style="${v < 0 ? 'color:var(--red);' : ''}">${fmtBRL(v)}</td>`;
@@ -14052,11 +14072,11 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
   // corrente, igual à "Evolução Mensal" — a planilha só cobre 2026).
   const meses = [];
   let cursor = monthStart.startOf('month');
-  const fim = monthEnd.startOf('month');
+  const fim = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo — sem o subtract, incluía 1 mês a mais
   let guard = 0;
   while (!cursor.isAfter(fim) && guard < 24) { meses.push(cursor); cursor = cursor.add(1, 'month'); guard++; }
 
-  header.innerHTML = '<th>Descrição</th>' + meses.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.month()]}${m.isBefore(EXCEL_CONGELADO_ATE) ? '' : ' •'}</th>`).join('') + '<th>Total</th><th>Média</th>';
+  header.innerHTML = '<th class="dre-tbl-sticky">Descrição</th>' + meses.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.month()]}${m.isBefore(EXCEL_CONGELADO_ATE) ? '' : ' •'}</th>`).join('') + '<th>Total</th><th>Média</th>';
 
   // Pré-calcula o dado de cada mês UMA vez (congelado ou ao vivo),
   // reaproveitado pelas 25 linhas abaixo — calcular ao vivo dentro do
@@ -14081,7 +14101,7 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
     const cls = linha.destaque ? ' style="font-weight:600;"' : '';
     return `
       <tr${cls}>
-        <td>${semPrefixoDre(linha.label)}</td>
+        <td class="dre-tbl-sticky">${semPrefixoDre(linha.label)}</td>
         ${valoresMeses.map(v => `<td class="num">${v === null ? '—' : fmtBRL(v)}</td>`).join('')}
         <td class="num">${valoresValidos.length ? fmtBRL(total) : '—'}</td>
         <td class="num">${valoresValidos.length ? fmtBRL(media) : '—'}</td>
