@@ -2546,158 +2546,6 @@
 
 
 
-    <div class="section" id="sectionGrupoDfc">
-      <div class="section-head">
-        <h2>Grupo DRE Caixa — Dashboard Financeiro</h2>
-        <div class="desc">Fluxo de caixa consolidado (KMNO + Blue Line/Novah + RT), para o período De/Até selecionado no topo. Valores em R$.</div>
-        <div class="desc" style="margin-top:4px;">Meses marcados com <strong>•</strong> no cabeçalho das tabelas abaixo são calculados ao vivo a partir do Omie/Supabase (jun/2026 em diante). Meses sem marcação são valores fixos, vindos da planilha Excel de referência (jan-mai/2026, que não é mais atualizada).</div>
-      </div>
-
-      <!-- RESUMO detalhado, linha a linha, igual à planilha (pedido
-           reunião 21.07, linha 6+28: "Em cima da Pag do BI começa com o
-           resumo" / "Depois vem o detalhado igual o EXCEL"). Jan-Mai/26
-           = valores fixos da planilha; Jun/26 em diante calculado ao
-           vivo (KMNO+NOVAH, buildResumoDetalhadoMesAoVivo — 23/07/2026). -->
-      <div class="bloco-card" style="margin-bottom:14px;">
-        <div class="bloco-head"><div class="bloco-titulo">Resumo (Grupo, R$)</div></div>
-        <div class="bloco-body">
-          <div class="dre-tbl-wrap">
-            <table class="fin-tbl">
-              <tr id="grupoResumoDetalhadoHeader"><th>Descrição</th></tr>
-              <tbody id="grupoResumoDetalhadoBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Bancos — Saldo Primeiro dia do Mês (pedido reunião 21.07,
-           linha 28: "Depois vem o detalhado igual o EXCEL = BANCO mais
-           as linhas do DRE"). Jan-Mai/26 = fixo da planilha (inclui
-           Novah a partir de 23/07/2026). Jun/26+ = rollback banco a
-           banco ao vivo (KMNO+RT+NOVAH, saldoBancosPorContaRollback —
-           23/07/2026), usando cod_cc em dash_financial_movements. -->
-      <div class="bloco-card" style="margin-bottom:14px;">
-        <div class="bloco-head"><div class="bloco-titulo">Bancos — Saldo Primeiro dia do Mês (R$)</div></div>
-        <div class="bloco-body">
-          <div class="dre-tbl-wrap">
-            <table class="fin-tbl">
-              <tr id="grupoBancosHeader"><th>Banco</th></tr>
-              <tbody id="grupoBancosBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Prova Real dos Caixas (pedido reunião 21.07, linha 42: "No DFC
-           terminar assim para prova real dos caixas"). Confere se
-           Saldo Inicial + Entradas − Saídas (calculado) bate com o
-           saldo REAL somado dos bancos no fim do mês. Jan-Mai/26 = fixo
-           da planilha (KMNO+RT, sem Novah). Jun/26+ = calculado ao vivo
-           (buildProvaRealMesAoVivo — 23/07/2026); detalhe banco-a-banco
-           dentro de "Saldo Real" ainda não tem versão ao vivo (só o
-           total), precisaria de dash_current_account_transactions. -->
-      <div class="bloco-card" style="margin-bottom:14px;">
-        <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas (R$)</div></div>
-        <div class="bloco-body">
-          <div class="desc" style="padding:0 0 10px;">Saldo Inicial + Entradas − Saídas (calculado) x Saldo Real somado dos bancos no fim do mês. Diferença = Saldo Real − Saldo Calculado.</div>
-          <div class="dre-tbl-wrap">
-            <table class="fin-tbl">
-              <tr id="grupoProvaRealHeader"><th>Descrição</th></tr>
-              <tbody id="grupoProvaRealBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Cards de resumo -->
-      <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card">
-          <div class="grupo-dfc-card-label">Receita Bruta (Recebimento)</div>
-          <div class="grupo-dfc-card-val" id="grupoDfcReceitaBruta">R$ 0</div>
-          <!-- TODO(meta): placeholder ate definir a fonte da meta (ver comentario no topo do bloco renderGrupoDfc) -->
-          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcReceitaBrutaMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcReceitaBrutaPct">-----%</span></div>
-        </div>
-        <div class="grupo-dfc-card">
-          <div class="grupo-dfc-card-label">CMV</div>
-          <div class="grupo-dfc-card-val" id="grupoDfcCmv">R$ 0</div>
-          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcCmvMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcCmvPct">-----%</span></div>
-        </div>
-        <div class="grupo-dfc-card">
-          <div class="grupo-dfc-card-label">Margem de Contribuição</div>
-          <div class="grupo-dfc-card-val" id="grupoDfcMargem">R$ 0</div>
-          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcMargemMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcMargemPct">-----%</span></div>
-        </div>
-      </div>
-      <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card">
-          <div class="grupo-dfc-card-label">EBITDA</div>
-          <div class="grupo-dfc-card-val" id="grupoDfcEbitda">R$ 0</div>
-          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcEbitdaMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcEbitdaPct">-----%</span></div>
-        </div>
-        <div class="grupo-dfc-card">
-          <div class="grupo-dfc-card-label">Saldo Líquido</div>
-          <div class="grupo-dfc-card-val" id="grupoDfcSaldoLiquido">R$ 0</div>
-          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcSaldoLiquidoMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcSaldoLiquidoPct">-----%</span></div>
-        </div>
-      </div>
-
-      <!-- Evolução Mensal -->
-      <div class="bloco-card">
-        <div class="bloco-head"><div class="bloco-titulo">Evolução Mensal — Grupo (R$)</div></div>
-        <div class="bloco-body">
-          <div class="dre-tbl-wrap">
-            <table class="fin-tbl">
-              <tr id="grupoDfcEvolucaoHeader"><th>Métrica</th></tr>
-              <tbody id="grupoDfcEvolucaoBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="chart-card-title" style="margin-top:18px;">Evolução Mensal — Grupo (R$)</div>
-      <div style="position: relative; height: 320px;">
-        <canvas id="chartGrupoDfc" role="img" aria-label="Gráfico de evolução mensal do Grupo: Receita Bruta, CMV, Margem de Contribuição, EBITDA e Saldo Líquido">Evolução mensal do grupo.</canvas>
-      </div>
-
-      <!-- Waterfall detalhada "GRUPO DFC" — réplica linha por linha do
-           Excel de referência (DRE 2026 KMNO e NOVAH 28.06.xlsx, abas
-           Grupo DFC / KMNO DFC (caixa) / NOVAH DFC (caixa)). Ver
-           DRE_WATERFALL_GRUPOS + buildWaterfallDreCaixa() no JS. -->
-      <div class="bloco-card" style="margin-top:18px;">
-        <div class="bloco-head"><div class="bloco-titulo">Grupo DRE Caixa — Detalhado <span id="waterfallDreCaixaHint" style="font-size:11px;font-weight:400;color:var(--bone-dim);"></span></div></div>
-        <div class="bloco-body">
-          <div class="dre-tbl-wrap">
-            <table class="fin-tbl">
-              <tr id="waterfallDreCaixaHeader"><th>Descrição</th><th class="num">Total do Período</th><th class="num">% Receita</th></tr>
-              <tbody id="waterfallDreCaixaBody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- Resumo de Capital: início x fim do período De/Até selecionado no
-           topo da página. Saldo Bancos usa o mesmo rollback já usado no DFC
-           por Bloco (calcSaldoInicialRealizado). Cartões a Receber (KMNO)
-           ainda não tem fonte de dado confirmada — placeholder até Lucas
-           definir de onde vem esse número (não é o saldo das contas tipo
-           Cartão no Omie, os valores não batem com a referência dele). -->
-      <div class="chart-card-title" style="margin-top:18px;">Análise Caixa Bancos no Período</div>
-      <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoInicio">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoFim">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação no Período</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoDiff">R$ 0</div></div>
-      </div>
-      <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesInicio">R$ -----</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesFim">R$ -----</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação (Cartões)</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesDiff">R$ -----</div></div>
-      </div>
-      <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagtos Impostos Atrasados / Refis (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalRefis">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Capex (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalCapex">R$ 0</div></div>
-      </div>
-    </div>
-
     <div class="nav-menu-grid">
 
       <div class="nav-card" onclick="switchView('viewBlocks')">
@@ -2710,7 +2558,7 @@
       <div class="nav-card" onclick="switchView('viewDfcArvore')">
         <div>
           <div class="nav-card-title">DRE por Caixa</div>
-          <div class="nav-card-desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie: Saldo Inicial, Transferências, Receitas, Despesas, Resultado e Limite de Crédito.</div>
+          <div class="nav-card-desc">Resumo executivo do Grupo, Bancos, Prova Real dos Caixas e Fluxo de Caixa por Categoria — tudo o que é caixa/DFC num lugar só.</div>
         </div>
       </div>
 
@@ -2893,11 +2741,169 @@
       <div class="section" id="sectionDfcArvore">
         <div class="section-head">
           <h2>DRE por Caixa</h2>
-          <div class="desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie. Usa o mesmo período De/Até selecionado no topo da página. Saldo Inicial e Resultado Acumulado são aproximados por rollback a partir do saldo de hoje (sem histórico diário de saldo por conta) — Receitas, Despesas e Resultado do período vêm direto dos lançamentos e não sofrem essa aproximação.</div>
+          <div class="desc">Fluxo de Caixa por Categoria, na mesma estrutura do relatório nativo do Omie. Usa o mesmo período De/Até selecionado no topo da página. Saldo Inicial e Resultado Acumulado são aproximados por rollback a partir do saldo de hoje (sem histórico diário de saldo por conta) — Receitas, Despesas e Resultado do período vêm direto dos lançamentos e não sofrem essa aproximação. Abaixo: Resumo executivo do Grupo, Bancos e Prova Real dos Caixas (movidos do Menu em 23/07/2026 — mesma família de conteúdo, "caixa").</div>
         </div>
 
         <div class="dre-empresa-tabs" id="dfcEmpresaTabs"></div>
         <div id="dfcArvoreBody"></div>
+
+        <!-- Movido do Menu pra cá em 23/07/2026 (pedido reunião): tudo
+             que é conteúdo de CAIXA (Resumo, Bancos, Prova Real, Waterfall,
+             cards executivos, Análise Caixa Bancos) pertence ao card
+             "DRE por Caixa", não à página inicial (que agora é só
+             gráficos/indicadores + nav-cards). Nenhum card novo criado —
+             só realocado pro card que já existia com esse propósito. -->
+    <div class="section" id="sectionGrupoDfc">
+      <div class="section-head">
+        <h2>Grupo DRE Caixa — Dashboard Financeiro</h2>
+        <div class="desc">Fluxo de caixa consolidado (KMNO + Blue Line/Novah + RT), para o período De/Até selecionado no topo. Valores em R$.</div>
+        <div class="desc" style="margin-top:4px;">Meses marcados com <strong>•</strong> no cabeçalho das tabelas abaixo são calculados ao vivo a partir do Omie/Supabase (jun/2026 em diante). Meses sem marcação são valores fixos, vindos da planilha Excel de referência (jan-mai/2026, que não é mais atualizada).</div>
+      </div>
+
+      <!-- RESUMO detalhado, linha a linha, igual à planilha (pedido
+           reunião 21.07, linha 6+28: "Em cima da Pag do BI começa com o
+           resumo" / "Depois vem o detalhado igual o EXCEL"). Jan-Mai/26
+           = valores fixos da planilha; Jun/26 em diante calculado ao
+           vivo (KMNO+NOVAH, buildResumoDetalhadoMesAoVivo — 23/07/2026). -->
+      <div class="bloco-card" style="margin-bottom:14px;">
+        <div class="bloco-head"><div class="bloco-titulo">Resumo (Grupo, R$)</div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="grupoResumoDetalhadoHeader"><th>Descrição</th></tr>
+              <tbody id="grupoResumoDetalhadoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bancos — Saldo Primeiro dia do Mês (pedido reunião 21.07,
+           linha 28: "Depois vem o detalhado igual o EXCEL = BANCO mais
+           as linhas do DRE"). Jan-Mai/26 = fixo da planilha (inclui
+           Novah a partir de 23/07/2026). Jun/26+ = rollback banco a
+           banco ao vivo (KMNO+RT+NOVAH, saldoBancosPorContaRollback —
+           23/07/2026), usando cod_cc em dash_financial_movements. -->
+      <div class="bloco-card" style="margin-bottom:14px;">
+        <div class="bloco-head"><div class="bloco-titulo">Bancos — Saldo Primeiro dia do Mês (R$)</div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="grupoBancosHeader"><th>Banco</th></tr>
+              <tbody id="grupoBancosBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Prova Real dos Caixas (pedido reunião 21.07, linha 42: "No DFC
+           terminar assim para prova real dos caixas"). Confere se
+           Saldo Inicial + Entradas − Saídas (calculado) bate com o
+           saldo REAL somado dos bancos no fim do mês. Jan-Mai/26 = fixo
+           da planilha (KMNO+RT, sem Novah). Jun/26+ = calculado ao vivo
+           (buildProvaRealMesAoVivo — 23/07/2026); detalhe banco-a-banco
+           dentro de "Saldo Real" ainda não tem versão ao vivo (só o
+           total), precisaria de dash_current_account_transactions. -->
+      <div class="bloco-card" style="margin-bottom:14px;">
+        <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas (R$)</div></div>
+        <div class="bloco-body">
+          <div class="desc" style="padding:0 0 10px;">Saldo Inicial + Entradas − Saídas (calculado) x Saldo Real somado dos bancos no fim do mês. Diferença = Saldo Real − Saldo Calculado.</div>
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="grupoProvaRealHeader"><th>Descrição</th></tr>
+              <tbody id="grupoProvaRealBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Cards de resumo -->
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">Receita Bruta (Recebimento)</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcReceitaBruta">R$ 0</div>
+          <!-- TODO(meta): placeholder ate definir a fonte da meta (ver comentario no topo do bloco renderGrupoDfc) -->
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcReceitaBrutaMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcReceitaBrutaPct">-----%</span></div>
+        </div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">CMV</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcCmv">R$ 0</div>
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcCmvMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcCmvPct">-----%</span></div>
+        </div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">Margem de Contribuição</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcMargem">R$ 0</div>
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcMargemMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcMargemPct">-----%</span></div>
+        </div>
+      </div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">EBITDA</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcEbitda">R$ 0</div>
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcEbitdaMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcEbitdaPct">-----%</span></div>
+        </div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">Saldo Líquido</div>
+          <div class="grupo-dfc-card-val" id="grupoDfcSaldoLiquido">R$ 0</div>
+          <div class="grupo-dfc-card-meta">Meta: <span id="grupoDfcSaldoLiquidoMeta">R$-----</span> &nbsp;|&nbsp; Percentual (%): <span id="grupoDfcSaldoLiquidoPct">-----%</span></div>
+        </div>
+      </div>
+
+      <!-- Evolução Mensal -->
+      <div class="bloco-card">
+        <div class="bloco-head"><div class="bloco-titulo">Evolução Mensal — Grupo (R$)</div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="grupoDfcEvolucaoHeader"><th>Métrica</th></tr>
+              <tbody id="grupoDfcEvolucaoBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card-title" style="margin-top:18px;">Evolução Mensal — Grupo (R$)</div>
+      <div style="position: relative; height: 320px;">
+        <canvas id="chartGrupoDfc" role="img" aria-label="Gráfico de evolução mensal do Grupo: Receita Bruta, CMV, Margem de Contribuição, EBITDA e Saldo Líquido">Evolução mensal do grupo.</canvas>
+      </div>
+
+      <!-- Waterfall detalhada "GRUPO DFC" — réplica linha por linha do
+           Excel de referência (DRE 2026 KMNO e NOVAH 28.06.xlsx, abas
+           Grupo DFC / KMNO DFC (caixa) / NOVAH DFC (caixa)). Ver
+           DRE_WATERFALL_GRUPOS + buildWaterfallDreCaixa() no JS. -->
+      <div class="bloco-card" style="margin-top:18px;">
+        <div class="bloco-head"><div class="bloco-titulo">Grupo DRE Caixa — Detalhado <span id="waterfallDreCaixaHint" style="font-size:11px;font-weight:400;color:var(--bone-dim);"></span></div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl">
+              <tr id="waterfallDreCaixaHeader"><th>Descrição</th><th class="num">Total do Período</th><th class="num">% Receita</th></tr>
+              <tbody id="waterfallDreCaixaBody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- Resumo de Capital: início x fim do período De/Até selecionado no
+           topo da página. Saldo Bancos usa o mesmo rollback já usado no DFC
+           por Bloco (calcSaldoInicialRealizado). Cartões a Receber (KMNO)
+           ainda não tem fonte de dado confirmada — placeholder até Lucas
+           definir de onde vem esse número (não é o saldo das contas tipo
+           Cartão no Omie, os valores não batem com a referência dele). -->
+      <div class="chart-card-title" style="margin-top:18px;">Análise Caixa Bancos no Período</div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoInicio">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoFim">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação no Período</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoDiff">R$ 0</div></div>
+      </div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesInicio">R$ -----</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesFim">R$ -----</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação (Cartões)</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesDiff">R$ -----</div></div>
+      </div>
+      <div class="grupo-dfc-cards">
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagtos Impostos Atrasados / Refis (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalRefis">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Capex (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalCapex">R$ 0</div></div>
+      </div>
+    </div>
       </div>
     </div>
   </div>
@@ -3571,6 +3577,16 @@ async function handleAccessRequest(e) {
 function showDashboard() {
   document.getElementById('loginOverlay').classList.add('hidden');
   document.getElementById('dashboardWrap').classList.remove('hidden');
+
+  // Período padrão = mês atual real (não o ano inteiro). Setado
+  // explicitamente aqui em vez de confiar só no fallback de
+  // getSelectedPeriodRange() — o navegador pode manter um valor antigo
+  // nos campos De/Até de uma sessão anterior (autofill/cache do
+  // formulário), fazendo o dashboard "abrir em dezembro" mesmo sem
+  // nenhum código definindo isso de propósito (pedido reunião 23/07).
+  const mesAtual = dayjs().format('YYYY-MM');
+  document.getElementById('globalPeriodDe').value = mesAtual;
+  document.getElementById('globalPeriodAte').value = mesAtual;
 
   // Update user info
   const infoEl = document.getElementById('userInfo');
@@ -14193,9 +14209,12 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
 }
 
 function renderGrupoDfc(monthStart, monthEnd) {
-  // A tela separada "viewGrupoDfc" não existe mais — esse resumo agora
-  // vive direto no topo do menu principal (viewMenu). Guard atualizado
-  // pra checar a section que realmente existe hoje.
+  // A tela separada "viewGrupoDfc" não existe mais — esse resumo viveu
+  // no topo do Menu até 23/07/2026, quando foi movido pra dentro de
+  // "DRE por Caixa" (pedido reunião: Menu só com gráficos/indicadores,
+  // conteúdo de caixa junto do card que já existe pra isso). Guard
+  // segue igual, só checa se a section existe no DOM (não importa
+  // dentro de qual view ela está).
   const rootEl = document.getElementById('sectionGrupoDfc');
   if (!rootEl || !categoriesCache || !movementsCache) return; // section ainda não existe / dados não carregados
 
