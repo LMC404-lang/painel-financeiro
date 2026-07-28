@@ -460,6 +460,14 @@
     z-index: 2;
     background: var(--navy-2);
   }
+  /* Pedido 28/07: 1ª coluna ("Métrica") do card "Evolução Mensal — Grupo
+     (R$)" (Caixa e Competência) precisa ter espaço suficiente pra "Margem
+     de Contribuição" caber numa linha só, sem quebrar em 2. */
+  #grupoDfcEvolucaoHeader th:first-child, #grupoDfcEvolucaoBody td:first-child,
+  #grupoDfcEvolucaoHeaderCopia th:first-child, #grupoDfcEvolucaoBodyCopia td:first-child {
+    min-width: 150px;
+    white-space: nowrap;
+  }
   .fin-tbl th { color: var(--bone-dim); font-weight: 500; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; }
   .fin-tbl td.num { font-family: 'IBM Plex Mono', monospace; text-align: right; }
   .fin-tbl .status-pago { color: var(--green); }
@@ -2578,7 +2586,7 @@
            DRE por Competência no mesmo layout do DRE por Caixa). -->
       <div class="nav-card" onclick="switchView('viewDfcArvoreCopia')">
         <div>
-          <div class="nav-card-title">DRE por Competência — Novo Layout</div>
+          <div class="nav-card-title">DRE por Competência</div>
           <div class="nav-card-desc">Mesmo layout do DRE por Caixa, mas com Receita Bruta/CMV/Margem/EBITDA/Saldo Líquido calculados por competência (data de registro/emissão). Sem gráfico e sem os blocos de banco/prova real.</div>
         </div>
       </div>
@@ -2825,26 +2833,31 @@
            banco ao vivo (KMNO+RT+NOVAH, saldoBancosPorContaRollback —
            23/07/2026), usando cod_cc em dash_financial_movements. -->
       <div class="bloco-card" style="margin-bottom:14px;">
-        <div class="bloco-head"><div class="bloco-titulo">Bancos — Saldo Primeiro dia do Mês (R$)</div></div>
-        <div class="bloco-body">
+        <div class="bloco-head" id="grupoBancosToggleHead" style="cursor:pointer;" onclick="toggleGrupoBancosCard()">
+          <div class="bloco-titulo">Bancos — Saldo Primeiro dia do Mês (R$) <span id="grupoBancosToggleIcon" style="font-size:11px;color:var(--bone-dim);"></span></div>
+        </div>
+        <div class="bloco-body" id="grupoBancosBodyWrap">
           <div class="dre-tbl-wrap">
             <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col">
               <tr id="grupoBancosHeader"><th>Banco</th></tr>
               <tbody id="grupoBancosBody"></tbody>
             </table>
+
           </div>
         </div>
       </div>
 
-      <!-- Prova Real dos Caixas (pedido reunião 21.07, linha 42: "No DFC
-           terminar assim para prova real dos caixas"). Confere se
-           Saldo Inicial + Entradas − Saídas (calculado) bate com o
-           saldo REAL somado dos bancos no fim do mês. Jan-Mai/26 = fixo
-           da planilha (KMNO+RT, sem Novah). Jun/26+ = calculado ao vivo
-           (buildProvaRealMesAoVivo — 23/07/2026); detalhe banco-a-banco
-           dentro de "Saldo Real" ainda não tem versão ao vivo (só o
-           total), precisaria de dash_current_account_transactions. -->
-      <div class="bloco-card" style="margin-bottom:14px;">
+      <!-- Prova Real dos Caixas — ELIMINADO (pedido 28/07, marcação em X
+           vermelho no print pedindo exclusão do card inteiro). JS
+           (renderGrupoProvaReal/PROVA_REAL_CAIXAS) não foi removido, só
+           a exibição — mesmo padrão já usado pra outros cards eliminados
+           nesta página (ver Waterfall abaixo). Texto original mantido
+           em comentário pra referência:
+           "Confere se Saldo Inicial + Entradas − Saídas (calculado)
+           bate com o saldo REAL somado dos bancos no fim do mês.
+           Jan-Mai/26 = fixo da planilha (KMNO+RT, sem Novah). Jun/26+ =
+           calculado ao vivo (buildProvaRealMesAoVivo)." -->
+      <div class="bloco-card" style="margin-bottom:14px;display:none;">
         <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas (R$)</div></div>
         <div class="bloco-body">
           <div class="desc" style="padding:0 0 10px;">Saldo Inicial + Entradas − Saídas (calculado) x Saldo Real somado dos bancos no fim do mês. Diferença = Saldo Real − Saldo Calculado.</div>
@@ -2888,16 +2901,45 @@
       <div class="grupo-dfc-cards">
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoInicio">R$ 0</div></div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoFim">R$ 0</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação no Período</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoDiff">R$ 0</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação no Período</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoDiff">R$ 0</div><div class="grupo-dfc-card-label" id="resumoCapitalSaldoDiffAv" style="color:var(--red);margin-top:4px;"></div></div>
       </div>
       <div class="grupo-dfc-cards">
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesInicio">R$ -----</div></div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesFim">R$ -----</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação (Cartões)</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesDiff">R$ -----</div></div>
+        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação (Cartões)</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesDiff">R$ -----</div><div class="grupo-dfc-card-label" id="resumoCapitalCartoesDiffAv" style="color:var(--red);margin-top:4px;"></div></div>
       </div>
       <div class="grupo-dfc-cards">
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagtos Impostos Atrasados / Refis (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalRefis">R$ 0</div></div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Capex (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalCapex">R$ 0</div></div>
+      </div>
+      <!-- Capex e Refis mês a mês (pedido 28/07: "todo mês aumenta, fazer
+           mês a mês" — os 2 cards acima só mostravam 1 número acumulado
+           do período inteiro). Adicionado logo abaixo de "Análise Caixa
+           Bancos no Período", mesmo lugar de onde saiu o print do pedido. -->
+      <div class="chart-card-title" style="margin-top:18px;">Capex e Refis — Mês a Mês (R$)</div>
+      <div style="position: relative; height: 260px;">
+        <canvas id="chartCapexRefis" role="img" aria-label="Gráfico de barras mostrando Capex e Refis (Pagtos Impostos Atrasados) mês a mês no período selecionado">Evolução mensal de Capex e Refis.</canvas>
+      </div>
+
+      <!-- Prova Real dos Caixas, mês a mês, POR EMPRESA (pedido 28/07 —
+           recria o card excluído, mas por empresa em vez de Grupo, com
+           tabela + gráfico). NOVAH/RT ficam "sem dado ainda" até Lucas
+           mandar o equivalente da KMNO. -->
+      <div class="bloco-card" style="margin-top:18px;margin-bottom:14px;" id="provaRealEmpresaWrap">
+        <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas — Mês a Mês, por Empresa (R$)</div></div>
+        <div class="bloco-body">
+          <div class="desc" style="padding:0 0 10px;">Saldo Inicial + Entradas − Saídas (calculado) x Saldo Real somado dos bancos no fim do mês. Diferença = Saldo Real − Saldo Calculado.</div>
+          <div class="dre-empresa-tabs" id="provaRealEmpresaTabs" style="margin-bottom:10px;"></div>
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col">
+              <tr><th>Descrição</th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th></tr>
+              <tbody id="provaRealEmpresaBody"></tbody>
+            </table>
+          </div>
+          <div style="position: relative; height: 260px; margin-top:14px;">
+            <canvas id="chartProvaRealEmpresa" role="img" aria-label="Gráfico de Saldo Calculado x Saldo Real x Diferença, mês a mês, por empresa">Prova real mês a mês por empresa.</canvas>
+          </div>
+        </div>
       </div>
     </div>
       </div>
@@ -2912,7 +2954,7 @@
 
       <div class="section" id="sectionDfcArvoreCopia">
         <div class="section-head">
-          <h2>DRE por Competência — Novo Layout</h2>
+          <h2>DRE por Competência</h2>
           <div class="desc">Mesmo layout do card "DRE por Caixa", mas com os dados calculados por COMPETÊNCIA (data de registro/emissão no Omie — quando a receita/despesa foi realizada), não por caixa (data de pagamento). Os blocos que só fazem sentido em caixa (saldo de banco, prova real) foram removidos daqui — ver nota no lugar de cada um.</div>
         </div>
 
@@ -3029,33 +3071,11 @@
         </div>
       </div>
 
-      <!-- Bancos — Saldo Primeiro dia do Mês (pedido reunião 21.07,
-           linha 28: "Depois vem o detalhado igual o EXCEL = BANCO mais
-           as linhas do DRE"). Jan-Mai/26 = fixo da planilha (inclui
-           Novah a partir de 23/07/2026). Jun/26+ = rollback banco a
-           banco ao vivo (KMNO+RT+NOVAH, saldoBancosPorContaRollback —
-           23/07/2026), usando cod_cc em dash_financial_movements. -->
-      <div class="bloco-card" style="margin-bottom:14px;">
-        <div class="bloco-head"><div class="bloco-titulo">Bancos — Saldo Primeiro dia do Mês (R$)</div></div>
-        <div class="bloco-body">
-          <div class="bloco-vazio">Não aplicável em competência — saldo bancário é conceito de caixa (ver "DRE por Caixa").</div>
-        </div>
-      </div>
-
-      <!-- Prova Real dos Caixas (pedido reunião 21.07, linha 42: "No DFC
-           terminar assim para prova real dos caixas"). Confere se
-           Saldo Inicial + Entradas − Saídas (calculado) bate com o
-           saldo REAL somado dos bancos no fim do mês. Jan-Mai/26 = fixo
-           da planilha (KMNO+RT, sem Novah). Jun/26+ = calculado ao vivo
-           (buildProvaRealMesAoVivo — 23/07/2026); detalhe banco-a-banco
-           dentro de "Saldo Real" ainda não tem versão ao vivo (só o
-           total), precisaria de dash_current_account_transactions. -->
-      <div class="bloco-card" style="margin-bottom:14px;">
-        <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas (R$)</div></div>
-        <div class="bloco-body">
-          <div class="bloco-vazio">Não aplicável em competência — é uma reconciliação de saldo bancário real vs calculado, conceito de caixa (ver "DRE por Caixa").</div>
-        </div>
-      </div>
+      <!-- Bancos e Prova Real dos Caixas — REMOVIDOS da tela de
+           Competência (pedido 28/07, confirmado: "pode excluir"). Eram
+           só placeholders informativos ("não aplicável em
+           competência"), sem dado nenhum — JS das versões de Caixa não
+           foi tocado, só esses 2 blocos informativos daqui saíram. -->
 
       <!-- Waterfall detalhada "GRUPO DFC" — réplica linha por linha do
            Excel de referência (DRE 2026 KMNO e NOVAH 28.06.xlsx, abas
@@ -9136,7 +9156,28 @@ function extrairLinhaResumo(resumoRows, labelsAceitas) {
   return row ? row.val : 0;
 }
 
+// ===================================================================
+// Congelado — "Vendas (Receita Bruta) x Faturamento (Resultado
+// Líquido)", por empresa. Fonte: planilha (print "Faturamento (R$)" /
+// "VENDAS" enviado por Lucas 28/07) — cobre Jan-Mai/2026. RT só tem
+// dado próprio a partir de ABRIL (Jan-Mar fica null = "sem dado", não
+// R$0 — nesse período o valor de RT está diluído dentro do total da
+// KMNO na origem, confirmado por Lucas). null vira "-----" na tela.
+// ===================================================================
+const VENDAS_FATURAMENTO_ESTATICO = {
+  KMNO:  { vendas: [578012.66, 807035.75, 1028160.08, 948602.23, 787982.81], faturamento: [469949.55, 877469.51, 783660.17, 750762.56, 889612.46] },
+  NOVAH: { vendas: [null, null, 274233.00, 274233.00, 274233.00], faturamento: [145425.55, 88937.45, 53620.01, 106804.80, 101656.20] },
+  RT:    { vendas: [null, null, 125397.00, 118742.00, 0], faturamento: [null, null, null, 42697.00, 56702.10] },
+};
+
 function calcularVendasFaturamentoEmpresa(empresa, categories, movements, monthStart, monthEnd) {
+  if (monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
+    const congelado = VENDAS_FATURAMENTO_ESTATICO[empresa];
+    const idx = indiceMes(monthStart) - indiceMes(dayjs('2026-01-01'));
+    if (congelado && idx >= 0 && idx < 5) {
+      return { vendas: congelado.vendas[idx], faturamento: congelado.faturamento[idx] };
+    }
+  }
   const B = buildTodosBlocosRealizado(empresa, categories, movements, monthStart, monthEnd);
   const builder = DRE_ARVORE_RESUMO_BUILDERS[empresa];
   const resumoRows = builder(B);
@@ -9598,12 +9639,14 @@ function renderVendasFaturamento() {
 
   const linhaEmpresa = (label, dados, totalAnterior) => {
     const cells = dados.map(({ vendas, faturamento }) => {
-      const diff = faturamento - vendas;
+      const v = vendas || 0, f = faturamento || 0;
+      const diff = f - v;
       const diffCls = diff >= 0 ? 'status-pago' : 'status-atraso';
+      const semVendas = vendas === null, semFat = faturamento === null;
       return `
-        <td class="num mes-inicio">${fmtBRL(vendas)}</td>
-        <td class="num">${fmtBRL(faturamento)}</td>
-        <td class="num ${diffCls}">${fmtBRL(diff)}</td>`;
+        <td class="num mes-inicio">${semVendas ? '-----' : fmtBRL(vendas)}</td>
+        <td class="num">${semFat ? '-----' : fmtBRL(faturamento)}</td>
+        <td class="num ${diffCls}">${(semVendas && semFat) ? '-----' : fmtBRL(diff)}</td>`;
     }).join('');
     return `<tr><td>${label}</td>${cells}${totalMediaCells(dados, totalAnterior)}</tr>`;
   };
@@ -10806,6 +10849,7 @@ function setLoadingState() {
 
 async function loadCompanyData() {
   setLoadingState();
+  grupoBancosExpandidoManual = null; // reseta pro automático a cada troca de empresa (pedido 28/07)
   document.body.style.cursor = 'wait';
   const keys = selectedCompanyKeys.length ? selectedCompanyKeys : [currentCompanyKey];
   const nomes = keys.map(k => COMPANIES[k].label).join(' + ');
@@ -12588,6 +12632,26 @@ const EXCEL_HISTORICO_GRUPO_DFC = {
   '2026-05': { receitaBruta: 863979.50, receitaLiquida: 761106.30, cmv: 417374.98, margemContribuicao: 340307.85, custosFixos: 278692.85, ebitda: 61615.00, despesasFinanceiras: 9364.18, lucroLiquido: 60530.14, saldoLiquido: -133071.24 },
 };
 
+// ===================================================================
+// Congelado — DRE (COMPETÊNCIA), aba "Grupo DRE" da planilha
+// DRE_2026_KMNO_e_NOVAH_28_06_1.xlsx (coluna TOTAL de cada mês, lida
+// direto da célula calculada — não veio de screenshot). NÃO é a mesma
+// coisa que EXCEL_HISTORICO_GRUPO_DFC (aquele é caixa/recebimento,
+// este é competência/emissão) — bug encontrado em 28/07: o clone "DRE
+// por Competência" estava reaproveitando por engano o congelado do
+// Caixa, por isso os números batiam ~80/90% do esperado em vez de 100%.
+// custosFixos aqui = "(-) Custo ADM + ADM Industria" + "(-) Despesas
+// Comerciais" (mesma composição do campo custosFixos no congelado DFC,
+// pra manter os dois objetos com o mesmo formato/chaves).
+// ===================================================================
+const EXCEL_HISTORICO_GRUPO_DRE = {
+  '2026-01': { receitaBruta: 615375.10, receitaLiquida: 531361.21, cmv: 349778.93, margemContribuicao: 164007.68, custosFixos: 182523.00, ebitda: -18515.32, despesasFinanceiras: 11523.84, lucroLiquido: -37931.46, saldoLiquido: -53722.06 },
+  '2026-02': { receitaBruta: 966406.96, receitaLiquida: 846519.30, cmv: 374465.50, margemContribuicao: 434035.20, custosFixos: 234466.65, ebitda: 199568.55, despesasFinanceiras: 11061.30, lucroLiquido: 177529.98, saldoLiquido: 100422.97 },
+  '2026-03': { receitaBruta: 837280.18, receitaLiquida: 728688.48, cmv: 417210.72, margemContribuicao: 282844.99, custosFixos: 286312.18, ebitda: -3467.18, despesasFinanceiras: 11865.69, lucroLiquido: -17429.46, saldoLiquido: -105176.27 },
+  '2026-04': { receitaBruta: 900264.56, receitaLiquida: 790417.16, cmv: 453912.07, margemContribuicao: 296155.25, custosFixos: 301633.25, ebitda: -5477.99, despesasFinanceiras: 9872.78, lucroLiquido: -17524.79, saldoLiquido: -68446.67 },
+  '2026-05': { receitaBruta: 1047970.76, receitaLiquida: 923698.13, cmv: 756458.54, margemContribuicao: 139869.96, custosFixos: 298152.83, ebitda: -158282.87, despesasFinanceiras: 10087.48, lucroLiquido: -172790.54, saldoLiquido: -416969.68 },
+};
+
 // Soma as métricas do Grupo mês a mês dentro do período De/Até
 // selecionado, usando o valor congelado da planilha pros meses
 // Jan-Mai/2026 e o cálculo ao vivo (buildMetricasGrupoDfcPeriodo) pros
@@ -12601,7 +12665,10 @@ function buildMetricasGrupoComExcel(categories, movements, monthStart, monthEnd)
   const fim = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo (1º dia do mês seguinte ao selecionado) — sem o subtract, incluía 1 mês a mais
   while (!cursor.isAfter(fim)) {
     const chave = cursor.format('YYYY-MM');
-    const congelado = EXCEL_HISTORICO_GRUPO_DFC[chave];
+    // FIX 28/07: era EXCEL_HISTORICO_GRUPO_DFC (caixa) — esta função
+    // alimenta o card "DRE por Competência", precisa do congelado de
+    // competência (Grupo DRE), não do de caixa (Grupo DFC).
+    const congelado = EXCEL_HISTORICO_GRUPO_DRE[chave];
     if (congelado) {
       campos.forEach(c => acumulado[c] += (congelado[c] || 0));
     } else if (!cursor.isBefore(EXCEL_CONGELADO_ATE)) {
@@ -12649,6 +12716,44 @@ function calcSaldoCartoesEmData(receivable, dataAlvo) {
   return total;
 }
 
+// ===================================================================
+// Cache dedicado "Análise Caixa Bancos no Período" — SEMPRE as 3
+// empresas (KMNO+NOVAH+RT), independente do seletor global de empresas
+// do topo (pedido 28/07: "agrupar 3 empresas = sempre mostra a soma
+// das 3 empresas, independente do seletor"). Sem isso, o card mudava
+// de valor conforme o seletor porque contasCorrentesCache/
+// financialMovementsCache/receivableCache globais só trazem as
+// empresas marcadas no topo (ver sbMultiPaged — filtra por
+// selectedCompanyKeys). Mesmo padrão já usado pela "DRE por Bloco"
+// (dreArvoreCategoriesCache/dreArvoreMovementsCache).
+// ===================================================================
+let analiseBancosContasCache = null;
+let analiseBancosMovimentosCache = null;
+let analiseBancosReceivableCache = null;
+let analiseBancosCarregando = false;
+
+async function carregarDadosAnaliseBancosTodasEmpresas() {
+  if (analiseBancosCarregando) return;
+  analiseBancosCarregando = true;
+  try {
+    const empresas = ['KMNO', 'NOVAH', 'RT'];
+    const [contas, movs, receb] = await Promise.all([
+      Promise.all(empresas.map(k => sbPaged('dash_contas_correntes?select=n_cod_cc,descricao,fluxo_caixa,saldo_inicial,saldo_data,valor_limite,saldo_atual', k).catch(() => []))),
+      Promise.all(empresas.map(k => sbPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_registro,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo,cod_cc', k).catch(() => []))),
+      Promise.all(empresas.map(k => sbPaged('dash_accounts_receivable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor', k).catch(() => []))),
+    ]);
+    analiseBancosContasCache = contas.flatMap((rows, i) => (rows || []).map(r => ({ ...r, _empresa: empresas[i] })));
+    analiseBancosMovimentosCache = dedupFinancialMovements(excluirGatewayReconciliacaoKmno(excluirIcmsResiduoKmno(
+      movs.flatMap((rows, i) => (rows || []).map(r => ({ ...r, _empresa: empresas[i] })))
+    )));
+    analiseBancosReceivableCache = receb.flatMap((rows, i) => (rows || []).filter(r => r.status_titulo !== 'CANCELADO').map(r => ({ ...r, _empresa: empresas[i] })));
+  } catch (err) {
+    console.error('carregarDadosAnaliseBancosTodasEmpresas falhou:', err);
+  } finally {
+    analiseBancosCarregando = false;
+  }
+}
+
 // Cards "Resumo de Capital" no topo da home: início x fim do período
 // De/Até selecionado. Saldo Bancos reaproveita o mesmo rollback usado no
 // DFC por Bloco (calcSaldoInicialRealizado, parte do saldo_atual de hoje
@@ -12659,12 +12764,33 @@ function calcSaldoCartoesEmData(receivable, dataAlvo) {
 // Line/Novah — confirmado com Lucas 22/07/2026).
 function renderResumoCapital(monthStart, monthEnd) {
   const elSaldoInicio = document.getElementById('resumoCapitalSaldoInicio');
-  if (!elSaldoInicio || !contasCorrentesCache || !categoriesCache || !financialMovementsCache) return;
+  if (!elSaldoInicio) return;
+
+  // FIX 28/07 (pedido: "agrupar 3 empresas = sempre mostra a soma das 3
+  // empresas, independente do seletor") — usa o cache DEDICADO (sempre
+  // KMNO+NOVAH+RT), não mais contasCorrentesCache/financialMovementsCache/
+  // receivableCache globais (esses são filtrados pelo seletor do topo via
+  // sbMultiPaged, por isso o card mudava de valor ao trocar o seletor).
+  if (!analiseBancosContasCache || !analiseBancosMovimentosCache) {
+    if (!analiseBancosCarregando) carregarDadosAnaliseBancosTodasEmpresas().then(() => renderResumoCapital(monthStart, monthEnd));
+    return;
+  }
+  // Categorias: reaproveita o cache dedicado da árvore DRE (GRUPO 2),
+  // que também já é sempre-3-empresas — evita buscar categorias 2x.
+  if (!dreArvoreCategoriesCache) {
+    if (!dreArvoreCarregando) carregarDadosDreArvoreTodasEmpresas().then(() => renderResumoCapital(monthStart, monthEnd));
+    return;
+  }
 
   // Saldo Bancos em 01.01.2026: valor FIXO da planilha (Manual/Excel,
   // pedido reunião 21.07 — "Saldo Bancos em 01.01.2026 ... Manual
   // (Excel)"). Não recalcula mais via rollback do Supabase.
-  const SALDO_BANCOS_INICIO_EXCEL = -3382509;
+  // FIX 28/07 (ordem direta: "igual ao excel, ctrl+C ctrl+V, sem mais
+  // nem menos") — era -3382509 (fonte/motivo original não documentado
+  // e divergia da soma real das contas). Valor certo = soma de todas as
+  // contas em BANCOS_SALDO_INICIO_MES['2026-01'] = mesmo total já
+  // validado no card "Bancos — Saldo Primeiro dia do Mês".
+  const SALDO_BANCOS_INICIO_EXCEL = 781639.33;
   // Saldo Bancos Último Dia do Mês Anterior: Omie/ao vivo (rollback a
   // partir do saldo_atual de hoje). Corrigido 23/07/2026 (pedido
   // reunião): antes usava sempre dayjs() (mês atual REAL), ignorando o
@@ -12673,11 +12799,18 @@ function renderResumoCapital(monthStart, monthEnd) {
   // 1º dia do mês seguinte ao "Até" escolhido).
   const fimMesAnteriorFixo = monthEnd;
   const saldoInicio = SALDO_BANCOS_INICIO_EXCEL;
-  const saldoFim = calcSaldoInicialRealizado(contasCorrentesCache, categoriesCache, financialMovementsCache, 'TODAS', fimMesAnteriorFixo);
+  const saldoFim = calcSaldoInicialRealizado(analiseBancosContasCache, dreArvoreCategoriesCache, analiseBancosMovimentosCache, 'TODAS', fimMesAnteriorFixo);
+  const diffSaldo = saldoFim - saldoInicio;
 
   document.getElementById('resumoCapitalSaldoInicio').textContent = fmtBRL(saldoInicio);
   document.getElementById('resumoCapitalSaldoFim').textContent = fmtBRL(saldoFim);
-  document.getElementById('resumoCapitalSaldoDiff').textContent = fmtBRL(saldoFim - saldoInicio);
+  document.getElementById('resumoCapitalSaldoDiff').textContent = fmtBRL(diffSaldo);
+  // AV% (pedido 28/07): Variação no Período ÷ Saldo Bancos Último Dia do
+  // Mês Anterior (o card com a base em vermelho, conforme a marcação).
+  const elSaldoDiffAv = document.getElementById('resumoCapitalSaldoDiffAv');
+  if (elSaldoDiffAv) {
+    elSaldoDiffAv.textContent = saldoFim ? `AV% ${(diffSaldo / saldoFim * 100).toFixed(1).replace('.', ',')}%` : '';
+  }
 
   // Saldo Cartões a Receber em 01.01.2026: valor FIXO da planilha
   // (Manual/Excel — "Grupo DFC" BA33 "Saldo Cartões 01/01/2026",
@@ -12686,19 +12819,26 @@ function renderResumoCapital(monthStart, monthEnd) {
   // Saldo Cartões a Receber Último Dia do Mês Anterior: Omie/ao vivo —
   // snapshot de títulos em aberto de RedeCard (KMNO + Blue Line/Novah),
   // reconstruído na data-alvo (mesmo "fim do mês anterior" usado no
-  // Saldo Bancos acima).
+  // Saldo Bancos acima). FIX 28/07: usa analiseBancosReceivableCache
+  // (sempre 3 empresas), não mais receivableCache global (filtrado
+  // pelo seletor).
   const elCartoesInicio = document.getElementById('resumoCapitalCartoesInicio');
   if (elCartoesInicio) {
-    if (receivableCache) {
+    if (analiseBancosReceivableCache) {
       const dataAlvoCartoes = fimMesAnteriorFixo.subtract(1, 'day');
       const saldoCartoesInicio = SALDO_CARTOES_INICIO_EXCEL;
-      const saldoCartoesFim = calcSaldoCartoesEmData(receivableCache, dataAlvoCartoes);
+      const saldoCartoesFim = calcSaldoCartoesEmData(analiseBancosReceivableCache, dataAlvoCartoes);
+      const diffCartoes = saldoCartoesFim - saldoCartoesInicio;
       elCartoesInicio.textContent = fmtBRL(saldoCartoesInicio);
       document.getElementById('resumoCapitalCartoesFim').textContent = fmtBRL(saldoCartoesFim);
-      document.getElementById('resumoCapitalCartoesDiff').textContent = fmtBRL(saldoCartoesFim - saldoCartoesInicio);
+      document.getElementById('resumoCapitalCartoesDiff').textContent = fmtBRL(diffCartoes);
+      const elCartoesDiffAv = document.getElementById('resumoCapitalCartoesDiffAv');
+      if (elCartoesDiffAv) {
+        elCartoesDiffAv.textContent = saldoCartoesFim ? `AV% ${(diffCartoes / saldoCartoesFim * 100).toFixed(1).replace('.', ',')}%` : '';
+      }
     } else {
-      // receivableCache ainda não carregou nesse ciclo de render — mantém
-      // placeholder em vez de mostrar um zero enganoso.
+      // analiseBancosReceivableCache ainda não carregou nesse ciclo de
+      // render — mantém placeholder em vez de mostrar um zero enganoso.
       elCartoesInicio.textContent = 'R$ -----';
       document.getElementById('resumoCapitalCartoesFim').textContent = 'R$ -----';
       document.getElementById('resumoCapitalCartoesDiff').textContent = 'R$ -----';
@@ -12741,6 +12881,9 @@ function renderResumoCapital(monthStart, monthEnd) {
   document.getElementById('resumoCapitalRefis').textContent = fmtBRL(refis);
   const elCapex = document.getElementById('resumoCapitalCapex');
   if (elCapex) elCapex.textContent = fmtBRL(capex);
+
+  renderCapexRefisMensalPeriodo(monthStart, monthEnd);
+  renderProvaRealPorEmpresa();
 }
 
 // TODO(meta): Receita Bruta/CMV/Margem/EBITDA/Saldo Líquido ganharam um
@@ -14010,9 +14153,52 @@ const RESUMO_DETALHADO_LINHAS = [
   { label: '(-) Capex',                                              chave: 'capex' },
   { label: '(-) Outros (Refis)',                                     chave: 'refis' },
   { label: '(=) Saldo Líquido',                                      chave: 'saldoLiquido', destaque: true },
-  { label: '(+) Recebimento Empréstimos',                            chave: 'recebimentoEmprestimos' },
-  { label: '(-) Pagamento de Empréstimos',                           chave: 'pagamentoEmprestimos' },
-  { label: '(=) Saldo de Caixa',                                     chave: 'saldoCaixa', destaque: true },
+  // Removidas 28/07 (pedido, marcação em vermelho no print): "(+)
+  // Recebimento Empréstimos", "(-) Pagamento de Empréstimos", "(=)
+  // Saldo de Caixa" — ficaram fora do card "Resumo (Grupo, R$)".
+];
+
+// ===================================================================
+// Congelado — "Resumo (Grupo, R$)" da tela DRE por COMPETÊNCIA (clone).
+// Fonte: aba "Grupo DRE" (linhas 1-25) da mesma planilha, célula por
+// célula — não tem coluna "Recebimento/Pagamento de Empréstimos" nem
+// "Saldo de Caixa" (isso é fluxo de caixa, não existe em DRE por
+// competência), mas tem "Depreciação" que o DFC não tem. Por isso é
+// um dataset/layout PRÓPRIO, não reaproveita RESUMO_DETALHADO_MESES/
+// LINHAS (bug corrigido em 28/07 — o clone estava usando os do Caixa).
+// ===================================================================
+const RESUMO_DETALHADO_MESES_DRE = {
+  '2026-01': { receitaProdutos: 469949.55, receitaMercadorias: 0, receitaServicos: 145425.55, receita: 615375.10, deducoes: 84013.89, receitaLiquida: 531361.21, custoInsumos: 212549.68, custoServicos: 11652.50, custoMaoObra: 125576.75, cmv: 349778.93, royalties: 17574.59, margemContribuicao: 164007.68, custoAdm: 118646.82, despesasComerciais: 63876.18, ebitda: -18515.32, depreciacao: 7903.75, despesasFinanceiras: 11523.84, receitasFinanceiras: 11.45, lucroLiquido: -37931.46, distribuicao: 2865.03, capex: 4044.00, refis: 8881.57, saldoLiquido: -53722.06 },
+  '2026-02': { receitaProdutos: 877469.51, receitaMercadorias: 0, receitaServicos: 88937.45, receita: 966406.96, deducoes: 119887.66, receitaLiquida: 846519.30, custoInsumos: 195631.32, custoServicos: 20780.00, custoMaoObra: 158054.18, cmv: 374465.50, royalties: 38018.60, margemContribuicao: 434035.20, custoAdm: 149878.88, despesasComerciais: 84587.77, ebitda: 199568.55, depreciacao: 11014.07, despesasFinanceiras: 11061.30, receitasFinanceiras: 36.80, lucroLiquido: 177529.98, distribuicao: 367.95, capex: 19754.79, refis: 56984.27, saldoLiquido: 100422.97 },
+  '2026-03': { receitaProdutos: 783660.17, receitaMercadorias: 0, receitaServicos: 53620.01, receita: 837280.18, deducoes: 108591.70, receitaLiquida: 728688.48, custoInsumos: 227094.25, custoServicos: 20048.37, custoMaoObra: 170068.10, cmv: 417210.72, royalties: 28632.77, margemContribuicao: 282844.99, custoAdm: 174972.07, despesasComerciais: 111340.11, ebitda: -3467.18, depreciacao: 10372.80, despesasFinanceiras: 11865.69, receitasFinanceiras: 8276.22, lucroLiquido: -17429.46, distribuicao: 2191.87, capex: 66785.80, refis: 18769.14, saldoLiquido: -105176.27 },
+  '2026-04': { receitaProdutos: 793459.76, receitaMercadorias: 0, receitaServicos: 106804.80, receita: 900264.56, deducoes: 109847.40, receitaLiquida: 790417.16, custoInsumos: 237119.61, custoServicos: 28357.04, custoMaoObra: 188435.42, cmv: 453912.07, royalties: 40349.84, margemContribuicao: 296155.25, custoAdm: 210863.57, despesasComerciais: 90769.68, ebitda: -5477.99, depreciacao: 10502.65, despesasFinanceiras: 9872.78, receitasFinanceiras: 8328.63, lucroLiquido: -17524.79, distribuicao: 2271.98, capex: 28721.86, refis: 19928.04, saldoLiquido: -68446.67 },
+  '2026-05': { receitaProdutos: 946314.56, receitaMercadorias: 0, receitaServicos: 101656.20, receita: 1047970.76, deducoes: 124272.63, receitaLiquida: 923698.13, custoInsumos: 487509.75, custoServicos: 50712.92, custoMaoObra: 218235.87, cmv: 756458.54, royalties: 27369.63, margemContribuicao: 139869.96, custoAdm: 198156.30, despesasComerciais: 99996.53, ebitda: -158282.87, depreciacao: 11979.71, despesasFinanceiras: 10087.48, receitasFinanceiras: 7559.52, lucroLiquido: -172790.54, distribuicao: 0, capex: 89484.41, refis: 154694.73, saldoLiquido: -416969.68 },
+};
+
+const RESUMO_DETALHADO_LINHAS_DRE = [
+  { label: '(+) Receita Produtos',                                  chave: 'receitaProdutos' },
+  { label: '(+) Receita de Mercadorias (Site)',                      chave: 'receitaMercadorias' },
+  { label: '(+) Receita de Serviços',                                chave: 'receitaServicos' },
+  { label: '(=) Receita Bruta',                                      chave: 'receita', destaque: true },
+  { label: '(-) Deduções de Vendas (Impostos + Devoluções)',         chave: 'deducoes' },
+  { label: '(=) Receita Líquida',                                    chave: 'receitaLiquida', destaque: true },
+  { label: '(-) Custo de Insumos e Matéria-Prima',                   chave: 'custoInsumos' },
+  { label: '(-) Custo de Serviços',                                  chave: 'custoServicos' },
+  { label: '(-) Custo Mão de Obra',                                  chave: 'custoMaoObra' },
+  { label: '(-) CMV',                                                chave: 'cmv', destaque: true },
+  { label: '(-) Royalties',                                          chave: 'royalties' },
+  { label: '(=) Margem de Contribuição',                             chave: 'margemContribuicao', destaque: true },
+  { label: '(-) Custo ADM + ADM Indústria',                          chave: 'custoAdm' },
+  { label: '(-) Despesas Comerciais',                                chave: 'despesasComerciais' },
+  { label: '(-) Resultado Operacional (EBITDA)',                     chave: 'ebitda', destaque: true },
+  { label: '(-) Depreciação',                                        chave: 'depreciacao' },
+  { label: '(-) Despesas Financeiras',                               chave: 'despesasFinanceiras' },
+  { label: '(+) Receitas Financeiras',                               chave: 'receitasFinanceiras' },
+  { label: '(-) Resultado Líquido (Lucro Líquido)',                  chave: 'lucroLiquido', destaque: true },
+  { label: '(-) Distribuição',                                       chave: 'distribuicao' },
+  { label: '(-) Capex',                                               chave: 'capex' },
+  { label: '(-) Outros',                                             chave: 'refis' },
+  { label: '(=) Saldo Líquido',                                      chave: 'saldoLiquido', destaque: true },
 ];
 
 const RESUMO_DETALHADO_MESES = {
@@ -14094,6 +14280,167 @@ function saldoBancosPorContaRollback(contasCorrentes, categories, financialMovem
   return out;
 }
 
+// Mapa banco (label) -> empresa, pra filtrar o card "Bancos" quando só
+// 1 empresa está selecionada (pedido 28/07). Congelado (Jan-Mai): mapa
+// fixo abaixo. Ao vivo (Jun+): o label já vem no formato "Conta
+// (EMPRESA)" (ver saldoBancosPorContaRollback), extrai via regex.
+const BANCOS_LABEL_EMPRESA = {
+  'Brasil KMNO': 'KMNO', 'Sicoob': 'KMNO', 'Itaú': 'KMNO', 'Caixinha': 'KMNO',
+  'Sicredi KMNO': 'KMNO', 'Omie Cash': 'KMNO', 'BTG': 'KMNO',
+  'Brasil RT': 'RT', 'Sicredi RT': 'RT',
+  'Caixinha (Novah)': 'NOVAH', 'Vexpenses (Novah)': 'NOVAH', 'Sicredi (Novah)': 'NOVAH', 'Cotas Sicredi (Novah)': 'NOVAH',
+};
+function empresaDoBanco(label) {
+  if (BANCOS_LABEL_EMPRESA[label]) return BANCOS_LABEL_EMPRESA[label];
+  const m = /\((KMNO|NOVAH|RT)\)$/.exec(label);
+  return m ? m[1] : null;
+}
+
+// Card "Bancos": 1 empresa selecionada = abre direto, só com os bancos
+// daquela empresa. 2-3 empresas = fica minimizado por padrão (soma
+// geral não abre sozinha) — clique no título expande/recolhe. Resetado
+// pra automático a cada troca no seletor global (loadCompanyData).
+let grupoBancosExpandidoManual = null;
+function toggleGrupoBancosCard() {
+  const wrap = document.getElementById('grupoBancosBodyWrap');
+  if (!wrap) return;
+  const abertoAgora = wrap.style.display !== 'none';
+  grupoBancosExpandidoManual = !abertoAgora;
+  aplicarEstadoGrupoBancosCard();
+}
+function aplicarEstadoGrupoBancosCard() {
+  const wrap = document.getElementById('grupoBancosBodyWrap');
+  const icon = document.getElementById('grupoBancosToggleIcon');
+  if (!wrap) return;
+  const umaEmpresa = selectedCompanyKeys && selectedCompanyKeys.length === 1;
+  const abertoPadrao = umaEmpresa;
+  const aberto = grupoBancosExpandidoManual === null ? abertoPadrao : grupoBancosExpandidoManual;
+  wrap.style.display = aberto ? '' : 'none';
+  if (icon) icon.textContent = aberto ? '▲ recolher' : '▼ expandir';
+}
+
+// ===================================================================
+// PROVA REAL MÊS A MÊS, POR EMPRESA (pedido 28/07 — recria o card
+// "Prova Real dos Caixas" que foi excluído, mas agora por empresa em
+// vez de Grupo consolidado, com tabela + gráfico). Fonte: abas
+// "KMNO/NOVAH/RT DFC (caixa)", bloco INI/ENT/SAÍ/SAL de cada uma —
+// valores lidos célula a célula do excel (KMNO confirmado por print
+// 28/07). NOVAH e RT ainda não têm esse bloco confirmado — ficam null
+// até Lucas mandar o equivalente.
+//
+// ATENÇÃO: Mar/Abr/Mai da KMNO têm uma inconsistência real entre
+// "Saldo Real" (soma dos bancos, aba BANCOS) e "Diferença" mostrada —
+// não corrigi nem recalculei, copiei exatamente como está no excel
+// (ordem direta: "ctrl C ctrl V, sem mais nem menos"). Pode ser um
+// problema real de reconciliação já mapeado (ver notas de conciliação
+// do grupo) — não é bug de transcrição.
+// ===================================================================
+const PROVA_REAL_POR_EMPRESA = {
+  KMNO: {
+    jan: { saldoInicial: 746008.60, entradas: 726555.21, saidas: 571320.37, saldoCalculado: 901243.44, saldoReal: 889317.40, diferenca: -11926.04 },
+    fev: { saldoInicial: 889317.36, entradas: 720089.24, saidas: 572260.35, saldoCalculado: 1037146.25, saldoReal: 1028234.65, diferenca: -8911.59 },
+    mar: { saldoInicial: 1236837.69, entradas: 922993.69, saidas: 805345.64, saldoCalculado: 1354485.74, saldoReal: 645660.88, diferenca: 3950.20 },
+    abr: { saldoInicial: 1095626.87, entradas: 831676.46, saidas: 788009.82, saldoCalculado: 1139293.51, saldoReal: 1137043.09, diferenca: 5852.62 },
+    mai: { saldoInicial: 939313.87, entradas: 765706.88, saidas: 878080.12, saldoCalculado: 826940.63, saldoReal: 1042137.78, diferenca: 7408.59 },
+  },
+  NOVAH: {
+    // Fonte: aba "NOVAH DFC (caixa)", fórmulas linhas 226-229 (INICIAL/
+    // ENTRADAS/SAÍDAS/SALDO BANCOS) + linha 224 (SALDOS BANCOS real,
+    // "Saldo Primeiro dia do Mês"). Novah NÃO rastreia saldo real de
+    // fim de mês diretamente (diferente da KMNO) — "Saldo Real" de um
+    // mês é o "Saldo Primeiro dia do Mês" real do mês SEGUINTE (mesmo
+    // ponto no tempo, visto do lado de dentro do mês seguinte).
+    // Maio: precisaria do 1º dia de Junho, que é Omie (ao vivo), fora
+    // do escopo do congelado Jan-Mai — fica null de propósito.
+    jan: { saldoInicial: 11360.93, entradas: 240678.29, saidas: 241933.15, saldoCalculado: 10106.07, saldoReal: 10916.12, diferenca: 810.05 },
+    fev: { saldoInicial: 35630.73, entradas: 200545.99, saidas: 272349.32, saldoCalculado: -36172.60, saldoReal: 87084.21, diferenca: 123256.81 },
+    mar: { saldoInicial: 10916.12, entradas: 350055.63, saidas: 281822.70, saldoCalculado: 79149.05, saldoReal: 56744.90, diferenca: -22404.15 },
+    abr: { saldoInicial: 87084.21, entradas: 239239.00, saidas: 292995.51, saldoCalculado: 33327.70, saldoReal: 20657.63, diferenca: -12670.07 },
+    mai: { saldoInicial: 56744.90, entradas: 248272.62, saidas: 345760.37, saldoCalculado: -40742.85, saldoReal: null, diferenca: null },
+  },
+  RT: null,    // pendente — sem print/dado confirmado ainda
+};
+const PROVA_REAL_MESES_ORDEM = ['jan', 'fev', 'mar', 'abr', 'mai'];
+
+let provaRealEmpresaAtual = 'KMNO';
+function selecionarProvaRealEmpresa(empresa) {
+  provaRealEmpresaAtual = empresa;
+  renderProvaRealPorEmpresa();
+}
+
+let chartProvaRealEmpresa = null;
+function renderProvaRealPorEmpresa() {
+  const tabsEl = document.getElementById('provaRealEmpresaTabs');
+  const bodyEl = document.getElementById('provaRealEmpresaBody');
+  const wrapEl = document.getElementById('provaRealEmpresaWrap');
+  if (!tabsEl || !bodyEl || !wrapEl) return;
+
+  tabsEl.innerHTML = ['KMNO', 'NOVAH', 'RT'].map(emp => `
+    <button type="button" class="dre-empresa-tab${emp === provaRealEmpresaAtual ? ' active' : ''}"
+      onclick="selecionarProvaRealEmpresa('${emp}')">${COMPANIES[emp] ? COMPANIES[emp].label : emp}</button>
+  `).join('');
+
+  const dados = PROVA_REAL_POR_EMPRESA[provaRealEmpresaAtual];
+  if (!dados) {
+    bodyEl.innerHTML = '<tr><td style="color:var(--bone-dim);">Sem dado ainda pra essa empresa — pendente planilha/print equivalente ao da KMNO.</td></tr>';
+    wrapEl.querySelector('.chart-card-title')?.remove();
+    const canvas = document.getElementById('chartProvaRealEmpresa');
+    if (canvas) canvas.style.display = 'none';
+    if (chartProvaRealEmpresa) { chartProvaRealEmpresa.destroy(); chartProvaRealEmpresa = null; }
+    return;
+  }
+  const canvas = document.getElementById('chartProvaRealEmpresa');
+  if (canvas) canvas.style.display = '';
+
+  const linhas = [
+    { label: 'Saldo Inicial', chave: 'saldoInicial' },
+    { label: 'Entradas', chave: 'entradas' },
+    { label: 'Saídas', chave: 'saidas' },
+    { label: '(=) Saldo Calculado', chave: 'saldoCalculado', destaque: true },
+    { label: 'Saldo Real (soma dos bancos)', chave: 'saldoReal' },
+    { label: '(=) Diferença (Real − Calculado)', chave: 'diferenca', destaque: true },
+  ];
+  bodyEl.innerHTML = linhas.map(l => `
+    <tr${l.destaque ? ' style="font-weight:600;"' : ''}>
+      <td>${l.label}</td>
+      ${PROVA_REAL_MESES_ORDEM.map(m => {
+        const v = dados[m][l.chave];
+        if (v === null || v === undefined) return '<td class="num" style="color:var(--bone-dim);">-----</td>';
+        const negativo = v < 0;
+        return `<td class="num" style="${negativo ? 'color:var(--red);' : ''}">${negativo ? `(${fmtBRL(Math.abs(v))})` : fmtBRL(v)}</td>`;
+      }).join('')}
+    </tr>`).join('');
+
+  if (canvas) {
+    if (chartProvaRealEmpresa) chartProvaRealEmpresa.destroy();
+    const labels = PROVA_REAL_MESES_ORDEM.map(m => m.toUpperCase());
+    chartProvaRealEmpresa = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: {
+        labels,
+        datasets: [
+          { label: 'Saldo Calculado', data: PROVA_REAL_MESES_ORDEM.map(m => dados[m].saldoCalculado == null ? null : Math.round(dados[m].saldoCalculado)), backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 26 },
+          { label: 'Saldo Real', data: PROVA_REAL_MESES_ORDEM.map(m => dados[m].saldoReal == null ? null : Math.round(dados[m].saldoReal)), backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 26 },
+          { type: 'line', label: 'Diferença', data: PROVA_REAL_MESES_ORDEM.map(m => dados[m].diferenca == null ? null : Math.round(dados[m].diferenca)), borderColor: CHART_COLORS.red, backgroundColor: CHART_COLORS.red, yAxisID: 'y1', tension: 0.25 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { color: 'rgba(243,239,230,0.75)' } },
+          tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${fmtBRL(ctx.parsed.y)}` } },
+        },
+        scales: {
+          x: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { color: 'rgba(243,239,230,0.06)' } },
+          y: { ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { color: 'rgba(243,239,230,0.06)' } },
+          y1: { position: 'right', ticks: { color: 'rgba(243,239,230,0.55)' }, grid: { display: false } },
+        },
+      },
+    });
+  }
+}
+
 function renderGrupoBancos(monthStart, monthEnd) {
   const header = document.getElementById('grupoBancosHeader');
   const body = document.getElementById('grupoBancosBody');
@@ -14161,7 +14508,15 @@ function renderGrupoBancos(monthStart, monthEnd) {
   const bancosSet = new Set(d.labels);
   mesesValidos.filter(m => m.live).forEach(m => Object.keys(liveByMes[m.chave] || {}).forEach(b => bancosSet.add(b)));
 
-  const linhasBancos = [...bancosSet].map(label => `
+  // FIX 28/07 (pedido): 1 empresa selecionada = só os bancos dela.
+  const umaEmpresa = selectedCompanyKeys && selectedCompanyKeys.length === 1 ? selectedCompanyKeys[0] : null;
+  const bancosFiltrados = umaEmpresa ? [...bancosSet].filter(b => empresaDoBanco(b) === umaEmpresa) : [...bancosSet];
+  // Total recalculado sobre o conjunto filtrado (soma real dos bancos
+  // exibidos) — em vez do d.total fixo do Grupo, que não faz sentido
+  // quando é só 1 empresa.
+  const totalMesFiltrado = (m) => bancosFiltrados.reduce((s, b) => s + valorBanco(b, m), 0);
+
+  const linhasBancos = bancosFiltrados.map(label => `
     <tr>
       <td class="dre-tbl-sticky">${label}</td>
       ${mesesValidos.map((m, i) => `
@@ -14172,15 +14527,15 @@ function renderGrupoBancos(monthStart, monthEnd) {
     <tr style="font-weight:600;">
       <td class="dre-tbl-sticky">Saldo Primeiro dia do Mês (Total)</td>
       ${mesesValidos.map((m, i) => `
-        <td class="num">${fmtBRL(totalMes(m))}</td>
-        <td class="num total-pct">${avPct(totalMes, i)}</td>`).join('')}
+        <td class="num">${fmtBRL(totalMesFiltrado(m))}</td>
+        <td class="num total-pct">${avPct(totalMesFiltrado, i)}</td>`).join('')}
     </tr>`;
   // Linhas extras (Depósito/Cartão de Crédito recebidos no mês) só têm
   // fonte congelada (Excel) — meses ao vivo ficam sem essas 2 linhas,
   // sem fonte confirmada no Omie ainda pra esse agrupamento específico.
   // Sem AV% aqui (célula "—" só pra manter o alinhamento de colunas —
   // são fluxo do mês, não saldo, comparação não se aplica igual).
-  const linhasExtras = d.labelsExtras.map((label, k) => `
+  const linhasExtras = (umaEmpresa && umaEmpresa !== 'KMNO') ? '' : d.labelsExtras.map((label, k) => `
     <tr${k === 0 ? ' style="border-top:1px solid var(--line);"' : ''}>
       <td class="dre-tbl-sticky" style="color:var(--bone-dim);">${label}</td>
       ${mesesValidos.map(m => `
@@ -14188,6 +14543,7 @@ function renderGrupoBancos(monthStart, monthEnd) {
         <td class="num total-pct">—</td>`).join('')}
     </tr>`).join('');
   body.innerHTML = linhasBancos + linhaTotal + linhasExtras;
+  aplicarEstadoGrupoBancosCard();
 }
 
 // Prova Real dos Caixas (reunião 21.07, linha 42: "No DFC terminar
@@ -14614,18 +14970,20 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
 // de fora (removidos do HTML — ver viewDfcArvoreCopia), por não terem
 // equivalente em competência.
 function renderGrupoDfcMetasCopia(grupo) {
+  window._ultimoGrupoMetricasCopia = grupo;
+  const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
   const campos = [
-    { chave: 'receitaBruta', metaEl: 'grupoDfcReceitaBrutaMetaCopia', pctEl: 'grupoDfcReceitaBrutaPctCopia', avEl: 'grupoDfcReceitaBrutaAvCopia', valor: grupo.receitaBruta },
-    { chave: 'cmv', metaEl: 'grupoDfcCmvMetaCopia', pctEl: 'grupoDfcCmvPctCopia', avEl: 'grupoDfcCmvAvCopia', valor: grupo.cmv },
-    { chave: 'margemContribuicao', metaEl: 'grupoDfcMargemMetaCopia', pctEl: 'grupoDfcMargemPctCopia', avEl: 'grupoDfcMargemAvCopia', valor: grupo.margemContribuicao },
-    { chave: 'ebitda', metaEl: 'grupoDfcEbitdaMetaCopia', pctEl: 'grupoDfcEbitdaPctCopia', avEl: 'grupoDfcEbitdaAvCopia', valor: grupo.ebitda },
-    { chave: 'saldoLiquido', metaEl: 'grupoDfcSaldoLiquidoMetaCopia', pctEl: 'grupoDfcSaldoLiquidoPctCopia', avEl: 'grupoDfcSaldoLiquidoAvCopia', valor: grupo.saldoLiquido },
+    { chave: 'receitaBruta', metaEl: 'grupoDfcReceitaBrutaMetaCopia', pctEl: 'grupoDfcReceitaBrutaPctCopia', avEl: 'grupoDfcReceitaBrutaAvCopia', valor: grupo.receitaBruta, label: 'Receita Bruta' },
+    { chave: 'cmv', metaEl: 'grupoDfcCmvMetaCopia', pctEl: 'grupoDfcCmvPctCopia', avEl: 'grupoDfcCmvAvCopia', valor: grupo.cmv, label: 'CMV' },
+    { chave: 'margemContribuicao', metaEl: 'grupoDfcMargemMetaCopia', pctEl: 'grupoDfcMargemPctCopia', avEl: 'grupoDfcMargemAvCopia', valor: grupo.margemContribuicao, label: 'Margem de Contribuição' },
+    { chave: 'ebitda', metaEl: 'grupoDfcEbitdaMetaCopia', pctEl: 'grupoDfcEbitdaPctCopia', avEl: 'grupoDfcEbitdaAvCopia', valor: grupo.ebitda, label: 'EBITDA' },
+    { chave: 'saldoLiquido', metaEl: 'grupoDfcSaldoLiquidoMetaCopia', pctEl: 'grupoDfcSaldoLiquidoPctCopia', avEl: 'grupoDfcSaldoLiquidoAvCopia', valor: grupo.saldoLiquido, label: 'Saldo Líquido' },
   ];
-  // Mesma meta em R$ do card original (dashMetasCache é compartilhado —
-  // é a mesma meta de negócio, só muda a lente caixa/competência). Só
-  // não recebe botão de editar aqui, pra não duplicar edição em dois
-  // lugares — edita pelo card original ("DRE por Caixa"), que já
-  // re-renderiza ambos via window._ultimoGrupoMetricas de cada view.
+  // FIX 28/07 (pedido): antes não tinha botão de editar aqui de
+  // propósito ("edita pelo card original, pra não duplicar"). Lucas
+  // pediu pra ter os dois — mesma dashMetasCache/editarMetaGrupo do
+  // card original, só com ids próprios (sufixo "Copia") pra não colidir
+  // no DOM com o botão do "DRE por Caixa".
   const baseReceitaBruta = grupo.receitaBruta || 0;
   campos.forEach(c => {
     const meta = dashMetasCache[c.chave];
@@ -14641,6 +14999,16 @@ function renderGrupoDfcMetasCopia(grupo) {
     }
     const av = c.chave === 'receitaBruta' ? 100 : (baseReceitaBruta ? (c.valor / baseReceitaBruta * 100) : 0);
     if (avEl) avEl.textContent = av.toFixed(1).replace('.', ',') + '%';
+    if (ehAdmin && metaEl && !document.getElementById('editMetaCopia-' + c.chave)) {
+      const btn = document.createElement('button');
+      btn.id = 'editMetaCopia-' + c.chave;
+      btn.type = 'button';
+      btn.textContent = '✎';
+      btn.title = 'Editar meta (admin)';
+      btn.style.cssText = 'background:none;border:none;color:var(--blue-belt-light);cursor:pointer;margin-left:6px;font-size:11px;padding:0;';
+      btn.onclick = () => editarMetaGrupo(c.chave, c.label);
+      metaEl.parentElement.appendChild(btn);
+    }
   });
 }
 
@@ -14666,7 +15034,7 @@ function renderGrupoResumoDetalhadoCopia(monthStart, monthEnd) {
   meses.forEach(m => {
     const chave = m.format('YYYY-MM');
     if (indiceMes(m) > mesAtualIdxResumo) { dadoPorMes[chave] = null; return; }
-    dadoPorMes[chave] = RESUMO_DETALHADO_MESES[chave]
+    dadoPorMes[chave] = RESUMO_DETALHADO_MESES_DRE[chave]
       || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && movementsCache
         ? buildResumoDetalhadoMesAoVivo(categoriesCache, movementsCache, m, m.add(1, 'month'))
         : null);
@@ -14678,13 +15046,13 @@ function renderGrupoResumoDetalhadoCopia(monthStart, monthEnd) {
   const dadoPorMesAnterior = {};
   mesesAnterior.forEach(m => {
     const chave = m.format('YYYY-MM');
-    dadoPorMesAnterior[chave] = RESUMO_DETALHADO_MESES[chave]
+    dadoPorMesAnterior[chave] = RESUMO_DETALHADO_MESES_DRE[chave]
       || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && movementsCache
         ? buildResumoDetalhadoMesAoVivo(categoriesCache, movementsCache, m, m.add(1, 'month'))
         : null);
   });
 
-  body.innerHTML = RESUMO_DETALHADO_LINHAS.map(linha => {
+  body.innerHTML = RESUMO_DETALHADO_LINHAS_DRE.map(linha => {
     const valoresMeses = meses.map(m => {
       if (indiceMes(m) > mesAtualIdxResumo) return { v: 0, futuro: true, av: null };
       const dado = dadoPorMes[m.format('YYYY-MM')];
@@ -14833,7 +15201,7 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
     if (indiceMes(m) > mesAtualIdxEvolucao) {
       return { mes: m, receitaBruta: 0, cmv: 0, margemContribuicao: 0, ebitda: 0, saldoLiquido: 0 };
     }
-    const congelado = EXCEL_HISTORICO_GRUPO_DFC[chave];
+    const congelado = EXCEL_HISTORICO_GRUPO_DRE[chave];
     const fimMes = m.add(1, 'month');
     const metricasMes = congelado || buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, m, fimMes).grupo;
     return {
@@ -14848,7 +15216,7 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
 
   const mesAntesEvolucao = meses[0].subtract(1, 'month');
   const chaveAntesEvolucao = mesAntesEvolucao.format('YYYY-MM');
-  const congeladoAntesEvolucao = EXCEL_HISTORICO_GRUPO_DFC[chaveAntesEvolucao];
+  const congeladoAntesEvolucao = EXCEL_HISTORICO_GRUPO_DRE[chaveAntesEvolucao];
   const metricasAntesEvolucao = congeladoAntesEvolucao
     || (categoriesCache && movementsCache ? buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, mesAntesEvolucao, mesAntesEvolucao.add(1, 'month')).grupo : null);
 
@@ -15112,47 +15480,60 @@ function renderGrupoDfcChart(evolucaoMensal) {
   });
 }
 
-// Soma valores de Capex e Refis mês a mês (mesma lista de meses já usada
-// pra "Evolução Mensal — Grupo"), lendo movementsCache direto por código
-// de categoria — NÃO passa por isExcludedFromDre (essas categorias estão
-// deliberadamente fora do DRE, ver CATEGORIAS_SEM_CONTA_DRE).
-function buildCapexRefisMensal(movements, meses, categories) {
-  const catByKey = buildCatByEmpresaCodigo(categories || []);
-  const porMes = {};
-  meses.forEach(m => { porMes[m.format('YYYY-MM')] = { capex: 0, refis: 0, capexDetalhe: {}, refisDetalhe: {} }; });
-
-  (movements || []).forEach(mv => {
-    if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
-    const key = dayjs(mv.dt_registro || mv.dt_emissao).format('YYYY-MM');
-    if (!porMes[key]) return;
-    const v = Number(mv.val_pago || mv.val_liquido || 0);
-    if (!v) return;
-
-    const cat = catByKey[`${mv._empresa}|${mv.cod_categoria}`];
-    const label = cat ? decodeHtmlEntities(cat.descricao) : mv.cod_categoria;
-    const chave = `${label} (${mv._empresa})`;
-
-    if (CAPEX_CODIGOS.includes(mv.cod_categoria)) {
-      porMes[key].capex += v;
-      porMes[key].capexDetalhe[chave] = (porMes[key].capexDetalhe[chave] || 0) + v;
-    }
-    const refisCodigos = REFIS_CODIGOS_POR_EMPRESA[mv._empresa] || [];
-    if (refisCodigos.includes(mv.cod_categoria)) {
-      porMes[key].refis += v;
-      porMes[key].refisDetalhe[chave] = (porMes[key].refisDetalhe[chave] || 0) + v;
-    }
-  });
-
+// Soma valores de Capex e Refis mês a mês, dentro do período De/Até
+// selecionado. FIX 28/07: agora usa o MESMO padrão já usado pros cards
+// "Capex (Período)"/"Pagtos Impostos Atrasados/Refis (Período)" —
+// congelado da planilha (RESUMO_DETALHADO_MESES) pros meses Jan-Mai/26,
+// cálculo ao vivo (por código de categoria) pros meses Jun/26+. Antes
+// lia só movementsCache (sempre ao vivo, e além disso filtrado pelo
+// seletor de empresa do topo) — violava a regra "Jan-Mai só Excel" e
+// não tinha canvas correspondente no HTML (ficava sem uso).
+function buildCapexRefisMensal(financialMovements, meses, categories) {
   return meses.map(m => {
-    const d = porMes[m.format('YYYY-MM')];
-    return {
-      mes: m,
-      capex: d.capex,
-      refis: d.refis,
-      capexDetalhe: d.capexDetalhe,
-      refisDetalhe: d.refisDetalhe,
-    };
+    const chave = m.format('YYYY-MM');
+    const congelado = RESUMO_DETALHADO_MESES[chave];
+    if (congelado) {
+      // Congelado não tem detalhe categoria-a-categoria (só o total do
+      // mês) — tooltip mostra "(valor congelado da planilha)".
+      return { mes: m, capex: congelado.capex || 0, refis: congelado.refis || 0, capexDetalhe: null, refisDetalhe: null };
+    }
+    const monthEndM = m.endOf('month');
+    let capex = 0, refis = 0;
+    const capexDetalhe = {}, refisDetalhe = {};
+    const catByKey = buildCatByEmpresaCodigo(categories || []);
+    (financialMovements || []).forEach(mv => {
+      if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
+      const d = dayjs(mv.dt_registro || mv.dt_emissao);
+      if (d.isBefore(m) || d.isAfter(monthEndM)) return;
+      const v = Number(mv.val_pago || mv.val_liquido || 0);
+      if (!v) return;
+      const cat = catByKey[`${mv._empresa}|${mv.cod_categoria}`];
+      const label = cat ? decodeHtmlEntities(cat.descricao) : mv.cod_categoria;
+      const chaveCat = `${label} (${mv._empresa})`;
+      if (CAPEX_CODIGOS.includes(mv.cod_categoria)) { capex += v; capexDetalhe[chaveCat] = (capexDetalhe[chaveCat] || 0) + v; }
+      const refisCodigos = REFIS_CODIGOS_POR_EMPRESA[mv._empresa] || [];
+      if (refisCodigos.includes(mv.cod_categoria)) { refis += v; refisDetalhe[chaveCat] = (refisDetalhe[chaveCat] || 0) + v; }
+    });
+    return { mes: m, capex, refis, capexDetalhe, refisDetalhe };
   });
+}
+
+// Monta a lista de meses do período De/Até e dispara o gráfico Capex x
+// Refis mês a mês (canvas #chartCapexRefis, dentro de "Análise Caixa
+// Bancos no Período"). Chamado a partir de renderResumoCapital, que já
+// garante que analiseBancosMovimentosCache/dreArvoreCategoriesCache
+// estão carregados (sempre 3 empresas).
+function renderCapexRefisMensalPeriodo(monthStart, monthEnd) {
+  const canvas = document.getElementById('chartCapexRefis');
+  if (!canvas) return;
+  const meses = [];
+  let cursor = monthStart.startOf('month');
+  const fim = monthEnd.subtract(1, 'month').startOf('month');
+  let guard = 0;
+  while (!cursor.isAfter(fim) && guard < 24) { meses.push(cursor); cursor = cursor.add(1, 'month'); guard++; }
+  if (!meses.length) return;
+  const evolucaoMensal = buildCapexRefisMensal(analiseBancosMovimentosCache, meses, dreArvoreCategoriesCache);
+  renderCapexRefisChart(evolucaoMensal);
 }
 
 let chartCapexRefis = null;
