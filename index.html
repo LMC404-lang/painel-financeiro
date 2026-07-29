@@ -451,6 +451,23 @@
     background: var(--navy-2);
     font-weight: 600;
   }
+  /* Pedido 28/07: só na tabela "Vendas x Faturamento" (print), Total/Média
+     em amarelo — diferente do dourado #C9A227 já usado nos gráficos
+     (Faturamento, CMV, Saldo Real, Refis). Escopado só nessa tabela pra não
+     afetar as outras 24 que usam .fin-tbl. */
+  .fin-tbl-vendas-fat-amarelo th.total, .fin-tbl-vendas-fat-amarelo td.total,
+  .fin-tbl-vendas-fat-amarelo th.media, .fin-tbl-vendas-fat-amarelo td.media,
+  .fin-tbl-vendas-fat-amarelo th.total-pct, .fin-tbl-vendas-fat-amarelo td.total-pct {
+    background: rgba(180, 160, 90, 0.14);
+  }
+  /* Pedido 28/07: Total/Média em amarelo (mesmo esquema acima) também na
+     tabela "Evolução Mensal — Grupo" — nos 2 lugares onde ela existe
+     (DRE por Caixa e o clone dentro do DRE por Competência). Escopado
+     só nessas 2 tabelas. */
+  .fin-tbl-evolucao-amarelo th.total, .fin-tbl-evolucao-amarelo td.total,
+  .fin-tbl-evolucao-amarelo th.media, .fin-tbl-evolucao-amarelo td.media {
+    background: rgba(180, 160, 90, 0.14);
+  }
   /* Pedido reunião 27/07: "congelar a primeira coluna, para mais fácil
      validação de dados" — mesmo padrão do .dre-tbl-sticky, aplicado nas
      tabelas mês a mês (Vendas x Faturamento, Resumo Grupo). */
@@ -880,6 +897,20 @@
     min-width: 220px;
     max-width: 320px;
     white-space: normal;
+    /* Pedido 28/07: linha com "+" (ícone monospace inline-block) tinha
+       altura diferente de linha sem "+" (só texto) por causa de métrica
+       de fonte diferente entre o ícone e o texto — line-height fixo
+       aqui garante a MESMA altura pra qualquer linha, com ou sem ícone. */
+    line-height: 18px;
+  }
+  /* Pedido 28/07: card "Tipo/Grupo/Conta do DRE" tinha linhas com altura
+     desigual (nomes tipo "Receita Líquida Operacional", "Custo Médio
+     (CMC) das Vendas" quebrando em 2 linhas, enquanto nomes curtos
+     ficavam em 1) — igualando ao comportamento do "Resumo por Empresa"
+     (que não tem max-width, só quebra em nomes bem longos). Escopado só
+     nessa tabela pra não afetar as outras 4 que usam .dre-tbl-mes-alt. */
+  .dre-tbl-tipo-grupo-conta .dre-tbl-sticky {
+    max-width: 420px;
   }
   .dre-tbl th.dre-tbl-sticky { color: var(--bone-dim); z-index: 4; }
   .dre-tbl th.orcado, .dre-tbl td.orcado { border-left: 1px dashed var(--line); font-style: italic; color: var(--bone-dim); }
@@ -906,6 +937,10 @@
   .dfc-linha-filho td:nth-child(2) { padding-left: 24px; color: var(--bone-dim); }
   .dre-tbl-row.destaque td { font-weight: 700; font-size: 12.5px; padding-top: 10px; padding-bottom: 10px; }
   .dre-tbl-row.destaque td.dre-tbl-sticky { font-size: 13px; }
+  /* Pedido 28/07: linha pai + linhas-filho ficam verde-claro quando o
+     grupo está aberto (card "Resumo por Empresa" só — toggleResumoEmpresaConta).
+     !important pra vencer a listra alternada (.dre-tbl-mes-alt td:nth-child(even)). */
+  .linha-grupo-aberta td { background: rgba(63,166,106,0.18) !important; }
   .dre-tbl td.valor-nao-confirmado { color: var(--bone-dim); font-style: italic; }
   .badge-nao-confirmado { font-size: 10px; color: #d9a441; font-style: normal; white-space: nowrap; }
   .dre-tbl td.pos { color: var(--green); }
@@ -923,6 +958,11 @@
     font-family: 'IBM Plex Mono', monospace;
     color: var(--blue-belt-light);
     margin-right: 6px;
+    /* Pedido 28/07: sem isso, o "inline-block" alinha pela baseline e
+       empurra o texto (inclusive quando quebra em 2 linhas) pra baixo,
+       ficando com distância da borda diferente das linhas sem ícone. */
+    vertical-align: text-top;
+    line-height: inherit;
   }
   .dre-tbl-itens { display: none; }
   .dre-tbl-itens.aberto { display: table-row-group; }
@@ -2372,13 +2412,6 @@
          reunião 27/07: "tirar do painel principal e migrar para o bloco
          DRE competência"). Ver sectionBlocos (viewBlocks). -->
 
-    <div class="chart-card" id="chartCardForecast" style="border: 1px solid var(--line); border-radius: 10px; margin-bottom: 32px;">
-      <div class="chart-card-title">Fluxo de caixa futuro — próximos 60 dias</div>
-      <div style="position: relative; height: 260px;">
-        <canvas id="chartForecastFlow" role="img" aria-label="Gráfico de linha mostrando o fluxo de caixa projetado para os próximos 60 dias">Fluxo de caixa projetado.</canvas>
-      </div>
-    </div>
-
     <div class="chart-actions-row" style="display:flex; justify-content:flex-end; margin-bottom:10px;">
       <button type="button" class="btn-export" id="btnExportDfcPdf" onclick="exportResumoPeriodoToPdf()" title="Gera PDF com o resumo do período: DRE (aba Categoria por Bloco) e DRE Caixa (Saldo de Caixa, gráfico acima)">⬇ Exportar PDF do período</button>
     </div>
@@ -2796,7 +2829,7 @@
         <div class="bloco-head"><div class="bloco-titulo">Evolução Mensal — Grupo (R$)</div></div>
         <div class="bloco-body">
           <div class="dre-tbl-wrap">
-            <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col">
+            <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col fin-tbl-evolucao-amarelo">
               <tr id="grupoDfcEvolucaoHeader"><th>Métrica</th></tr>
               <tbody id="grupoDfcEvolucaoBody"></tbody>
             </table>
@@ -2891,12 +2924,37 @@
         </div>
       </div>
 
+      <!-- Prova Real dos Caixas, mês a mês, POR EMPRESA (pedido 28/07 —
+           recria o card excluído, mas por empresa em vez de Grupo, com
+           tabela + gráfico). NOVAH/RT ficam "sem dado ainda" até Lucas
+           mandar o equivalente da KMNO. REORDENADO 28/07 (pedido: "deixar
+           a prova real na sequência" — logo após o card "Bancos" acima). -->
+      <div class="bloco-card" style="margin-top:18px;margin-bottom:14px;" id="provaRealEmpresaWrap">
+        <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas — Mês a Mês, por Empresa (R$)</div></div>
+        <div class="bloco-body">
+          <div class="desc" style="padding:0 0 10px;">Saldo Inicial + Entradas − Saídas (calculado) x Saldo Real somado dos bancos no fim do mês. Diferença = Saldo Real − Saldo Calculado.</div>
+          <div class="dre-empresa-tabs" id="provaRealEmpresaTabs" style="margin-bottom:10px;"></div>
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col">
+              <tr><th>Descrição</th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th></tr>
+              <tbody id="provaRealEmpresaBody"></tbody>
+            </table>
+          </div>
+          <div style="position: relative; height: 260px; margin-top:14px;">
+            <canvas id="chartProvaRealEmpresa" role="img" aria-label="Gráfico de Saldo Calculado x Saldo Real x Diferença, mês a mês, por empresa">Prova real mês a mês por empresa.</canvas>
+          </div>
+        </div>
+      </div>
+
       <!-- Resumo de Capital: início x fim do período De/Até selecionado no
            topo da página. Saldo Bancos usa o mesmo rollback já usado no DFC
            por Bloco (calcSaldoInicialRealizado). Cartões a Receber (KMNO)
            ainda não tem fonte de dado confirmada — placeholder até Lucas
            definir de onde vem esse número (não é o saldo das contas tipo
-           Cartão no Omie, os valores não batem com a referência dele). -->
+           Cartão no Omie, os valores não batem com a referência dele).
+           REORDENADO 28/07 (pedido: "deixa por último", junto com Capex/
+           Refis abaixo) — antes vinha logo após Bancos, agora vem depois
+           da Prova Real por Empresa. -->
       <div class="chart-card-title" style="margin-top:18px;">Análise Caixa Bancos no Período</div>
       <div class="grupo-dfc-cards">
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Bancos em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoInicio">R$ 0</div></div>
@@ -2914,32 +2972,10 @@
       </div>
       <!-- Capex e Refis mês a mês (pedido 28/07: "todo mês aumenta, fazer
            mês a mês" — os 2 cards acima só mostravam 1 número acumulado
-           do período inteiro). Adicionado logo abaixo de "Análise Caixa
-           Bancos no Período", mesmo lugar de onde saiu o print do pedido. -->
+           do período inteiro). -->
       <div class="chart-card-title" style="margin-top:18px;">Capex e Refis — Mês a Mês (R$)</div>
       <div style="position: relative; height: 260px;">
         <canvas id="chartCapexRefis" role="img" aria-label="Gráfico de barras mostrando Capex e Refis (Pagtos Impostos Atrasados) mês a mês no período selecionado">Evolução mensal de Capex e Refis.</canvas>
-      </div>
-
-      <!-- Prova Real dos Caixas, mês a mês, POR EMPRESA (pedido 28/07 —
-           recria o card excluído, mas por empresa em vez de Grupo, com
-           tabela + gráfico). NOVAH/RT ficam "sem dado ainda" até Lucas
-           mandar o equivalente da KMNO. -->
-      <div class="bloco-card" style="margin-top:18px;margin-bottom:14px;" id="provaRealEmpresaWrap">
-        <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas — Mês a Mês, por Empresa (R$)</div></div>
-        <div class="bloco-body">
-          <div class="desc" style="padding:0 0 10px;">Saldo Inicial + Entradas − Saídas (calculado) x Saldo Real somado dos bancos no fim do mês. Diferença = Saldo Real − Saldo Calculado.</div>
-          <div class="dre-empresa-tabs" id="provaRealEmpresaTabs" style="margin-bottom:10px;"></div>
-          <div class="dre-tbl-wrap">
-            <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col">
-              <tr><th>Descrição</th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th></tr>
-              <tbody id="provaRealEmpresaBody"></tbody>
-            </table>
-          </div>
-          <div style="position: relative; height: 260px; margin-top:14px;">
-            <canvas id="chartProvaRealEmpresa" role="img" aria-label="Gráfico de Saldo Calculado x Saldo Real x Diferença, mês a mês, por empresa">Prova real mês a mês por empresa.</canvas>
-          </div>
-        </div>
       </div>
     </div>
       </div>
@@ -3015,11 +3051,11 @@
         </div>
       </div>
 
-      <div class="bloco-card">
+      <div class="bloco-card" style="margin-bottom:14px;">
         <div class="bloco-head"><div class="bloco-titulo">Evolução Mensal — Grupo (R$)</div></div>
         <div class="bloco-body">
           <div class="dre-tbl-wrap">
-            <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col">
+            <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col fin-tbl-evolucao-amarelo">
               <tr id="grupoDfcEvolucaoHeaderCopia"><th>Métrica</th></tr>
               <tbody id="grupoDfcEvolucaoBodyCopia"><tr><td colspan="3" style="text-align:center;color:var(--bone-dim);">— placeholder —</td></tr></tbody>
             </table>
@@ -3032,22 +3068,10 @@
            gráficos") — chartGrupoDfcCopia não é criado, só a tabela
            acima. -->
 
-      <!-- RESUMO detalhado, linha a linha, igual à planilha (pedido
-           reunião 21.07, linha 6+28: "Em cima da Pag do BI começa com o
-           resumo" / "Depois vem o detalhado igual o EXCEL"). Jan-Mai/26
-           = valores fixos da planilha; Jun/26 em diante calculado ao
-           vivo (KMNO+NOVAH, buildResumoDetalhadoMesAoVivo — 23/07/2026). -->
-      <div class="bloco-card" style="margin-bottom:14px;">
-        <div class="bloco-head"><div class="bloco-titulo">Resumo (Grupo, R$)</div></div>
-        <div class="bloco-body">
-          <div class="dre-tbl-wrap">
-            <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col">
-              <tr id="grupoResumoDetalhadoHeaderCopia"><th>Descrição</th></tr>
-              <tbody id="grupoResumoDetalhadoBodyCopia"><tr><td colspan="3" style="text-align:center;color:var(--bone-dim);">— placeholder —</td></tr></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
+      <!-- "Resumo (Grupo, R$)" — EXCLUÍDO (pedido 28/07, item "Excluir
+           isso"). renderGrupoResumoDetalhadoCopia() não foi removida do
+           JS (tem guarda própria "if (!header || !body) return"), só a
+           exibição do card. -->
 
       <!-- Resumo (baseado no codigo_dre nativo do Omie) + árvore
            "Tipo/Grupo/Conta do DRE" — pedido 27/07: trazer essas duas
@@ -3057,7 +3081,12 @@
            selecionada = árvore completa e expansível (clique na Conta
            pra abrir Categoria); "Todas"/2+ empresas = resumida, só
            Tipo/Grupo, sem abrir Conta/Categoria. -->
-      <div class="bloco-card" style="margin-bottom:14px;">
+      <!-- Pedido 28/07: "tira do dash" — escondido visualmente
+           (display:none), NÃO removido do DOM, porque renderDreNativoCopia()
+           preenche este wrap e o do card "Tipo / Grupo / Conta do DRE" (logo
+           abaixo) na mesma função, com guarda "if (!wrapResumo || !wrapArvore)
+           return" — remover o elemento quebraria os dois cards. -->
+      <div class="bloco-card" style="margin-bottom:14px; display:none;">
         <div class="bloco-head"><div class="bloco-titulo">Resumo (baseado no codigo_dre nativo do Omie)</div></div>
         <div class="bloco-body">
           <div id="dreNativoResumoCopiaWrap"><div class="bloco-vazio">Carregando…</div></div>
@@ -4811,6 +4840,42 @@ const DRE_NATIVO_ORDEM_CONTA = {
 const DRE_NATIVO_DESTINO_IMPOSTOS = '1.01.02'; // "02. Impostos"
 const DRE_NATIVO_DESTINO_CMC = '1.21.01'; // "01. Custo Médio (CMC) das Vendas"
 
+// ===================================================================
+// FROZEN Jan-Mai/2026 pro card "Tipo/Grupo/Conta do DRE" (pedido 28/07:
+// "popule o card com as informações do Excel, o que não achar, coloca
+// placeholder"). Fonte: abas "KMNO DRE"/"NOVAH DRE" da planilha
+// DRE_2026_KMNO_e_NOVAH_28_06.xlsx, cruzado com o codigo_dre real de
+// cada categoria (Supabase dash_categories) pra saber em qual Conta
+// cada linha do Excel cai. RT não tem aba equivalente — fica 100% ao
+// vivo (sem congelado), igual já era antes pra esse card.
+//
+// Contas SEM dado no Excel (ficam ausentes do objeto = placeholder):
+// 1.11.01 (Outras Receitas), 1.21.01 (CMC das Vendas — calculado via
+// cmcVendas, fonte diferente/só ao vivo), 1.21.03 (Outros Custos),
+// 2.01.02 (Recuperação Desp. Variáveis), 2.11.05 (Outros Tributos).
+//
+// Decisões confirmadas com Lucas 28/07:
+// - "Impostos" (1.01.02) usa os valores CALCULADOS/presumidos do Excel
+//   (IRPJ/CSLL/PIS/COFINS Presumido), mesmo sabendo que são diferentes
+//   das categorias REAIS que o Omie usa pra esse codigo_dre hoje
+//   (ICMS/DIFAL/PIS-COFINS/Simples Nacional).
+// - "CMV" (1.21.02) é o valor OFICIAL da planilha (Custo Insumos +
+//   Custo Mão de Obra/Facção), SEM incluir "Frete Pago" — o Omie
+//   classificaria Frete Pago dentro do mesmo grupo, mas a planilha do
+//   time financeiro trata como seção separada. Frete Pago (R$20.136 em
+//   Jan/KMNO) ficou de fora de qualquer conta por enquanto — avisar
+//   Lucas, é dinheiro real sem classificação ainda.
+// - "Total de Impostos" da própria planilha KMNO não bate com a soma
+//   das 5 linhas visíveis em Abr/Mai (inconsistência interna do Excel,
+//   não é bug de transcrição) — usamos o valor da linha Total
+//   diretamente (ver DRE_NATIVO_CONGELADO_TOTAL_OVERRIDE), não a soma.
+// ===================================================================
+const DRE_NATIVO_CONGELADO_KMNO = {"1.01.01": {"Vendas KMNO": [469949.55, 877469.51, 783660.17, 750762.56, 889612.46], "Vendas RT": [0, 0, 0, 42697.2, 56702.1]}, "1.01.02": {"Base de Cálculo Lucro Presumido (8%)": [-37595.964, -70197.5608, -62692.8136, -63476.7808, -75705.1648], "IRPJ Presumido (15%)": [-5639.3946, -10529.63412, -9403.92204, -9521.51712, -11355.77472], "Adicional IRPJ Presumido (10%)": [-1759.5964, -5019.75608, -4269.28136, -4347.67808, -5570.51648], "CSLL Presumido (9%)": [-3383.63676, -6317.780472, -5642.353224, -5712.910272, -6813.464832], "PIS Presumido (0,65%)": [-3054.672075, -5703.551815, -5093.791105, -4879.95664, -5782.48099]}, "1.01.03": {"Devolução de Produtos": [-926.0, -2350.0, -0.0, -1198.8, -25.0]}, "1.11.02": {"Juros Recebidos": [11.45, 36.8, 8218.77, 8328.63, 6770.99], "Descontos Recebidos/Devoluções Recebidas": [0.0, 0.0, 0.0, 0.0, 788.53]}, "1.21.02": {"Tecido Sarja": [-2093.63, -7132.9, -151.39, -21917.25, -6939.9], "Tecido Trançado": [-84175.79, -0.0, -47914.04, -88788.61, -101124.96], "Tecido Rash/Bermuda": [-18057.09, -0.0, -17242.15, -17584.0, -55224.37], "Tinturaria": [-0.0, -30062.68, -0.0, -0.0, -14489.68], "Aviamentos": [-639.6, -0.0, -0.0, -0.0, -0.0], "Tintas e Outros (Rash)": [-10752.94, -13867.72, -6942.0, -6943.52, -4643.52], "Tecido Ripstop": [-46070.24, -93345.44, -68486.55, -46914.6, -230973.37], "Materia Prima (EVA/Feltro/Patch/Tags)": [-20462.04, -17038.08, -32047.02, -29171.36, -21837.0], "Modelagem/Plotagem/Camisetas": [-0.0, -275.27, -100.0, -47.17, -0.0], "Etiquetas": [-8986.46, -7786.34, -8713.03, -0.0, -1957.51], "Frete Compra Materiais": [-706.55, -1285.0, -6678.4, -1323.08, -2015.03], "Embalagem de Produtos": [-10133.28, -48.0, -0.0, -0.0, -0.0], "Serviços Novah (Facção)": [-175000.0, -135000.0, -200000.0, -150000.0, -150000.0], "Serviços (Outras Facções)": [-11652.5, -20780.0, -20048.37, -28357.04, -50712.92]}, "2.01.01": {"REFIS (INSS - STC)": [-1847.06, -1933.07, -1876.86, -1893.55, -1908.59], "REFIS (SIMPLES)/ICMS": [-7034.51, -55051.2, -16892.28, -18034.49, -6714.4], "REFIS STC": [-0.0, -0.0, -0.0, -0.0, -146071.74]}, "2.11.01": {"Claudia (Adm)": [-2119.0, -2436.0, -2791.0, -2436.0, -2519.0], "Claudia (Bonificação)": [-1500.0, -1500.0, -1500.0, -1500.0, -1500.0], "Burno (Adm)": [-0.0, -0.0, -0.0, -0.0, -1443.0], "Bruno (Bonificação)": [-0.0, -0.0, -0.0, -0.0, -177.0], "FGTS (ADM)": [-236.0, -212.0, -444.4, -413.81, -491.04], "GPS (ADM)": [-1493.83, -1438.34, -2649.13, -2328.01, -2664.19], "Férias (ADM)": [-190.71, -219.24, -251.19, -219.24, -226.71], "1/3 sobre Férias (ADM)": [-44.7109, -51.3996, -58.8901, -51.3996, -53.1509], "FGTS Sobre Férias (ADM)": [-18.833672, -21.651168, -24.806408, -21.651168, -22.388872], "13 Salario (ADM)": [-176.5127, -202.9188, -232.4903, -202.9188, -209.8327], "FGTS Sobre 13 (ADM)": [-14.121016, -16.233504, -18.599224, -16.233504, -16.786616], "Aviso Prévio/Rescisão (ADM)": [-10.595, -12.18, -13.955, -12.18, -12.595], "FGTS Sobre Aviso (ADM)": [-0.8476, -0.9744, -1.1164, -0.9744, -1.0076], "Multa FGTS (ADM)": [-13.5209152, -15.5436288, -17.8088128, -15.5436288, -16.0732352], "PJ Adm": [-11000.0, -11000.0, -11000.0, -11000.0, -11000.0], "Maria Tirloni (RT)": [-4863.0, -4863.0, -4863.0, -4863.0, -4863.0], "Ricardo (Pro-labore)": [-1352.0, -1352.0, -1443.0, -1443.0, -1443.0], "Timeless (Pro-labore)": [-0.0, -0.0, -25000.0, -25000.0, -25000.0], "Patricia": [-9511.82, -19263.88, -17165.31, -11857.19, -16211.95], "Gabriel": [-10000.83, -16779.66, -13901.99, -15455.89, -16799.1], "Leticia": [-3292.53, -6553.6, -7360.43, -8000.0, -8746.72], "Claúdio": [-0.0, -0.0, -0.0, -1591.65, -514.86], "Yasmin": [-3311.75, -3251.23, -3839.78, -5265.02, -3870.68], "Auxiliar de Vendas": [-0.0, -1350.0, -2309.0, -2321.0, -2288.0]}, "2.11.02": {"Aluguel Sala": [-4500.0, -5500.0, -5000.0, -5000.0, -5000.0], "IPTU": [-0.0, -2750.02, -0.0, -0.0, -0.0], "Emasa (Agua e esgoto)": [-65.15, -65.15, -65.15, -65.15, -0.0], "Celesc (Energia Eletrica)": [-309.62, -541.01, -541.01, -631.77, -646.03], "Taxa de Lixo (Ambiental)": [-57.29, -670.46, -0.0, -0.0, -0.0], "Alvará PMBC, Bombeiro, Sanitário e outros": [-0.0, -0.0, -229.01, -0.0, -1877.64], "Faxina": [-500.0, -500.0, -300.0, -600.0, -400.0], "Material Copa/Cozinha/Limpeza": [-63.99, -141.95, -162.2, -0.0, -156.75], "Material de Papelaria": [-158.61, -129.9, -518.38, -299.98, -110.84], "Manutenção do Imovel": [-50.0, -49.7, -464.0, -37.0, -0.0], "Manutenção Móveis": [-0.0, -3310.35, -0.0, -5052.69, -600.0], "Contabilidade": [-2550.0, -2550.0, -2550.0, -2805.0, -2760.0], "Alterações Contratuais": [-700.0, -700.0, -0.0, -0.0, -0.0], "Certificado Digital": [-0.0, -110.0, -309.0, -0.0, -170.0], "Despesas documentais": [-0.0, -14.95, -0.0, -35.0, -16.96], "Uber/Combustível/Aluguel Carro": [-858.32, -1879.67, -1697.28, -1381.22, -1863.71], "Despesas de Software": [-2943.49, -3865.25, -5859.76, -6121.11, -5131.38], "Equipamentos de Informatica": [-2282.0, -1384.38, -0.0, -14606.27, -1285.53], "Manutenção de Informatica": [-750.0, -1610.0, -870.0, -750.0, -915.0], "Telefone Celular": [-271.8, -279.7, -277.58, -301.33, -271.73], "Internet": [-267.11, -266.44, -267.11, -198.93, -192.51], "Honorários Advocatícios": [-2000.0, -2000.0, -2000.0, -2000.0, -2000.0], "Despesas Processos Juridicos": [-1700.0, -1700.0, -1700.0, -1700.0, -1700.0], "Incentivos": [-0.0, -0.0, -0.0, -2214.0, -175.0], "Seg Trabalho/Admissão": [-198.0, -198.0, -198.0, -198.0, -198.0], "Implantação Sistemas e Treinamentos": [-1167.0, -8399.56, -9800.0, -15132.53, -3800.0], "Anúncios (ADM)": [-0.0, -136.68, -634.67, -0.0, -329.61], "Sindicato": [-147.75, -0.0, -147.75, -0.0, -0.0], "BPO Financeiro": [-5000.0, -5000.0, -4000.0, -5000.0, -5000.0]}, "2.11.03": {"(-)Aluguel Maquinas de Cartões": [-0.0, -0.0, -0.0, -60.0, -44.19], "(-)Taxas Maquina cartão": [-8340.41, -7028.43, -7822.54, -6290.67, -5545.42], "(-)Manutenção de Contas Bancárias": [-368.3, -368.3, -383.3, -368.3, -363.0], "(-)Tarifas de TED/DOC": [-76.88, -1144.64, -1601.55, -1318.49, -229.21], "(-)Anuidade Cartão": [-32.0, -32.0, -32.0, -32.0, -16.0], "(-)Tarifa Boletos": [-46.3, -41.56, -0.0, -0.0, -9.9], "(-) Juros Bancários": [-71.84, -32.99, -52.82, -0.0, -41.34], "(-) Juros Emprestimos": [-2270.26, -1898.55, -1498.05, -1454.35, -1955.11], "(-) Outras despesas financeiras": [-0.0, -0.0, -0.0, -0.0, -719.8], "(-) IOF": [-274.42, -48.13, -23.79, -39.89, -45.88], "(-) Emprestimos para Terceiros": [-0.0, -0.0, -0.0, -0.0, -700.0], "(-) Cotas Capital": [-0.0, -0.0, -300.0, -200.0, -200.0]}, "2.11.04": {"Site": [-238.71, -103.35, -102.75, -498.39, -145.47], "Edição de Videos/Fotos": [-0.0, -0.0, -1800.0, -1800.0, -0.0], "Patrocinado Face": [-323.9, -1219.89, -1017.9, -587.55, -453.17], "Google E-mail WorkBussines": [-842.3, -568.79, -623.29, -624.35, -637.0], "Patrocinado Google": [-147.03, -29.79, -0.0, -0.0, -0.0], "Marketing": [-0.0, -3562.94, -6624.85, -644.86, -276.86], "Embalagem Comercial": [-323.45, -0.0, -707.77, -1527.4, -100.0], "Consultoria Comercial": [-6000.0, -6000.0, -11040.16, -8891.81, -9372.93], "Software Ecommerce": [-2129.9, -2314.69, -2469.59, -2206.52, -3530.52], "CRM/GURU": [-1170.73, -953.03, -978.35, -916.36, -916.36], "Bonificações (Comercial)": [-2938.03, -5315.28, -4350.98, -3895.68, -4568.25], "LinkTree Registro Anual": [-42.0, -0.0, -0.0, -0.0, -0.0], "Despesas de Eventos/BL": [-1059.27, -2356.75, -2810.27, -2556.94, -610.35], "Despesas de Viagens": [-2407.53, -0.0, -439.8, -1038.46, -472.21]}, "3.01.01": {"Compra Maquinas e Equipamentos": [-0.0, -0.0, -61785.8, -25490.0, -38779.93], "Maquina de Bordado": [-2000.0, -2000.0, -2000.0, -2000.0, -0.0], "Venda de Máquinas e Equipamentos": [-0.0, -0.0, 300.0, -0.0, 300.0]}, "3.01.02": {"Reforma Patrimonio": [-2044.0, -3740.0, -3300.0, -1100.0, -1100.0]}, "1.21.03": {"Royalties": [-17574.59, -38018.6, -28632.77, -40349.84, -27369.63]}};
+
+const DRE_NATIVO_CONGELADO_NOVAH = {"1.01.01": {"Facção para KMNO": [175000.0, 135000.0, 200000.0, 150000.0, 150000.0], "Facção para GRACIE BARRA": [76600.0, 78285.2, 53620.01, 106804.8, 101656.2], "Jeans": [68825.55, 10652.25, 0.0, 0.0, 0.0]}, "1.01.02": {"Simples Nacional": [-31654.63, -19769.38, -21489.54, -24125.53, -23556.4]}, "1.01.03": {"Devoluções": [-0.0, -0.0, -0.0, -0.0, -0.0]}, "1.11.02": {"Juros Recebidos": [0.0, 0.0, 57.45, 0.0, 0.0], "Descontos Recebidos": [0.0, 0.0, 0.0, 0.0, 0.0]}, "1.21.02": {"Geral (Insumos)": [-8862.86, -20032.61, -34972.41, -18819.01, -38524.69], "Serviço Industrialização": [-581.0, -0.0, -1690.0, -3974.99, -8095.53], "Embalagens Produção": [-347.58, -3504.58, -376.14, -0.0, -105.4], "Embalagens Comerciais": [-680.62, -1252.7, -931.19, -1424.8, -1260.0], "Difal (Insumos)": [-0.0, -0.0, -849.93, -211.22, -318.79], "Costura Terceiros": [-20366.0, -0.0, -0.0, -0.0, -0.0], "Salarios CLT Acabamento": [-15230.66, -18482.25, -20684.04, -24046.69, -24349.36], "PPR CLT Acabamento": [-0.0, -0.0, -1000.0, -1500.0, -1500.0], "Assiduidade Acabamento": [-0.0, -0.0, -2250.0, -2250.0, -2500.0], "Premio Produtividade Acabamento": [-0.0, -0.0, -0.0, -0.0, -2000.0], "PJ Corte": [-6069.78, -6969.0, -6969.0, -6969.0, -6975.71], "PPR PJ Corte": [-4646.25, -3327.3, -5642.25, -7203.9, -7660.84], "Salarios CLT Rash/Bermuda": [-1472.13, -2186.46, -0.0, -0.0, -0.0], "Terceiros Costura Externa (Rash)": [-2146.0, -0.0, -116.0, -0.0, -2040.82], "Salarios CLT Costura Kimono": [-36162.0, -54260.75, -58367.43, -59619.35, -61926.95], "PPR CLT Costura Kimono": [-0.0, -0.0, -2350.0, -2300.0, -3000.0], "Assiduidade Kimono": [-0.0, -0.0, -4750.0, -4250.0, -5000.0], "Premio Produtividade Kimono": [-0.0, -0.0, -0.0, -0.0, -4600.0], "Salarios CLT Bordado": [-6799.22, -6460.67, -7337.24, -8637.77, -11610.02], "PJ Bordado": [-4226.0, -5000.0, -5000.0, -7500.0, -5000.0], "PPR PJ Bordado": [-1000.0, -1000.0, -1000.0, -1000.0, -1867.0], "Assiduidade Bordado": [-0.0, -0.0, -500.0, -750.0, -750.0], "Premio Produtividade Bordado": [-0.0, -0.0, -0.0, -0.0, -600.0], "Salarios CLT Sublimação": [-1602.18, -0.0, -0.0, -877.06, -1936.09], "PJ Sublimação": [-4005.0, -4300.0, -4300.0, -4300.0, -5000.0], "PPR PJ Sublimação": [-1112.0, -3508.55, -2395.05, -3857.2, -6307.91], "Assiduidade Sublimação": [-0.0, -0.0, -0.0, -250.0, -250.0], "Premio Produtividade Sublimação": [-0.0, -0.0, -0.0, -0.0, -200.0], "Desp. Pessoal Indústria (encargos/férias/13/FGTS)": [-41105.532565, -52559.197229, -47407.085422, -53124.449714, -63161.16945]}, "2.11.01": {"Porteiro": [-0.0, -1274.15, -1400.02, -1400.02, -1400.02], "Mecânico": [-1097.61, -1447.33, -1248.78, -1467.11, -1449.81], "Expedição": [-1576.47, -0.0, -5146.04, -4987.29, -5047.51], "Faxineira": [-0.0, -0.0, -387.0, -2075.09, -2202.87], "PCP": [-1838.06, -0.0, -3319.88, -3312.12, -3405.11], "Aux Adm": [-0.0, -0.0, -0.0, -1174.62, -2161.51], "Assiduidade ADM": [-500.0, -500.0, -250.0, -750.0, -1250.0], "Abono": [-680.33, -1535.0, -785.0, -2400.0, -1000.0], "Premio Produtividade ADM": [-0.0, -0.0, -0.0, -0.0, -2985.0], "Horas Extras ADM": [-0.0, -0.0, -164.0, -0.0, -347.5], "FGTS ADM (encargos)": [-401.075, -241.907, -1023.365, -1177.622, -1200.461], "GPS ADM (encargos)": [-551.478, -332.622, -1405.751, -1618.405, -1651.219], "Férias ADM (encargos)": [-501.299, -302.356, -1277.841, -1471.145, -1500.441], "Aviso Prévio/Rescisão ADM": [-24.365, -14.696, -62.109, -71.474, -72.949], "Pro Labore Sócio": [-1621.0, -1621.0, -1700.0, -1621.0, -1621.0], "EMP SYBELI E RICHARD": [-18500.0, -18500.0, -18500.0, -18500.0, -18500.0], "PPR ADM": [-0.0, -0.0, -0.0, -0.0, -900.0], "PCP (PJ Terceiros)": [-2855.0, -7500.0, -0.0, -0.0, -0.0], "PPR PCP": [-1000.0, -3296.81, -0.0, -0.0, -0.0], "LEO": [-1000.0, -1000.0, -1000.0, -1000.0, -1000.0], "GERALDO": [-0.0, -5500.0, -5500.0, -5500.0, -5500.0]}, "2.11.02": {"Aluguel Galpão + IPTU": [-25000.0, -25000.0, -25000.0, -27764.8, -26097.93], "Limpeza Urbana (Lixo)": [-0.0, -0.0, -0.0, -748.85, -0.0], "Celesc (Energia Eletrica)": [-1255.44, -1501.59, -2139.07, -2587.69, -3587.35], "Diesel (Gerador)": [-0.0, -270.0, -271.5, -215.6, -0.0], "Despesas com Bolo, Niver (Pessoal)": [-325.81, -381.13, -317.92, -331.9, -716.99], "Alvará PMBC, Bombeiro, Sanitário e outros": [-0.0, -0.0, -763.35, -0.0, -0.0], "Faxina": [-500.0, -640.0, -200.0, -0.0, -0.0], "Material Copa/Cozinha/Limpeza": [-862.5, -444.3, -543.8, -1007.75, -1398.22], "Material de Papelaria": [-1312.23, -515.73, -1490.38, -429.9, -1075.27], "Manutenção do Imovel": [-82.62, -0.0, -0.0, -66.21, -890.96], "Contabilidade": [-2051.4, -2050.0, -2050.0, -2255.0, -2256.05], "Uber/Combustivel/Aluguel Carro": [-200.0, -300.0, -215.9, -450.03, -680.0], "Despesas de Software": [-0.0, -0.0, -1459.78, -2084.1, -2846.17], "Equipamentos de Informatica": [-0.0, -0.0, -0.0, -0.0, -1911.97], "Manutenção de Informatica": [-0.0, -0.0, -808.0, -1405.42, -1211.09], "Telefone Celular": [-26.78, -27.08, -26.58, -26.58, -27.08], "Internet": [-249.91, -249.91, -309.91, -249.91, -249.91], "Medicina do Trabalho": [-1000.0, -1000.0, -1000.0, -1000.0, -1000.0], "Frete Produtos": [-142.19, -318.38, -822.53, -196.0, -912.24], "Frete Manuntenção": [-89.0, -0.0, -136.0, -483.39, -190.0], "Manutenção Maquinas": [-1173.89, -2486.13, -1458.03, -3157.75, -4549.07], "Incentivos": [-122.5, -873.36, -811.46, -808.75, -2080.05], "Levits BPO": [-2000.0, -2000.0, -2000.0, -2000.0, -2000.0], "Consultoria/Treinamento": [-50.0, -0.0, -0.0, -0.0, -0.0], "Anúncios": [-0.0, -850.0, -850.0, -0.0, -2150.0], "Caçamba/Aterro/Lixo": [-0.0, -520.0, -0.0, -0.0, -748.85], "Serviços Diretoria": [-0.0, -0.0, -0.0, -0.0, -680.0]}, "2.11.03": {"Tarifas de TED/DOC": [-25.53, -4.4, -27.87, -7.98, -4.0], "Tarifa de Boletos": [-17.9, -23.27, -17.9, -3.58, -8.95], "Taxa Cartão (Vexpenses)": [-0.0, -34.5, -83.05, -62.5, -41.0], "Juros Antecipação Boletos": [-0.0, -248.1, -0.0, -0.0, -40.0], "IOF": [-0.0, -156.43, -22.82, -35.02, -123.68]}, "3.01.01": {"Maquinas e Equipamentos": [-0.0, -14014.79, -0.0, -131.86, -48304.48], "Móveis": [-0.0, -0.0, -0.0, -0.0, -1600.0]}};
+
+const DRE_NATIVO_CONGELADO_TOTAL_OVERRIDE = { KMNO: {"1.01.02": [-51433.263835, -97768.283287, -87102.161329, -84523.06691200001, -100691.233822]}, NOVAH: {} };
+
 function numeroCurtoDre(codigo) {
   const partes = codigo.split('.');
   return partes[partes.length - 1];
@@ -4828,7 +4893,7 @@ function buildArvoreNativaDreConsolidado(categories, movements, meses, nfeRows, 
   const empresas = ['KMNO', 'NOVAH', 'RT'];
   const arvoresPorEmpresa = {};
   empresas.forEach(emp => {
-    arvoresPorEmpresa[emp] = buildArvoreNativaDre(emp, categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas);
+    arvoresPorEmpresa[emp] = buildArvoreNativaDreComCongelado(emp, categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas);
   });
   const arvores = empresas.map(emp => arvoresPorEmpresa[emp]);
 
@@ -5019,6 +5084,75 @@ function buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows, ex
   return { tipos, meses: mesesTotal, total: mesesTotal.reduce((a, b) => a + b, 0) };
 }
 
+function buildArvoreNativaDreComCongelado(empresa, categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas) {
+  const congeladoFonte = empresa === 'KMNO' ? DRE_NATIVO_CONGELADO_KMNO : (empresa === 'NOVAH' ? DRE_NATIVO_CONGELADO_NOVAH : null);
+  if (!congeladoFonte) return buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas);
+
+  const temMesLive = meses.some(m => !m.isBefore(EXCEL_CONGELADO_ATE));
+  const mesesLive = meses.filter(m => !m.isBefore(EXCEL_CONGELADO_ATE));
+  const arvoreLive = temMesLive ? buildArvoreNativaDre(empresa, categories, movements, mesesLive, nfeRows, extratoSemTitulo, cmcVendas) : null;
+  const overrideTotal = (DRE_NATIVO_CONGELADO_TOTAL_OVERRIDE[empresa] || {});
+
+  const acharContaLive = (tipoCod, grupoCod, contaCod) => {
+    if (!arvoreLive) return null;
+    const t = arvoreLive.tipos.find(x => x.codigo === tipoCod);
+    const g = t && t.grupos.find(x => x.codigo === grupoCod);
+    return g && g.contas.find(x => x.codigo === contaCod);
+  };
+
+  const somaArraysLocal = (arrs) => {
+    const out = new Array(meses.length).fill(0);
+    arrs.forEach(arr => arr.forEach((v, i) => { out[i] += v; }));
+    return out;
+  };
+
+  const tipos = DRE_NATIVO_ORDEM_TIPO.map(tipoCod => {
+    const grupos = (DRE_NATIVO_ORDEM_GRUPO[tipoCod] || []).map(grupoCod => {
+      const contas = (DRE_NATIVO_ORDEM_CONTA[grupoCod] || []).map(contaCod => {
+        const congeladoConta = congeladoFonte[contaCod];
+        const contaLive = acharContaLive(tipoCod, grupoCod, contaCod);
+        const labelsSet = new Set();
+        if (congeladoConta) Object.keys(congeladoConta).forEach(l => labelsSet.add(l));
+        if (contaLive) contaLive.categorias.forEach(c => labelsSet.add(c.label));
+
+        const categoriasArr = [...labelsSet].sort().map(label => {
+          let liveCursor = -1;
+          const mesesArr = meses.map(m => {
+            const live = !m.isBefore(EXCEL_CONGELADO_ATE);
+            if (!live) {
+              const arr = congeladoConta ? congeladoConta[label] : null;
+              return arr ? (arr[m.month()] || 0) : 0;
+            }
+            liveCursor++;
+            const catLive = contaLive ? contaLive.categorias.find(c => c.label === label) : null;
+            return catLive ? (catLive.meses[liveCursor] || 0) : 0;
+          });
+          return { label, meses: mesesArr, total: mesesArr.reduce((a, b) => a + b, 0) };
+        });
+
+        let mesesConta = somaArraysLocal(categoriasArr.map(c => c.meses));
+        if (overrideTotal[contaCod]) {
+          mesesConta = meses.map((m, i) => !m.isBefore(EXCEL_CONGELADO_ATE) ? mesesConta[i] : overrideTotal[contaCod][m.month()]);
+        }
+        return {
+          codigo: contaCod,
+          numero: numeroCurtoDre(contaCod),
+          label: DRE_NATIVO_CONTA_LABEL[contaCod] || contaCod,
+          categorias: categoriasArr,
+          meses: mesesConta,
+          total: mesesConta.reduce((a, b) => a + b, 0),
+        };
+      });
+      const mesesGrupo = somaArraysLocal(contas.map(c => c.meses));
+      return { codigo: grupoCod, numero: numeroCurtoDre(grupoCod), label: DRE_NATIVO_GRUPO_LABEL[grupoCod] || grupoCod, contas, meses: mesesGrupo, total: mesesGrupo.reduce((a, b) => a + b, 0) };
+    });
+    const mesesTipo = somaArraysLocal(grupos.map(g => g.meses));
+    return { codigo: tipoCod, numero: tipoCod, label: DRE_NATIVO_TIPO_LABEL[tipoCod] || tipoCod, grupos, meses: mesesTipo, total: mesesTipo.reduce((a, b) => a + b, 0) };
+  });
+  const mesesTotal = somaArraysLocal(tipos.map(t => t.meses));
+  return { tipos, meses: mesesTotal, total: mesesTotal.reduce((a, b) => a + b, 0) };
+}
+
 function fmtDreNativoValor(v) {
   if (!v) return '';
   return fmtBRL(v);
@@ -5032,6 +5166,26 @@ function fmtDreNativoValor(v) {
 // e alterna TODAS as linhas com o mesmo data-grupo (não só a 1ª que
 // getElementById acharia, já que categorias duplicadas compartilhavam
 // id -- ver fix em renderGrupoResumoPorEmpresa).
+// Toggle dedicado só pro card "Resumo por Empresa" (pedido 28/07: linha
+// pai + linhas-filho ficam com destaque verde claro quando abertas — ver
+// classe .linha-grupo-aberta abaixo). Função separada da
+// toggleDreNativoConta (compartilhada com as árvores Tipo/Grupo/Conta)
+// de propósito — pedido explícito era só nesta tabela, não nas outras.
+function toggleResumoEmpresaConta(id) {
+  const linhas = document.querySelectorAll(`tr[data-grupo-conta="${id}"]`);
+  const pai = document.getElementById('pai-' + id);
+  if (!linhas.length) return;
+  const icon = document.getElementById('icon-' + id);
+  const abrindo = !linhas[0].classList.contains('dre-cat-aberta');
+  linhas.forEach(l => {
+    l.classList.toggle('dre-cat-aberta', abrindo);
+    l.classList.toggle('linha-grupo-aberta', abrindo);
+    l.style.display = abrindo ? 'table-row' : 'none';
+  });
+  if (pai) pai.classList.toggle('linha-grupo-aberta', abrindo);
+  if (icon) icon.textContent = abrindo ? '−' : '+';
+}
+
 function toggleDreNativoConta(id) {
   const linhas = document.querySelectorAll(`tr[data-grupo-conta="${id}"]`);
   if (!linhas.length) return;
@@ -5066,7 +5220,7 @@ function renderArvoreNativaDreHtml(arvore, meses) {
       </tr>`);
       grupo.contas.forEach((conta, ci) => {
         linhas.push(`<tr class="dre-tbl-row">
-          <td class="dre-tbl-sticky" style="padding-left:40px;color:var(--bone-dim);">${conta.numero}. ${semPrefixoDre(conta.label)}</td>
+          <td class="dre-tbl-sticky" style="padding-left:40px;color:var(--bone);font-weight:600;">${conta.numero}. ${semPrefixoDre(conta.label)}</td>
           ${conta.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
           <td>${fmtDreNativoValor(conta.total)}</td>
           <td class="num total-pct">${fmtAvPct(conta.total, baseAv)}</td>
@@ -9159,15 +9313,16 @@ function extrairLinhaResumo(resumoRows, labelsAceitas) {
 // ===================================================================
 // Congelado — "Vendas (Receita Bruta) x Faturamento (Resultado
 // Líquido)", por empresa. Fonte: planilha (print "Faturamento (R$)" /
-// "VENDAS" enviado por Lucas 28/07) — cobre Jan-Mai/2026. RT só tem
-// dado próprio a partir de ABRIL (Jan-Mar fica null = "sem dado", não
-// R$0 — nesse período o valor de RT está diluído dentro do total da
-// KMNO na origem, confirmado por Lucas). null vira "-----" na tela.
+// "VENDAS" enviado por Lucas 28/07) — cobre Jan-Mai/2026. RT não tem
+// dado próprio confiável em nenhum mês desse período (pedido 28/07:
+// "RT não tem dados de jan até maio, deixa tudo dela com placeholder")
+// — todo o período fica null = "sem dado", não R$0. null vira "-----"
+// na tela.
 // ===================================================================
 const VENDAS_FATURAMENTO_ESTATICO = {
   KMNO:  { vendas: [578012.66, 807035.75, 1028160.08, 948602.23, 787982.81], faturamento: [469949.55, 877469.51, 783660.17, 750762.56, 889612.46] },
   NOVAH: { vendas: [null, null, 274233.00, 274233.00, 274233.00], faturamento: [145425.55, 88937.45, 53620.01, 106804.80, 101656.20] },
-  RT:    { vendas: [null, null, 125397.00, 118742.00, 0], faturamento: [null, null, null, 42697.00, 56702.10] },
+  RT:    { vendas: [null, null, null, null, null], faturamento: [null, null, null, null, null] },
 };
 
 function calcularVendasFaturamentoEmpresa(empresa, categories, movements, monthStart, monthEnd) {
@@ -9694,10 +9849,10 @@ function renderVendasFaturamento() {
 
   wrapEl.innerHTML = `
     <div class="bloco-card">
-      <div class="bloco-head"><div class="bloco-titulo">Vendas (Receita Bruta) x Faturamento (Resultado Líquido)</div></div>
+      <div class="bloco-head"><div class="bloco-titulo">Vendas x Faturamento</div></div>
       <div class="bloco-body">
         <div class="dre-tbl-wrap">
-          <table class="fin-tbl fin-tbl-sticky-col fin-tbl-mes-alt">
+          <table class="fin-tbl fin-tbl-sticky-col fin-tbl-mes-alt fin-tbl-vendas-fat-amarelo">
             <tr><th></th>${headerMeses}</tr>
             <tr><th>Empresa</th>${headerSub}</tr>
             ${linhasEmpresas}
@@ -10930,7 +11085,8 @@ try {
     // renderForSelectedMonth() (chamada logo acima), já com o período
     // (grupoDe) selecionado no cabeçalho — necessário pro filtro "A Vencer".
     renderPrazosMedios(receivable, payable);
-    renderForecastFlowChart(receivable, payable);
+    // renderForecastFlowChart removido (pedido 28/07: "tirar do BI" o
+    // gráfico "Fluxo de Caixa Futuro — próximos 60 dias").
     renderForecasts(receivable, payable);
 
   } catch (err) {
@@ -13937,6 +14093,12 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
     return {
       receita: itensParaCategoria(B.faturamento.itens),
       deducoes: mergeCategoriaMaps(itensParaCategoria(B.impostos.itens), itensParaCategoria(B.devolucoes.itens)),
+      // impostos/devolucoes separados (pedido 28/07) — "deducoes" acima
+      // continua existindo (mesclado) pros outros consumidores desta
+      // função (buildResumoDetalhadoMesAoVivo, buildMetricasGrupoDfcPeriodo)
+      // que ainda usam soma('deducoes') como um bloco só.
+      impostos: itensParaCategoria(B.impostos.itens),
+      devolucoes: itensParaCategoria(B.devolucoes.itens),
       custoInsumos: itensParaCategoria(B.custo_materia_prima.itens),
       custoMaoObra: itensParaCategoria(B.custo_mao_obra.itens),
       royalties: itensParaCategoria(B.royalties.itens),
@@ -13957,6 +14119,8 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
     return {
       receita: itensParaCategoria(B.receita_bruta.itens),
       deducoes: mergeCategoriaMaps(itensParaCategoria(B.impostos.itens), itensParaCategoria(B.devolucoes.itens)),
+      impostos: itensParaCategoria(B.impostos.itens),
+      devolucoes: itensParaCategoria(B.devolucoes.itens),
       custoInsumos: itensParaCategoria(B.uso_consumo.itens),
       custoMaoObra: mergeCategoriaMaps(
         itensParaCategoria(B.acabamento.itens), itensParaCategoria(B.corte.itens), itensParaCategoria(B.rash_bermuda.itens),
@@ -13984,7 +14148,13 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
 // existe na aba consolidada "Grupo DFC").
 const RESUMO_POR_EMPRESA_LINHAS = [
   { chave: 'receita', label: '(+) Receita (Recebimento)' },
-  { chave: 'deducoes', label: '(-) Deduções de Vendas (Impostos + Devolução)' },
+  // Pedido 28/07 (print "Deduções de Vendas"): separar Devoluções dos
+  // Impostos, Devoluções numa linha logo abaixo. Antes era 1 linha só
+  // ("deducoes", Impostos+Devolução misturados). Congelado (Jan-Mai):
+  // splitDeducoesCongelado() separa pelo nome da categoria (tudo que
+  // começa com "Devolu" vai pra devolucoes, resto fica em impostos).
+  { chave: 'impostos', label: '(-) Impostos' },
+  { chave: 'devolucoes', label: '(-) Devoluções' },
   { chave: 'custoInsumos', label: '(-) Custo de Insumos e Matéria-Prima' },
   { chave: 'custoServicos', label: '(-) Custo de Serviços' },
   { chave: 'custoMaoObra', label: '(-) Custo Mão de Obra' },
@@ -13999,6 +14169,22 @@ const RESUMO_POR_EMPRESA_LINHAS = [
   { chave: 'recebimentoEmprestimos', label: '(+) Recebimento Empréstimos' },
   { chave: 'pagamentoEmprestimos', label: '(-) Pagamento de Empréstimos' },
 ];
+
+// Separa o bucket congelado "deducoes" (Excel, Jan-Mai — só existe
+// mesclado na fonte) em impostos/devolucoes pra bater com os 2 buckets
+// novos ao vivo (buildResumoCategoriasMes). Regra: qualquer categoria
+// cujo nome comece com "Devolu" (Devolução/Devoluções/Devolução
+// Financeira — mesma lista usada em DRE_WATERFALL_GRUPOS.devolucoes)
+// vai pro grupo de devoluções; o resto (IRPJ/CSLL/PIS/COFINS/Difal/
+// ICMS/Simples etc.) fica em impostos.
+function splitDeducoesCongelado(bucketDeducoes, grupo) {
+  const out = {};
+  Object.entries(bucketDeducoes || {}).forEach(([label, arr]) => {
+    const ehDevolucao = /^Devolu/i.test(label);
+    if ((grupo === 'devolucoes') === ehDevolucao) out[label] = arr;
+  });
+  return out;
+}
 
 function somaCategoriaMes(bucket, mesIdx) {
   if (!bucket) return 0;
@@ -14061,19 +14247,22 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // AV% — mesma base confirmada na planilha original (linha da Receita
   // fixa como denominador, ex: KMNO DFC (caixa) linha 248): valor de
   // cada linha ÷ Receita (Recebimento) da MESMA empresa no período.
+  // (AV% por mês testado 28/07 e revertido — "fica muito poluída".)
   header.innerHTML = '<th class="dre-tbl-sticky">Descrição</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th>`).join('') + '<th>Total</th><th>Média</th><th class="total-pct">AV%</th>';
 
   const bucketReceitaCongelado = dadosCongelado['receita'];
-  const totalReceitaPeriodo = mesesValidos.reduce((acc, m) => {
-    const v = m.live
-      ? Object.values((liveByMes[m.chave]['receita']) || {}).reduce((s, x) => s + x, 0)
-      : somaCategoriaMes(bucketReceitaCongelado, m.frozenIdx);
-    return acc + v;
-  }, 0);
+  const receitaPorMes = mesesValidos.map(m => m.live
+    ? Object.values((liveByMes[m.chave]['receita']) || {}).reduce((s, x) => s + x, 0)
+    : somaCategoriaMes(bucketReceitaCongelado, m.frozenIdx));
+  const totalReceitaPeriodo = receitaPorMes.reduce((a, b) => a + b, 0);
 
   let seq = 0;
   const linhas = RESUMO_POR_EMPRESA_LINHAS.map(l => {
-    const bucketCongelado = dadosCongelado[l.chave];
+    // impostos/devolucoes (pedido 28/07): fonte congelada só tem
+    // "deducoes" mesclado — splitDeducoesCongelado() separa por nome.
+    const bucketCongelado = (l.chave === 'impostos' || l.chave === 'devolucoes')
+      ? splitDeducoesCongelado(dadosCongelado['deducoes'], l.chave)
+      : dadosCongelado[l.chave];
 
     // Valor do bucket em cada mês (congelado ou ao vivo).
     const valoresMeses = mesesValidos.map(m => m.live
@@ -14097,7 +14286,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     const rowId = `resumo-emp-${seq}`;
 
     const linhaPai = `
-      <tr class="dre-tbl-row${temCategorias ? ' colapsavel' : ''}"${temCategorias ? ` onclick="toggleDreNativoConta('${rowId}')" title="Clique para ver as categorias"` : ''}>
+      <tr class="dre-tbl-row${temCategorias ? ' colapsavel' : ''}"${temCategorias ? ` id="pai-${rowId}" onclick="toggleResumoEmpresaConta('${rowId}')" title="Clique para ver as categorias"` : ''}>
         <td class="dre-tbl-sticky">${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>` : ''}${semPrefixoDre(l.label)}</td>
         ${valoresMeses.map(v => `<td class="num">${fmtBRL(v)}</td>`).join('')}
         <td class="num">${fmtBRL(total)}</td>
@@ -14115,8 +14304,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       const mediaCat = valoresCat.length ? totalCat / valoresCat.length : 0;
       const avPctCat = totalReceitaPeriodo ? (totalCat / totalReceitaPeriodo * 100) : null;
       return `
-        <tr class="dre-tbl-row" style="display:none;" data-grupo-conta="${rowId}">
-          <td class="dre-tbl-sticky" style="padding-left:24px;color:var(--bone-dim);font-size:12px;">${catLabel}</td>
+        <tr class="dre-tbl-row" style="display:none;color:#DAD4C4;font-size:12px;" data-grupo-conta="${rowId}">
+          <td class="dre-tbl-sticky" style="padding-left:24px;">${catLabel}</td>
           ${valoresCat.map(v => `<td class="num">${fmtBRL(v)}</td>`).join('')}
           <td class="num">${fmtBRL(totalCat)}</td>
           <td class="num">${fmtBRL(mediaCat)}</td>
@@ -14124,7 +14313,12 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
         </tr>`;
     }).join('');
 
-    return linhaPai + linhasCategorias;
+    // Pedido 28/07: linhas-filho (categorias) aparecem ACIMA da linha
+    // pai, não abaixo — a linha pai vira o "total" na base do grupo,
+    // em vez de cabeçalho no topo. Só nesta tabela (Resumo por Empresa),
+    // por pedido explícito — não replicado nas outras árvores
+    // (Tipo/Grupo/Conta do DRE etc.), que continuam abrindo pra baixo.
+    return linhasCategorias + linhaPai;
   }).join('');
 
   body.innerHTML = linhas;
@@ -14530,19 +14724,11 @@ function renderGrupoBancos(monthStart, monthEnd) {
         <td class="num">${fmtBRL(totalMesFiltrado(m))}</td>
         <td class="num total-pct">${avPct(totalMesFiltrado, i)}</td>`).join('')}
     </tr>`;
-  // Linhas extras (Depósito/Cartão de Crédito recebidos no mês) só têm
-  // fonte congelada (Excel) — meses ao vivo ficam sem essas 2 linhas,
-  // sem fonte confirmada no Omie ainda pra esse agrupamento específico.
-  // Sem AV% aqui (célula "—" só pra manter o alinhamento de colunas —
-  // são fluxo do mês, não saldo, comparação não se aplica igual).
-  const linhasExtras = (umaEmpresa && umaEmpresa !== 'KMNO') ? '' : d.labelsExtras.map((label, k) => `
-    <tr${k === 0 ? ' style="border-top:1px solid var(--line);"' : ''}>
-      <td class="dre-tbl-sticky" style="color:var(--bone-dim);">${label}</td>
-      ${mesesValidos.map(m => `
-        <td class="num">${m.live ? '—' : fmtBRL(d.valoresExtras[label][m.frozenIdx])}</td>
-        <td class="num total-pct">—</td>`).join('')}
-    </tr>`).join('');
-  body.innerHTML = linhasBancos + linhaTotal + linhasExtras;
+  // Linhas extras (Depósito/Cartão de Crédito recebidos no mês) —
+  // REMOVIDAS (pedido 28/07, print com círculo "REMOVE" nessas 2
+  // linhas). labelsExtras/valoresExtras não foram removidos dos dados
+  // (BANCOS_SALDO_INICIO_MES), só a exibição aqui.
+  body.innerHTML = linhasBancos + linhaTotal;
   aplicarEstadoGrupoBancosCard();
 }
 
@@ -15092,20 +15278,35 @@ function renderDreNativoTreeCopiaHtml(arvore, meses, resumida) {
   // AV% — mesma base/fórmula da árvore original (Receita Bruta de
   // Vendas, conta 1.01.01, do período inteiro exibido).
   const baseAv = acharContaPorCodigo(arvore, '1.01.01');
+  // Pedido 28/07: "pega o estilo e as funções do card Resumo (Grupo, R$)
+  // e aplica aqui" — Total ganha classe .total (fundo navy-2 + negrito,
+  // igual lá) e adicionada a coluna Média (que não existia), mesmo
+  // cálculo usado em toda a Evolução Mensal (total ÷ nº de meses
+  // exibidos). Dados/hierarquia (Tipo/Grupo/Conta/Categoria) intocados.
+  const media = (total) => meses.length ? total / meses.length : 0;
   const linhas = [];
   let seq = 0;
   arvore.tipos.forEach((tipo) => {
     linhas.push(`<tr class="dre-tbl-row" style="font-weight:700;background:rgba(255,255,255,0.04);">
-      <td class="dre-tbl-sticky">${tipo.numero}. ${semPrefixoDre(tipo.label)}</td>
+      <td class="dre-tbl-sticky">${semPrefixoDre(tipo.label)}</td>
       ${tipo.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
-      <td>${fmtDreNativoValor(tipo.total)}</td>
+      <td class="total">${fmtDreNativoValor(tipo.total)}</td>
+      <td class="media">${fmtDreNativoValor(media(tipo.total))}</td>
       <td class="num total-pct">${fmtAvPct(tipo.total, baseAv)}</td>
     </tr>`);
+    // Pedido 28/07: quando o Tipo só tem 1 Grupo dentro dele E o nome é
+    // idêntico (ex: Tipo "Investimentos" > Grupo "Investimentos" — só
+    // acontece com esse Tipo na taxonomia do Omie), a linha do Grupo é
+    // 100% redundante (mesmo nome, mesmo valor) — não mostra ela, desce
+    // direto pras Contas. Outros Tipos (com 2-3 grupos, ex: Despesas)
+    // continuam mostrando o Grupo normalmente.
+    const grupoRedundante = tipo.grupos.length === 1 && tipo.grupos[0].label === tipo.label;
     tipo.grupos.forEach((grupo) => {
-      linhas.push(`<tr class="dre-tbl-row" style="font-weight:600;">
-        <td class="dre-tbl-sticky" style="padding-left:20px;">${grupo.numero}. ${semPrefixoDre(grupo.label)}</td>
+      if (!grupoRedundante) linhas.push(`<tr class="dre-tbl-row" style="font-weight:600;">
+        <td class="dre-tbl-sticky" style="padding-left:20px;">${semPrefixoDre(grupo.label)}</td>
         ${grupo.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
-        <td>${fmtDreNativoValor(grupo.total)}</td>
+        <td class="total">${fmtDreNativoValor(grupo.total)}</td>
+        <td class="media">${fmtDreNativoValor(media(grupo.total))}</td>
         <td class="num total-pct">${fmtAvPct(grupo.total, baseAv)}</td>
       </tr>`);
       if (resumida) return; // pára em Grupo — Todas/2+ empresas
@@ -15113,25 +15314,34 @@ function renderDreNativoTreeCopiaHtml(arvore, meses, resumida) {
         seq++;
         const rowId = `dre-nativo-copia-${seq}`;
         const temCategorias = conta.categorias && conta.categorias.length > 0;
-        linhas.push(`<tr class="dre-tbl-row${temCategorias ? ' colapsavel' : ''}"${temCategorias ? ` onclick="toggleDreNativoConta('${rowId}')" title="Clique para ver as categorias"` : ''}>
-          <td class="dre-tbl-sticky" style="padding-left:40px;color:var(--bone-dim);">${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>` : ''}${conta.numero}. ${semPrefixoDre(conta.label)}</td>
+        const linhaConta = `<tr class="dre-tbl-row${temCategorias ? ' colapsavel' : ''}"${temCategorias ? ` id="pai-${rowId}" onclick="toggleResumoEmpresaConta('${rowId}')" title="Clique para ver as categorias"` : ''}>
+          <td class="dre-tbl-sticky" style="padding-left:40px;color:var(--bone);font-weight:600;">${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>` : ''}${semPrefixoDre(conta.label)}</td>
           ${conta.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
-          <td>${fmtDreNativoValor(conta.total)}</td>
+          <td class="total">${fmtDreNativoValor(conta.total)}</td>
+          <td class="media">${fmtDreNativoValor(media(conta.total))}</td>
           <td class="num total-pct">${fmtAvPct(conta.total, baseAv)}</td>
-        </tr>`);
-        conta.categorias.forEach(catg => {
-          linhas.push(`<tr class="dre-tbl-row" style="display:none;" data-grupo-conta="${rowId}">
-            <td class="dre-tbl-sticky" style="padding-left:60px;color:var(--bone-dim);font-size:12px;">${semPrefixoDre(catg.label)}</td>
+        </tr>`;
+        // Pedido 28/07 ("pega tudo do Resumo por Empresa e aplica aqui
+        // também"): categorias aparecem ACIMA da conta (que vira o
+        // "total" na base do grupo, não cabeçalho no topo) — mesma
+        // inversão já usada no Resumo por Empresa. Reaproveita a MESMA
+        // função de toggle (toggleResumoEmpresaConta, genérica — não
+        // depende de tabela específica) pra também dar o destaque verde.
+        // toggleDreNativoConta (a árvore ORIGINAL do DRE por Caixa,
+        // diferente desse clone) continua intocada, abrindo pra baixo.
+        const linhasCategorias = conta.categorias.map(catg => `<tr class="dre-tbl-row" style="display:none;color:#DAD4C4;font-size:12px;" data-grupo-conta="${rowId}">
+            <td class="dre-tbl-sticky" style="padding-left:60px;">${semPrefixoDre(catg.label)}</td>
             ${catg.meses.map(v => `<td>${fmtDreNativoValor(v)}</td>`).join('')}
-            <td>${fmtDreNativoValor(catg.total)}</td>
+            <td class="total">${fmtDreNativoValor(catg.total)}</td>
+            <td class="media">${fmtDreNativoValor(media(catg.total))}</td>
             <td class="num total-pct">${fmtAvPct(catg.total, baseAv)}</td>
-          </tr>`);
-        });
+          </tr>`).join('');
+        linhas.push(linhasCategorias + linhaConta);
       });
     });
   });
-  return `<div class="dre-tbl-wrap"><table class="dre-tbl dre-tbl-mes-alt">
-    <thead><tr><th>Tipo / Grupo / Conta do DRE</th>${headerMeses}<th>Total</th><th class="total-pct">AV%</th></tr></thead>
+  return `<div class="dre-tbl-wrap"><table class="dre-tbl dre-tbl-mes-alt dre-tbl-tipo-grupo-conta">
+    <thead><tr><th>Tipo / Grupo / Conta do DRE</th>${headerMeses}<th class="total">Total</th><th class="media">Média</th><th class="total-pct">AV%</th></tr></thead>
     <tbody>${linhas.join('')}</tbody>
   </table></div>`;
 }
@@ -15157,7 +15367,7 @@ async function renderDreNativoCopia() {
 
   const arvore = empresa === 'TODAS'
     ? buildArvoreNativaDreConsolidado(dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache)
-    : buildArvoreNativaDre(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache);
+    : buildArvoreNativaDreComCongelado(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses, dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache);
   const resumo = buildResumoNativo(arvore, empresa, empresa === 'TODAS' ? arvore.depreciacaoConsolidada : null);
   const emprestimosDividendos = empresa === 'TODAS' ? null : buildCardEmprestimosDividendos(empresa, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo);
 
@@ -15190,7 +15400,12 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
   const meses = [];
   let cursor = inicioAno;
   let guard = 0;
-  while ((cursor.isBefore(monthEnd) || cursor.isSame(monthEnd, 'month')) && guard < 12) {
+  // FIX 28/07 (bug: "aparece 1 mês a mais do que está selecionado no
+  // Até") — monthEnd é EXCLUSIVO (1º dia do mês seguinte ao "Até"
+  // escolhido, mesma convenção usada no resto do dashboard). A condição
+  // "|| cursor.isSame(monthEnd, 'month')" incluía esse mês extra
+  // indevidamente — removida.
+  while (cursor.isBefore(monthEnd) && guard < 12) {
     meses.push(cursor);
     cursor = cursor.add(1, 'month');
     guard++;
@@ -15241,7 +15456,11 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
       const pct = evolucaoMensal[i][chave] / baseMes * 100;
       return pct.toFixed(1).replace('.', ',') + '%';
     };
-    evolucaoBody.innerHTML = linhasEvolucao.map(l => `
+    const fmtCelula = (v) => v < 0 ? `<span style="color:var(--red);">(${fmtBRL(Math.abs(v))})</span>` : fmtBRL(v);
+    evolucaoBody.innerHTML = linhasEvolucao.map(l => {
+      const total = evolucaoMensal.reduce((s, e) => s + e[l.chave], 0);
+      const media = evolucaoMensal.length ? total / evolucaoMensal.length : 0;
+      return `
       <tr>
         <td>${l.label}</td>
         ${evolucaoMensal.map((e, i) => {
@@ -15251,14 +15470,17 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
             <td class="num" style="${negativo ? 'color:var(--red);' : ''}">${negativo ? `(${fmtBRL(Math.abs(v))})` : fmtBRL(v)}</td>
             <td class="num total-pct">${avPctEvolucao(l.chave, i)}</td>`;
         }).join('')}
+        <td class="num total">${fmtCelula(total)}</td>
+        <td class="num media">${fmtCelula(media)}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const headerRow = document.getElementById('grupoDfcEvolucaoHeaderCopia');
     if (headerRow) {
       headerRow.innerHTML = '<th>Métrica</th>' + evolucaoMensal.map(e => `
         <th>${DRE_ARVORE_NOMES_MES[e.mes.month()]}</th>
-        <th class="total-pct">AV%</th>`).join('');
+        <th class="total-pct">AV%</th>`).join('') + '<th class="total">Total</th><th class="media">Média</th>';
     }
   }
 
@@ -15361,7 +15583,11 @@ function renderGrupoDfc(monthStart, monthEnd) {
   const meses = [];
   let cursor = inicioAno;
   let guard = 0;
-  while ((cursor.isBefore(monthEnd) || cursor.isSame(monthEnd, 'month')) && guard < 12) {
+  // FIX 28/07 (bug: "aparece 1 mês a mais do que está selecionado no
+  // Até") — monthEnd é EXCLUSIVO (1º dia do mês seguinte ao "Até"
+  // escolhido). A condição "|| cursor.isSame(monthEnd, 'month')" incluía
+  // esse mês extra indevidamente — removida.
+  while (cursor.isBefore(monthEnd) && guard < 12) {
     meses.push(cursor);
     cursor = cursor.add(1, 'month');
     guard++;
@@ -15420,7 +15646,11 @@ function renderGrupoDfc(monthStart, monthEnd) {
       const pct = evolucaoMensal[i][chave] / baseMes * 100;
       return pct.toFixed(1).replace('.', ',') + '%';
     };
-    evolucaoBody.innerHTML = linhasEvolucao.map(l => `
+    const fmtCelula = (v) => v < 0 ? `<span style="color:var(--red);">(${fmtBRL(Math.abs(v))})</span>` : fmtBRL(v);
+    evolucaoBody.innerHTML = linhasEvolucao.map(l => {
+      const total = evolucaoMensal.reduce((s, e) => s + e[l.chave], 0);
+      const media = evolucaoMensal.length ? total / evolucaoMensal.length : 0;
+      return `
       <tr>
         <td>${l.label}</td>
         ${evolucaoMensal.map((e, i) => {
@@ -15430,14 +15660,17 @@ function renderGrupoDfc(monthStart, monthEnd) {
             <td class="num" style="${negativo ? 'color:var(--red);' : ''}">${negativo ? `(${fmtBRL(Math.abs(v))})` : fmtBRL(v)}</td>
             <td class="num total-pct">${avPctEvolucao(l.chave, i)}</td>`;
         }).join('')}
+        <td class="num total">${fmtCelula(total)}</td>
+        <td class="num media">${fmtCelula(media)}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
 
     const headerRow = document.getElementById('grupoDfcEvolucaoHeader');
     if (headerRow) {
       headerRow.innerHTML = '<th>Métrica</th>' + evolucaoMensal.map(e => `
         <th>${DRE_ARVORE_NOMES_MES[e.mes.month()]}</th>
-        <th class="total-pct">AV%</th>`).join('');
+        <th class="total-pct">AV%</th>`).join('') + '<th class="total">Total</th><th class="media">Média</th>';
     }
   }
 
@@ -15949,7 +16182,6 @@ const SIDEBAR_BLOCKS = [
   { id: 'chartCardStacked', label: 'Despesas por Categoria (empilhado)' },
   { id: 'chartCardDonut',   label: 'Receitas por Categoria (donut)' },
   { id: 'chartCardInOut',   label: 'Entradas x Saídas (donut + últimas)' },
-  { id: 'chartCardForecast',label: 'Fluxo de Caixa Futuro (60 dias)' },
 ];
 
 function loadSidebarPrefs() {
