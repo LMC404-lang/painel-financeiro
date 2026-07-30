@@ -3108,8 +3108,24 @@
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação no Período</div><div class="grupo-dfc-card-val" id="resumoCapitalSaldoDiff">R$ 0</div></div>
       </div>
       <div class="grupo-dfc-cards">
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber em 01.01.2026</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesInicio">R$ -----</div></div>
-        <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Saldo Cartões a Receber Último Dia do Mês Anterior</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesFim">R$ -----</div></div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">Saldo Cartões a Receber em 01.01.2026</div>
+          <div class="grupo-dfc-card-val" id="resumoCapitalCartoesInicio">R$ -----</div>
+          <div style="font-size:11px;margin-top:4px;">
+            <a href="#" id="cartoesEditarInicio" onclick="editarCartoesReceber('inicio');return false;" style="color:var(--bone-dim);text-decoration:underline;">✎ editar</a>
+            &nbsp;|&nbsp;
+            <a href="#" onclick="verHistoricoCartoesReceber('inicio');return false;" style="color:var(--bone-dim);text-decoration:underline;">🕒 histórico</a>
+          </div>
+        </div>
+        <div class="grupo-dfc-card">
+          <div class="grupo-dfc-card-label">Saldo Cartões a Receber Último Dia do Mês Anterior</div>
+          <div class="grupo-dfc-card-val" id="resumoCapitalCartoesFim">R$ -----</div>
+          <div style="font-size:11px;margin-top:4px;">
+            <a href="#" id="cartoesEditarFim" onclick="editarCartoesReceber('fim');return false;" style="color:var(--bone-dim);text-decoration:underline;">✎ editar</a>
+            &nbsp;|&nbsp;
+            <a href="#" onclick="verHistoricoCartoesReceber('fim');return false;" style="color:var(--bone-dim);text-decoration:underline;">🕒 histórico</a>
+          </div>
+        </div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Variação (Cartões)</div><div class="grupo-dfc-card-val" id="resumoCapitalCartoesDiff">R$ -----</div></div>
       </div>
       <div class="grupo-dfc-cards">
@@ -13338,9 +13354,104 @@ function buildResumoDetalhadoMesFrozenPorEmpresa(empresaKey, chaveMesYYYYMM) {
   };
 }
 
-// Saldo em aberto (não recebido) de títulos a receber de bandeira de
-// cartão (RedeCard, único cliente cadastrado por empresa — ver
-// REDECARD_CODIGO_CLIENTE_POR_EMPRESA), numa data-alvo específica.
+// Saldo Cartões a Receber (pedido 30/07) — valor GRUPO fixo (sem quebra
+// por empresa, mesma regra do Capex/Refis: sempre 3 empresas, não
+// depende do seletor do topo), guardado em dash_cartoes_receber
+// (Supabase, banco consolidado) e editável manualmente só por admin, com
+// histórico de edições em dash_cartoes_receber_log (quem editou, quando,
+// valor antigo → novo). Fonte original dos valores-base: aba "Grupo DFC"
+// do Excel (prints enviados por Lucas 30/07).
+// Converte texto digitado num prompt pra número — aceita tanto formato
+// BR (1.317.472,32) quanto decimal simples (1317472.32).
+function parseValorBR(str) {
+  str = String(str).trim();
+  if (str.includes(',')) return parseFloat(str.replace(/\./g, '').replace(',', '.'));
+  return parseFloat(str);
+}
+
+let cartoesReceberCache = null; // { inicio: {valor,...}, fim: {valor,...} }
+let cartoesReceberCarregando = false;
+
+async function carregarCartoesReceber() {
+  cartoesReceberCarregando = true;
+  try {
+    const { data, error } = await supabaseClient.from('dash_cartoes_receber').select('*');
+    if (error) throw error;
+    cartoesReceberCache = {};
+    (data || []).forEach(row => { cartoesReceberCache[row.chave] = row; });
+  } catch (err) {
+    console.error('Erro ao carregar Saldo Cartões:', err);
+    cartoesReceberCache = {}; // evita loop infinito de retry — vira "-----"
+  } finally {
+    cartoesReceberCarregando = false;
+    renderCartoesReceberCards();
+  }
+}
+
+function renderCartoesReceberCards() {
+  const elInicio = document.getElementById('resumoCapitalCartoesInicio');
+  const elFim = document.getElementById('resumoCapitalCartoesFim');
+  const elDiff = document.getElementById('resumoCapitalCartoesDiff');
+  if (!elInicio || !elFim || !elDiff) return;
+  const inicio = cartoesReceberCache && cartoesReceberCache.inicio ? Number(cartoesReceberCache.inicio.valor) : null;
+  const fim = cartoesReceberCache && cartoesReceberCache.fim ? Number(cartoesReceberCache.fim.valor) : null;
+  elInicio.textContent = inicio === null ? 'R$ -----' : fmtBRL(inicio);
+  elFim.textContent = fim === null ? 'R$ -----' : fmtBRL(fim);
+  elDiff.textContent = (inicio === null || fim === null) ? 'R$ -----' : fmtBRL(fim - inicio); // positivo = aumentou, mesma convenção do card de Bancos
+  // Botão de editar só aparece/funciona pra admin (RLS do Supabase já
+  // bloqueia a escrita pra quem não é, isso aqui é só UX — esconder o
+  // convite a editar pra quem não pode).
+  const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
+  ['cartoesEditarInicio', 'cartoesEditarFim'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = ehAdmin ? '' : 'none';
+  });
+}
+
+async function editarCartoesReceber(chave) {
+  if (!currentProfile || currentProfile.role !== 'admin') { alert('Somente admin pode editar o Saldo Cartões.'); return; }
+  const atual = cartoesReceberCache && cartoesReceberCache[chave] ? Number(cartoesReceberCache[chave].valor) : 0;
+  const label = chave === 'inicio' ? 'Saldo Cartões em 01.01.2026' : 'Saldo Cartões Último Dia do Mês Anterior';
+  const novoStr = prompt(`Novo valor — ${label} (use ponto pra decimal, ex: 1317472.32):`, atual.toFixed(2));
+  if (novoStr === null) return; // cancelou
+  const novo = parseValorBR(novoStr);
+  if (isNaN(novo)) { alert('Valor inválido.'); return; }
+  try {
+    const { error: errUpdate } = await supabaseClient.from('dash_cartoes_receber').upsert({
+      chave, valor: novo, updated_at: new Date().toISOString(),
+      updated_by: currentSession?.user?.id || null, updated_by_email: currentSession?.user?.email || null,
+    });
+    if (errUpdate) throw errUpdate;
+    const { error: errLog } = await supabaseClient.from('dash_cartoes_receber_log').insert({
+      chave, valor_antigo: atual, valor_novo: novo,
+      editado_por: currentSession?.user?.id || null, editado_por_email: currentSession?.user?.email || null,
+    });
+    if (errLog) throw errLog;
+    cartoesReceberCache[chave] = { chave, valor: novo };
+    renderCartoesReceberCards();
+  } catch (err) {
+    console.error('Erro ao salvar Saldo Cartões:', err);
+    alert('Não foi possível salvar. Tente novamente.');
+  }
+}
+
+async function verHistoricoCartoesReceber(chave) {
+  try {
+    const { data, error } = await supabaseClient.from('dash_cartoes_receber_log')
+      .select('*').eq('chave', chave).order('editado_em', { ascending: false }).limit(20);
+    if (error) throw error;
+    if (!data || !data.length) { alert('Nenhuma edição registrada ainda.'); return; }
+    const linhas = data.map(l =>
+      `${dayjs(l.editado_em).format('DD/MM/YYYY HH:mm')} — ${l.editado_por_email || 'desconhecido'}: ${fmtBRL(l.valor_antigo)} → ${fmtBRL(l.valor_novo)}`
+    );
+    alert(`Histórico de edições:\n\n${linhas.join('\n')}`);
+  } catch (err) {
+    console.error('Erro ao buscar histórico:', err);
+    alert('Não foi possível carregar o histórico.');
+  }
+}
+
+
 // Reconstrução de snapshot no passado (mesmo princípio de aging): conta
 // o título se ele já existia (data_emissao/data_registro <= alvo) e
 // ainda não tinha sido recebido até aquela data (sem data_pagamento, ou
@@ -13497,23 +13608,23 @@ function renderResumoCapital(monthStart, monthEnd) {
       if (elSaldoFimEl) elSaldoFimEl.textContent = 'R$ -----';
       if (elSaldoDiffEl) elSaldoDiffEl.textContent = 'R$ -----';
     } else {
-      const diffSaldo = saldoInicio - saldoFim; // confirmado com Lucas: 01.01 − Último Dia do Mês Anterior
+      const diffSaldo = saldoFim - saldoInicio; // positivo = saldo aumentou; confirmado com Lucas 30/07
       elSaldoInicio.textContent = fmtBRL(saldoInicio);
       if (elSaldoFimEl) elSaldoFimEl.textContent = fmtBRL(saldoFim);
       if (elSaldoDiffEl) elSaldoDiffEl.textContent = fmtBRL(diffSaldo);
     }
   }
 
-  // Pedido 30/07 ("vamos desativar e colocar placeholder"): os 3 cards
-  // de Cartões a Receber (início/fim/variação) ficam sempre "-----",
-  // independente da seleção — desativados a pedido do Lucas. Cálculo
-  // antigo (calcSaldoCartoesEmData) não é mais chamado aqui; função em
-  // si não foi removida, só a exibição neste card.
-  const elCartoesInicio = document.getElementById('resumoCapitalCartoesInicio');
-  if (elCartoesInicio) {
-    elCartoesInicio.textContent = 'R$ -----';
-    document.getElementById('resumoCapitalCartoesFim').textContent = 'R$ -----';
-    document.getElementById('resumoCapitalCartoesDiff').textContent = 'R$ -----';
+  // Pedido 30/07: Cartões a Receber deixam de ser placeholder fixo — agora
+  // vêm do Supabase (dash_cartoes_receber), editável manualmente (só
+  // admin), com log de quem editou. Valor SEMPRE do Grupo, independente
+  // da empresa selecionada no topo (mesma regra do Capex/Refis — "sempre
+  // 3 empresas"). Carrega 1x (cache) e re-renderiza a cada chamada desta
+  // função; não depende de empresasSelResumoCapital.
+  if (!cartoesReceberCache && !cartoesReceberCarregando) {
+    carregarCartoesReceber();
+  } else {
+    renderCartoesReceberCards();
   }
 
   // Capex e Pagtos Impostos Atrasados/Refis (Período): "Até Maio Excel,
@@ -15550,11 +15661,11 @@ const RESUMO_DETALHADO_LINHAS_DRE = [
 ];
 
 const RESUMO_DETALHADO_MESES = {
-  '2026-01': { receitaProdutos: 726555.21, receitaMercadorias: 0, receitaServicos: 65678.29, receita: 792233.50, deducoes: 150748.27, receitaLiquida: 641485.23, custoInsumos: 91454.93, custoServicos: 9643.50, custoMaoObra: 133109.36, cmv: 234207.79, royalties: 14700.69, margemContribuicao: 392576.75, custoAdm: 113139.27, despesasComerciais: 85664.30, ebitda: 193773.18, despesasFinanceiras: 11992.37, receitasFinanceiras: 11.45, lucroLiquido: 181792.26, distribuicao: 2865.03, capex: 11344.21, refis: 8881.57, saldoLiquido: 158701.45, recebimentoEmprestimos: 26660.28, pagamentoEmprestimos: 17783.13, saldoCaixa: 167578.60 },
-  '2026-02': { receitaProdutos: 720089.24, receitaMercadorias: 0, receitaServicos: 65545.99, receita: 785635.23, deducoes: 73519.79, receitaLiquida: 712115.44, custoInsumos: 133063.74, custoServicos: 21515.00, custoMaoObra: 153538.23, cmv: 308116.97, royalties: 3274.73, margemContribuicao: 400723.74, custoAdm: 134235.69, despesasComerciais: 60267.36, ebitda: 206220.69, despesasFinanceiras: 11979.83, receitasFinanceiras: 36.80, lucroLiquido: 194277.66, distribuicao: 3221.07, capex: 12704.05, refis: 56984.27, saldoLiquido: 121368.27, recebimentoEmprestimos: 50065.15, pagamentoEmprestimos: 57230.73, saldoCaixa: 114202.69 },
-  '2026-03': { receitaProdutos: 922993.69, receitaMercadorias: 0, receitaServicos: 150055.63, receita: 1073049.32, deducoes: 103310.72, receitaLiquida: 969738.60, custoInsumos: 208300.49, custoServicos: 18895.00, custoMaoObra: 145067.80, cmv: 372263.29, royalties: 4742.91, margemContribuicao: 592732.40, custoAdm: 181556.75, despesasComerciais: 108612.39, ebitda: 302563.26, despesasFinanceiras: 12515.78, receitasFinanceiras: 8163.22, lucroLiquido: 298210.70, distribuicao: 1586.98, capex: 63947.06, refis: 19251.87, saldoLiquido: 213424.79, recebimentoEmprestimos: 18932.34, pagamentoEmprestimos: 34590.79, saldoCaixa: 197766.34 },
-  '2026-04': { receitaProdutos: 831676.46, receitaMercadorias: 0, receitaServicos: 89239.00, receita: 920915.46, deducoes: 161879.51, receitaLiquida: 759035.95, custoInsumos: 202103.80, custoServicos: 26790.89, custoMaoObra: 154940.51, cmv: 383835.20, royalties: 23494.13, margemContribuicao: 351706.62, custoAdm: 175755.90, despesasComerciais: 85492.43, ebitda: 90458.29, despesasFinanceiras: 10901.52, receitasFinanceiras: 8328.63, lucroLiquido: 87885.40, distribuicao: 2993.84, capex: 32446.92, refis: 20088.22, saldoLiquido: 32356.42, recebimentoEmprestimos: 30355.99, pagamentoEmprestimos: 42932.46, saldoCaixa: 19779.95 },
-  '2026-05': { receitaProdutos: 765706.88, receitaMercadorias: 0, receitaServicos: 98272.62, receita: 863979.50, deducoes: 102873.20, receitaLiquida: 761106.30, custoInsumos: 185879.84, custoServicos: 46022.02, custoMaoObra: 185473.12, cmv: 417374.98, royalties: 3423.47, margemContribuicao: 340307.85, custoAdm: 183718.70, despesasComerciais: 94974.15, ebitda: 61615.00, despesasFinanceiras: 9364.18, receitasFinanceiras: 8279.32, lucroLiquido: 60530.14, distribuicao: 3175.97, capex: 21106.63, refis: 169318.78, saldoLiquido: -133071.24, recebimentoEmprestimos: 69042.12, pagamentoEmprestimos: 80967.20, saldoCaixa: -144996.32 },
+  '2026-01': { receitaProdutos: 726555.21, receitaMercadorias: 0, receitaServicos: 65678.29, receita: 792233.50, impostos: 149822.27, devolucoes: 926.00, deducoes: 150748.27, receitaLiquida: 641485.23, custoInsumos: 91454.93, custoServicos: 9643.50, custoMaoObra: 133109.36, cmv: 234207.79, royalties: 14700.69, margemContribuicao: 392576.75, custoAdm: 113139.27, despesasComerciais: 85664.30, ebitda: 193773.18, despesasFinanceiras: 11992.37, receitasFinanceiras: 11.45, lucroLiquido: 181792.26, distribuicao: 2865.03, capex: 11344.21, refis: 8881.57, saldoLiquido: 158701.45, recebimentoEmprestimos: 26660.28, pagamentoEmprestimos: 17783.13, saldoCaixa: 167578.60 },
+  '2026-02': { receitaProdutos: 720089.24, receitaMercadorias: 0, receitaServicos: 65545.99, receita: 785635.23, impostos: 71169.79, devolucoes: 2350.00, deducoes: 73519.79, receitaLiquida: 712115.44, custoInsumos: 133063.74, custoServicos: 21515.00, custoMaoObra: 153538.23, cmv: 308116.97, royalties: 3274.73, margemContribuicao: 400723.74, custoAdm: 134235.69, despesasComerciais: 60267.36, ebitda: 206220.69, despesasFinanceiras: 11979.83, receitasFinanceiras: 36.80, lucroLiquido: 194277.66, distribuicao: 3221.07, capex: 12704.05, refis: 56984.27, saldoLiquido: 121368.27, recebimentoEmprestimos: 50065.15, pagamentoEmprestimos: 57230.73, saldoCaixa: 114202.69 },
+  '2026-03': { receitaProdutos: 922993.69, receitaMercadorias: 0, receitaServicos: 150055.63, receita: 1073049.32, impostos: 103310.72, devolucoes: 0.00, deducoes: 103310.72, receitaLiquida: 969738.60, custoInsumos: 208300.49, custoServicos: 18895.00, custoMaoObra: 145067.80, cmv: 372263.29, royalties: 4742.91, margemContribuicao: 592732.40, custoAdm: 181556.75, despesasComerciais: 108612.39, ebitda: 302563.26, despesasFinanceiras: 12515.78, receitasFinanceiras: 8163.22, lucroLiquido: 298210.70, distribuicao: 1586.98, capex: 63947.06, refis: 19251.87, saldoLiquido: 213424.79, recebimentoEmprestimos: 18932.34, pagamentoEmprestimos: 34590.79, saldoCaixa: 197766.34 },
+  '2026-04': { receitaProdutos: 831676.46, receitaMercadorias: 0, receitaServicos: 89239.00, receita: 920915.46, impostos: 155854.05, devolucoes: 6025.46, deducoes: 161879.51, receitaLiquida: 759035.95, custoInsumos: 202103.80, custoServicos: 26790.89, custoMaoObra: 154940.51, cmv: 383835.20, royalties: 23494.13, margemContribuicao: 351706.62, custoAdm: 175755.90, despesasComerciais: 85492.43, ebitda: 90458.29, despesasFinanceiras: 10901.52, receitasFinanceiras: 8328.63, lucroLiquido: 87885.40, distribuicao: 2993.84, capex: 32446.92, refis: 20088.22, saldoLiquido: 32356.42, recebimentoEmprestimos: 30355.99, pagamentoEmprestimos: 42932.46, saldoCaixa: 19779.95 },
+  '2026-05': { receitaProdutos: 765706.88, receitaMercadorias: 0, receitaServicos: 98272.62, receita: 863979.50, impostos: 98710.01, devolucoes: 4163.19, deducoes: 102873.20, receitaLiquida: 761106.30, custoInsumos: 185879.84, custoServicos: 46022.02, custoMaoObra: 185473.12, cmv: 417374.98, royalties: 3423.47, margemContribuicao: 340307.85, custoAdm: 183718.70, despesasComerciais: 94974.15, ebitda: 61615.00, despesasFinanceiras: 9364.18, receitasFinanceiras: 8279.32, lucroLiquido: 60530.14, distribuicao: 3175.97, capex: 21106.63, refis: 169318.78, saldoLiquido: -133071.24, recebimentoEmprestimos: 69042.12, pagamentoEmprestimos: 80967.20, saldoCaixa: -144996.32 },
 };
 
 // Bancos — Saldo Primeiro dia do Mês (reunião 21.07, linha 28). Fonte:
@@ -17309,6 +17420,21 @@ function renderCapexRefisChart(evolucaoMensal) {
 function buildCapexRefisMensalCompetencia(movements, meses, categories) {
   const catByKey = buildCatByEmpresaCodigo(categories || []);
   return meses.map(m => {
+    const chave = m.format('YYYY-MM');
+    if (m.isBefore(EXCEL_CONGELADO_ATE)) {
+      // FIX 30/07 ("capex da novah nem refis apareceram no gráfico"):
+      // não existia fonte congelada aqui — pra Jan-Mai o cálculo ao vivo
+      // não tem dado (Novah especialmente), ficava sempre 0. Usa a mesma
+      // fonte "por competência" já validada (KMNO_TESTE_GRUPOS/
+      // NOVAH_TESTE_GRUPOS via buildResumoDetalhadoMesFrozenPorEmpresa).
+      // RT sem congelado — conta como 0. Sem detalhe categoria-a-categoria
+      // (tooltip mostra "valor congelado da planilha").
+      const kmno = buildResumoDetalhadoMesFrozenPorEmpresa('KMNO', chave);
+      const novah = buildResumoDetalhadoMesFrozenPorEmpresa('NOVAH', chave);
+      const capex = (kmno && kmno.capex || 0) + (novah && novah.capex || 0);
+      const refis = (kmno && kmno.refis || 0) + (novah && novah.refis || 0);
+      return { mes: m, capex, refis, capexDetalhe: null, refisDetalhe: null };
+    }
     const monthEndM = m.endOf('month');
     let capex = 0, refis = 0;
     const capexDetalhe = {}, refisDetalhe = {};
