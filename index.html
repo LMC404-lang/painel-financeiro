@@ -490,9 +490,17 @@
   tr.dre-tbl-row-amarelo td.total,
   tr.dre-tbl-row-amarelo td.media,
   tr.dre-tbl-row-amarelo td.total-pct,
-  tr.dre-tbl-row-amarelo td.media-pct,
-  tr.dre-tbl-row-amarelo td.dre-tbl-sticky {
+  tr.dre-tbl-row-amarelo td.media-pct {
     background: rgba(180, 160, 90, 0.14) !important;
+  }
+  /* FIX 30/07: a coluna sticky (fixa) precisa de fundo OPACO — se usar a
+     mesma rgba semi-transparente das outras células, os números das
+     colunas de mês "aparecem por trás" do texto da coluna fixa durante o
+     scroll horizontal (bug reportado: "linhas amarelas subindo em cima
+     das linhas pai"). Cor equivalente sólida (rgba(180,160,90,0.14)
+     sobre --navy-2 #142C3E), sem mudar o visual. */
+  tr.dre-tbl-row-amarelo td.dre-tbl-sticky {
+    background: #2a3c42 !important;
   }
   /* Pedido reunião 27/07: "congelar a primeira coluna, para mais fácil
      validação de dados" — mesmo padrão do .dre-tbl-sticky, aplicado nas
@@ -15467,7 +15475,8 @@ const RESUMO_DETALHADO_LINHAS = [
   { label: '(+) Receita de Mercadorias (Site)',                      chave: 'receitaMercadorias' },
   { label: '(+) Receita de Serviços',                                chave: 'receitaServicos' },
   { label: '(=) Recebimento',                                       chave: 'receita', destaque: true },
-  { label: '(-) Deduções de Vendas (Impostos + Devolução)',          chave: 'deducoes' },
+  { label: '(-) Impostos',                                           chave: 'impostos' },
+  { label: '(-) Devoluções',                                         chave: 'devolucoes' },
   { label: '(=) Receita Líquida',                                    chave: 'receitaLiquida', destaque: true },
   { label: '(-) Custo de Insumos e Matéria-Prima',                   chave: 'custoInsumos' },
   { label: '(-) Custo de Serviços',                                  chave: 'custoServicos' },
