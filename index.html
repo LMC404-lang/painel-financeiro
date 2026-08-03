@@ -2493,6 +2493,7 @@
         <div class="global-period-range">
           <label>De: <input type="month" id="globalPeriodDe" aria-label="Período inicial"></label>
           <label>Até: <input type="month" id="globalPeriodAte" aria-label="Período final"></label>
+          <span id="currentViewLabel" style="margin-left:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--bone-dim); text-transform:uppercase;"></span>
         </div>
       </div>
     </div>
@@ -2530,10 +2531,8 @@
          lançado na planilha na época). NÃO vêm do Supabase/Omie ainda —
          ver ANALISES_GRAFICO_INDICADORES no bloco de script abaixo pra
          atualizar/estender quando entrar dado vivo. -->
-    <div class="section-head">
-      <h2>Análises — Peças, Vendas e Faturamento</h2>
-      <div class="desc">Fonte: planilha "Fat e Vendas" (reunião 21.07). Jan–Mai/2026 = Excel; a partir de Jun/2026 precisa ser mantido manualmente até termos pipeline do Omie pra essas 3 métricas.</div>
-    </div>
+    <!-- Título/resumo removidos a pedido de Lucas (03/08/2026) — card e
+         gráficos abaixo mantidos intactos, só a section-head saiu. -->
     <!-- Cards convertidos de chart-grid-3 pra standalone (pedido reunião
          27/07: "deixar o gráfico vendas x faturamento como card único,
          sem dividir espaço com mais nenhum gráfico"). Mesmo padrão visual
@@ -2776,6 +2775,15 @@
         <div>
           <div class="nav-card-title">Impostos e Análises</div>
           <div class="nav-card-desc">IRPJ, CSLL, PIS, COFINS, Difal e ICMS mês a mês x Receita Bruta (KMNO).</div>
+        </div>
+      </div>
+
+      <!-- Novo nav-card placeholder pedido por Lucas (03/08/2026) — sem
+           dados ainda, aguardando definição de fonte (ver viewSaidasEntradasPecas). -->
+      <div class="nav-card" onclick="switchView('viewSaidasEntradasPecas')">
+        <div>
+          <div class="nav-card-title">Saídas e Entradas R$ x Peças Faturadas</div>
+          <div class="nav-card-desc">Grupo (KMNO + Novah + RT) — em construção.</div>
         </div>
       </div>
 
@@ -3353,6 +3361,47 @@
   </div>
 
 
+  <!-- ===== VIEW: SAÍDAS E ENTRADAS R$ x PEÇAS FATURADAS (novo card,
+       pedido 03/08/2026) — placeholder puro, sem dados/render ligado
+       ainda. Fonte e escopo (Grupo: KMNO+Novah+RT) a definir depois. ===== -->
+  <div id="viewSaidasEntradasPecas" class="view-container">
+    <div class="blocks-inner">
+      <div class="btn-back-container">
+        <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+      </div>
+      <div class="section">
+        <div class="section-head">
+          <h2>Saídas e Entradas R$ x Peças Faturadas</h2>
+          <div class="desc">Grupo (KMNO + Novah + RT). Fonte: planilha "Fat e Vendas" (Excel congelado, Jan–Mai/2026). Jun/2026 em diante ainda não tem pipeline vivo — colunas ficam "-----" até ser definido. Colunas Meta/Tendência/Dif. também "-----": ainda não existem na planilha de referência.</div>
+        </div>
+
+        <!-- Card 1 (azul/verde na print): DFC — Saídas x Entradas de Caixa por Peça -->
+        <div class="bloco-card" style="margin-bottom:14px;">
+          <div class="bloco-head"><div class="bloco-titulo">Saídas e Entradas R$ x Peças (DFC)</div></div>
+          <div class="bloco-body">
+            <div id="wrapSaidasEntradasPecasDfc" class="dre-tbl-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Card 2 (roxo/laranja na print): Faturamento do Grupo x Peça (competência) -->
+        <div class="bloco-card" style="margin-bottom:14px;">
+          <div class="bloco-head"><div class="bloco-titulo">Saídas e Faturamento x Peças (Faturamento do Grupo)</div></div>
+          <div class="bloco-body">
+            <div id="wrapSaidasFaturamentoPecas" class="dre-tbl-wrap"></div>
+          </div>
+        </div>
+
+        <!-- Card 3: Faturamento (PÇS) — pedido 03/08/2026 -->
+        <div class="bloco-card" style="margin-bottom:14px;">
+          <div class="bloco-head"><div class="bloco-titulo">Faturamento (PÇS)</div></div>
+          <div class="bloco-body">
+            <div id="wrapFaturamentoPecas" class="dre-tbl-wrap"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== VIEW: IMPOSTOS E ANÁLISES (novo card, reunião 21.07) =====
        Fonte: planilha "Impostos Analise KMNO" (só KMNO por enquanto — é
        a única empresa com essa aba na planilha original). Valores
@@ -3676,6 +3725,22 @@
 
 <script>
   // Função responsável por alternar as secções do Dashboard de forma fluida
+// Nomes exibidos no cabeçalho (ao lado da data) — pedido 03/08/2026.
+// viewMenu fica com label vazio (é a tela inicial, não precisa dizer "Menu").
+const VIEW_DISPLAY_NAMES = {
+  viewMenu: '',
+  viewDfcArvore: 'DRE por Caixa',
+  viewDfcArvoreCopia: 'DRE por Competência',
+  viewImpostos: 'Impostos e Análises',
+  viewSaidasEntradasPecas: 'Saídas e Entradas x Peças Faturadas',
+  viewSaldoBancos: 'Saldo dos Bancos',
+  viewComercial: 'Comercial (KMNO)',
+  viewCicloFinanceiro: 'Ciclo Financeiro',
+  viewProjections: 'Projeção, Tendência e Metas',
+  viewOutrosPendentes: 'Validação de Categorias',
+  viewExtras: 'Financiamentos & Inadimplência',
+};
+
 function switchView(viewId, options = {}) {
   const { fromPopState = false } = options;
 
@@ -3689,7 +3754,11 @@ function switchView(viewId, options = {}) {
   if (targetView) {
     targetView.classList.add('active');
   }
-  
+
+  // 2b. Atualiza o nome da view no cabeçalho, ao lado da data.
+  const viewLabelEl = document.getElementById('currentViewLabel');
+  if (viewLabelEl) viewLabelEl.textContent = VIEW_DISPLAY_NAMES[viewId] || '';
+    
   /* 3. TRUQUE CRÍTICO PARA GRÁFICOS: 
     Quando elementos com gráficos do Chart.js estão escondidos com 'display: none', 
     eles não conseguem calcular o seu tamanho e ficam com 0px. Disparar um evento 'resize' 
@@ -3721,6 +3790,10 @@ function switchView(viewId, options = {}) {
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 60);
+  }
+
+  if (viewId === 'viewSaidasEntradasPecas') {
+    try { renderSaidasEntradasPecasTudo(); } catch (e) { console.error('renderSaidasEntradasPecasTudo falhou:', e); }
   }
 
   // Validação de Categorias: lê direto de DRE_ARVORE_BLOCOS (estático, já
@@ -10105,7 +10178,7 @@ function renderVendasFaturamento() {
 
   wrapEl.innerHTML = `
     <div class="bloco-card">
-      <div class="bloco-head"><div class="bloco-titulo">Vendas x Faturamento</div></div>
+      <div class="bloco-head"><div class="bloco-titulo">Vendas x Faturamento 2026</div></div>
       <div class="bloco-body">
         <div class="dre-tbl-wrap">
           <table class="fin-tbl fin-tbl-sticky-col fin-tbl-mes-alt fin-tbl-vendas-fat-amarelo">
@@ -11412,6 +11485,153 @@ const ANALISE_PECAS_VENDIDAS_FATURADAS = {
   saidaCaixaPorPeca:   [106.26, 90.68, 119.07, 98.91, 87.03, 99.19],
   faturamentoPorPeca:  [107.11, 148.18, 127.32, 105.84, 112.36, 120.95],
 };
+
+// ===================================================================
+// "Saídas e Entradas x Peças Faturadas" (card novo, pedido 03/08/2026) —
+// 3 tabelas, dados fixos Jan-Jul/2026 (planilha "Novo Painel Lucas
+// 03.08", aba "Fat e Vendas"). Jun/Jul de Saídas/Entradas/Faturamento
+// (R$) ainda não existem na planilha (null); Faturamento (PÇS) já tem
+// Jun/Jul preenchidos. Respeita o filtro De/Até do cabeçalho igual ao
+// card "Vendas x Faturamento" — ver renderSaidasEntradasPecasTudo().
+// ===================================================================
+const SAIDAS_ENTRADAS_PECAS_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho'];
+const SAIDAS_ENTRADAS_PECAS_ANO = 2026;
+
+const SAIDAS_ENTRADAS_PECAS_DFC_DADOS = {
+  saidasCaixa:    [610452.6900000001, 591394.37, 783001.8400000001, 841358.6900000002, 811728.68, null, null],
+  saidaPorPeca:   [106.25808355091385, 90.67684299294694, 119.06962287104623, 98.91355396190926, 87.02998606197063, null, null],
+  entradaCaixa:   [792233.5000000001, 785635.2300000001, 1073049.32, 920915.4600000001, 863979.5, null, null],
+  entradaPorPeca: [137.89965187119236, 120.45925022999081, 163.17659975669102, 108.26657183164826, 92.63208963225046, null, null],
+};
+
+const SAIDAS_FATURAMENTO_PECAS_DADOS = {
+  saidasCaixa:        [610452.6900000001, 591394.37, 783001.8400000001, 841358.6900000002, 811728.68, null, null],
+  saidaPorPeca:       [106.25808355091385, 90.67684299294694, 119.06962287104623, 98.91355396190926, 87.02998606197063, null, null],
+  faturamento:        [615375.1, 966406.96, 837280.18, 900264.3600000001, 1047970.7599999999, null, null],
+  faturamentoPorPeca: [107.1148999129678, 148.17647347439436, 127.32362834549879, 105.83874441570657, 112.35882491690789, null, null],
+};
+
+const FATURAMENTO_PECAS_DADOS = {
+  gbCalca:     [1000, 1022, 700, 1128, 1122, 2588, 2811],
+  gbGandola:   [1000, 1022, 700, 1128, 1122, 2588, 2811],
+  kmnoCalca:   [915, 1256, 1483, 1787, 1680, 1846, 2247],
+  kmnoGandola: [929, 1252, 1492, 1768, 1680, 1736, 2206],
+  bermuda:     [449, 280, 273, 278, 381, 536, 294],
+  rashGuard:   [1154, 1166, 1076, 677, 1253, 1159, 1236],
+  faixaKmno:   [298, 524, 852, 586, 629, 1100, 1023],
+  faixaRt:     [null, null, null, 1154, 1460, 2818, 3846],
+};
+
+// Índices dos meses (0=Jan..6=Jul/2026) que caem dentro do período De/Até
+// selecionado no cabeçalho, intersectado com o intervalo de dados
+// disponível (Jan-Jul/2026 — fora disso não tem dado nenhum).
+function indicesMesesSaidasEntradasPecas() {
+  const { de, ate } = getSelectedPeriodRange();
+  const dadosDe = dayjs('2026-01-01');
+  const dadosAte = dayjs('2026-07-01');
+  const efDe = de.isAfter(dadosDe) ? de : dadosDe;
+  const efAte = ate.isBefore(dadosAte) ? ate : dadosAte;
+  if (efDe.isAfter(efAte)) return [];
+  const idxs = [];
+  let cursor = efDe;
+  while (!cursor.isAfter(efAte)) {
+    idxs.push(cursor.month()); // 0-11, mas nossos arrays só têm 0-6 (Jan-Jul/26)
+    cursor = cursor.add(1, 'month');
+  }
+  return idxs;
+}
+
+function somaSaidasEntradasPecas(vals) {
+  return vals.reduce((acc, v) => acc + (v == null ? 0 : v), 0);
+}
+function mediaSaidasEntradasPecas(vals) {
+  const nums = vals.filter(v => v != null);
+  return nums.length ? somaSaidasEntradasPecas(nums) / nums.length : null;
+}
+
+// Monta o <table> completo pra uma tabela (lista de linhas), já filtrado
+// pelos meses do período selecionado — mesmas colunas extras (Meta
+// Acum/Dif/Tendência/Meta 2026) sempre "-----" (não existem na planilha
+// de referência ainda).
+function renderTabelaSaidasEntradasPecas(linhas) {
+  const idxs = indicesMesesSaidasEntradasPecas();
+  if (!idxs.length) {
+    return '<div class="bloco-vazio">Período selecionado fora do intervalo de dados (Jan–Jul/2026).</div>';
+  }
+  const headerMeses = idxs.map(i => `<th>${SAIDAS_ENTRADAS_PECAS_MESES[i]}</th>`).join('');
+  const headerLabel = idxs.length < 7 ? 'Total do Período' : 'Real Acum mai26';
+  const mediaLabel = 'Média';
+  const headerRow = `<tr><th class="dre-tbl-sticky">Descrição</th>${headerMeses}<th>${headerLabel}</th><th>Meta Acum mai26</th><th>Dif. acum (qtd)</th><th>Dif. acum (%)</th><th>Tendência 2026</th><th>Meta 2026</th><th>Dif. ano (qtd)</th><th>Dif. ano (%)</th><th>${mediaLabel}</th></tr>`;
+
+  const linhasHtml = linhas.map(l => {
+    const vals = idxs.map(i => l.dados[i]);
+    const soma = somaSaidasEntradasPecas(vals);
+    const media = mediaSaidasEntradasPecas(vals);
+    const fmt = l.pct ? fmtPctSaidasEntradasPecas : (l.moeda ? fmtBRLSaidasEntradasPecas : fmtNumSaidasEntradasPecas);
+    const cells = vals.map(v => `<td class="num">${v == null ? '-----' : fmt(v)}</td>`).join('');
+    return `<tr class="${l.amarelo ? 'dre-tbl-row-amarelo' : ''}"><td class="dre-tbl-sticky">${l.label}</td>${cells}<td class="num total">${fmt(soma)}</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num media">${media == null ? '-----' : fmt(media)}</td></tr>`;
+  }).join('');
+
+  return `<table class="fin-tbl fin-tbl-mes-alt">${headerRow}${linhasHtml}</table>`;
+}
+
+function fmtBRLSaidasEntradasPecas(v) { return fmtBRL(v); }
+function fmtNumSaidasEntradasPecas(v) {
+  return Math.round(v).toLocaleString('pt-BR');
+}
+function fmtPctSaidasEntradasPecas(v) {
+  return (v * 100).toFixed(2).replace('.', ',') + '%';
+}
+
+function renderSaidasEntradasPecasTudo() {
+  const wrapDfc = document.getElementById('wrapSaidasEntradasPecasDfc');
+  const wrapFat = document.getElementById('wrapSaidasFaturamentoPecas');
+  const wrapPcs = document.getElementById('wrapFaturamentoPecas');
+  if (!wrapDfc && !wrapFat && !wrapPcs) return; // view ainda não existe no DOM
+
+  const D = SAIDAS_ENTRADAS_PECAS_DFC_DADOS;
+  const F = SAIDAS_FATURAMENTO_PECAS_DADOS;
+  const variacaoDfc = D.entradaPorPeca.map((v, i) => (v == null || D.saidaPorPeca[i] == null) ? null : (v - D.saidaPorPeca[i]) / D.saidaPorPeca[i]);
+  const variacaoFat = F.faturamentoPorPeca.map((v, i) => (v == null || F.saidaPorPeca[i] == null) ? null : (v - F.saidaPorPeca[i]) / F.saidaPorPeca[i]);
+
+  if (wrapDfc) {
+    wrapDfc.innerHTML = renderTabelaSaidasEntradasPecas([
+      { label: 'Saídas R$ Caixa', dados: D.saidasCaixa, moeda: true },
+      { label: 'Saída R$ por Peça', dados: D.saidaPorPeca, moeda: true },
+      { label: 'Entrada R$ Caixa', dados: D.entradaCaixa, moeda: true, amarelo: true },
+      { label: 'Entradas R$ Caixa por Peças', dados: D.entradaPorPeca, moeda: true },
+      { label: 'Variação %', dados: variacaoDfc, pct: true, amarelo: true },
+    ]);
+  }
+
+  if (wrapFat) {
+    wrapFat.innerHTML = renderTabelaSaidasEntradasPecas([
+      { label: 'Saídas R$ Caixa', dados: F.saidasCaixa, moeda: true },
+      { label: 'Saída R$ por Peça', dados: F.saidaPorPeca, moeda: true },
+      { label: 'Faturamento', dados: F.faturamento, moeda: true, amarelo: true },
+      { label: 'Faturamento por Peças', dados: F.faturamentoPorPeca, moeda: true },
+      { label: 'Variação %', dados: variacaoFat, pct: true, amarelo: true },
+    ]);
+  }
+
+  if (wrapPcs) {
+    const P = FATURAMENTO_PECAS_DADOS;
+    const totalGb = P.gbCalca.map((v, i) => v + P.gbGandola[i] + P.kmnoCalca[i] + P.kmnoGandola[i]);
+    const totalGeral = P.gbCalca.map((v, i) => totalGb[i] + P.bermuda[i] + P.rashGuard[i] + P.faixaKmno[i] + (P.faixaRt[i] || 0));
+    wrapPcs.innerHTML = renderTabelaSaidasEntradasPecas([
+      { label: 'GB Calça', dados: P.gbCalca },
+      { label: 'GB Gandola', dados: P.gbGandola },
+      { label: 'KMNO Calça', dados: P.kmnoCalca },
+      { label: 'KMNO Gandola', dados: P.kmnoGandola },
+      { label: 'Total', dados: totalGb, amarelo: true },
+      { label: 'Bermuda', dados: P.bermuda },
+      { label: 'Rash Guard', dados: P.rashGuard },
+      { label: 'Faixa KMNO', dados: P.faixaKmno },
+      { label: 'Faixa RT', dados: P.faixaRt },
+      { label: 'Total', dados: totalGeral, amarelo: true },
+    ]);
+  }
+}
 
 // "Vendas x Faturamento" (pedido 29/07: passou a ser o GRUPO — KMNO +
 // Blue Line/Novah + RT somadas — antes só tinha KMNO, era a única com
@@ -12998,6 +13218,7 @@ function renderForSelectedMonth() {
       renderVendasFaturamento();
     } catch (e) { console.error('renderVendasFaturamento falhou:', e); }
   })();
+  try { renderSaidasEntradasPecasTudo(); } catch (e) { console.error('renderSaidasEntradasPecasTudo falhou:', e); }
 }
 
 // Preenche a view "Resumo Consolidado": números de DRE (competência) e DFC (caixa)
