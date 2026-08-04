@@ -3032,7 +3032,7 @@
            "Confere se Saldo Inicial + Entradas − Saídas (calculado)
            bate com o saldo REAL somado dos bancos no fim do mês.
            Jan-Mai/26 = fixo da planilha (KMNO+RT, sem Novah). Jun/26+ =
-           calculado ao vivo (buildProvaRealMesAoVivo)." -->
+           calculado ao vivo (buildProvaRealPorEmpresaMesVivo)." -->
       <div class="bloco-card" style="margin-bottom:14px;display:none;">
         <div class="bloco-head"><div class="bloco-titulo">Prova Real dos Caixas (R$)</div></div>
         <div class="bloco-body">
@@ -15891,7 +15891,7 @@ const PROVA_REAL_MESES_ORDEM = ['jan', 'fev', 'mar', 'abr', 'mai'];
 // (calcSaldoInicialRealizado); Entradas/Saídas somam analiseBancosMovimentosCache
 // com o MESMO filtro do DFC (isExcludedFromDfc), garantindo que Saldo
 // Calculado = Inicial + Entradas − Saídas seja consistente com o rollback.
-function buildProvaRealMesAoVivo(empresa, mesStart) {
+function buildProvaRealPorEmpresaMesVivo(empresa, mesStart) {
   const mesEndExcl = mesStart.add(1, 'month');
   const saldoInicial = calcSaldoInicialRealizado(analiseBancosContasCache, dreArvoreCategoriesCache, analiseBancosMovimentosCache, empresa, mesStart);
   const saldoReal = calcSaldoInicialRealizado(analiseBancosContasCache, dreArvoreCategoriesCache, analiseBancosMovimentosCache, empresa, mesEndExcl);
@@ -15951,7 +15951,7 @@ function renderProvaRealPorEmpresa(monthStart, monthEnd) {
   const getDado = (empresa, mes) => {
     if (mes.live) {
       if (!analiseBancosContasCache || !analiseBancosMovimentosCache) return null; // caches ainda não carregaram
-      return buildProvaRealMesAoVivo(empresa, mes.mesDayjs);
+      return buildProvaRealPorEmpresaMesVivo(empresa, mes.mesDayjs);
     }
     const d = PROVA_REAL_POR_EMPRESA[empresa];
     return d ? d[mes.chave] : null;
