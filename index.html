@@ -6028,19 +6028,11 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "Claudia (Adm)",
+          "nome": "Salário CLT Adm",
           "natureza": "P"
         },
         {
-          "nome": "Claudia (Bonificação)",
-          "natureza": "P"
-        },
-        {
-          "nome": "Bruno (Adm)",
-          "natureza": "P"
-        },
-        {
-          "nome": "Bruno (Bonificação)",
+          "nome": "Bonificação Adm",
           "natureza": "P"
         },
         {
@@ -6174,7 +6166,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "CRM/GURU",
+          "nome": "Software CRM",
           "natureza": "P"
         },
         {
@@ -6310,7 +6302,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "(+) Venda Maquinas e Equipamentos",
+          "nome": "Venda de Ativos",
           "natureza": "R"
         }
       ]
@@ -6371,10 +6363,6 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "RICARDO",
-          "natureza": "P"
-        },
-        {
           "nome": "Dividendo Sócio",
           "natureza": "P"
         }
@@ -6390,11 +6378,11 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "REFIS (SIMPLES)/ICMS (Parcelas)",
+          "nome": "Simples Nacional Parcelado",
           "natureza": "P"
         },
         {
-          "nome": "REFIS STC",
+          "nome": "Parcelamento ICMS",
           "natureza": "P"
         },
         {
@@ -6475,19 +6463,55 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "Geral",
+          "nome": "Compras de Materia Prima",
           "natureza": "P"
         },
         {
-          "nome": "Costura",
+          "nome": "Compra de Serviços",
           "natureza": "P"
         },
         {
-          "nome": "Sublimação",
+          "nome": "Amostras",
           "natureza": "P"
         },
         {
-          "nome": "Acabamento",
+          "nome": "Impressão",
+          "natureza": "P"
+        },
+        {
+          "nome": "Difal Matéria Prima",
+          "natureza": "P"
+        },
+        {
+          "nome": "Retorno de Remessa",
+          "natureza": "P"
+        },
+        {
+          "nome": "Serviço de Industrialização",
+          "natureza": "P"
+        },
+        {
+          "nome": "Embalagem Produção",
+          "natureza": "P"
+        },
+        {
+          "nome": "DIFAL S/ COMPRA",
+          "natureza": "P"
+        },
+        {
+          "nome": "Frete de Produção",
+          "natureza": "P"
+        },
+        {
+          "nome": "Despesas de Produção",
+          "natureza": "P"
+        },
+        {
+          "nome": "Embalagem Comercial",
+          "natureza": "P"
+        },
+        {
+          "nome": "Despesas de Máquinas e Equipamentos",
           "natureza": "P"
         }
       ]
@@ -7097,7 +7121,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Carpet",
+          "nome": "Materia Prima ( EVA/Feltro/Patch/Tags)",
           "natureza": "P"
         },
         {
@@ -7168,7 +7192,7 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "Pro Labore Sócio",
+          "nome": "Pró-Labore sócio",
           "natureza": "P"
         }
       ]
@@ -7179,19 +7203,19 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "(-) Manuntenção de Contas",
+          "nome": "Manuntenção de Contas",
           "natureza": "P"
         },
         {
-          "nome": "(-) Tarifas Bancárias",
+          "nome": "Tarifas Bancárias",
           "natureza": "P"
         },
         {
-          "nome": "(-) Juros sobre Empréstimos",
+          "nome": "Juros sobre Empréstimos",
           "natureza": "P"
         },
                 {
-          "nome": "(-) IOF",
+          "nome": "IOF",
           "natureza": "P"
         },
         {
@@ -7221,7 +7245,11 @@ const DRE_ARVORE_BLOCOS = {
       "natureza": "P",
       "itens": [
         {
-          "nome": "REFIS (Parcelas)",
+          "nome": "Simples Nacional Parcelado",
+          "natureza": "P"
+        },
+        {
+          "nome": "Parcelamento ICMS",
           "natureza": "P"
         }
       ]
@@ -12234,7 +12262,7 @@ function renderInOutDonut(movements, monthStart, monthEnd) {
 
   // Nota: NÃO filtramos CATEGORIAS_SEM_CONTA_DRE aqui — é caixa real (DFC).
   const inMonth = movements.filter(m => {
-    const ref = m.dt_pagamento || m.dt_emissao;
+    const ref = m.dt_pagamento; // DFC = dt_pagamento sempre, sem fallback (regra 04/08)
     if (!ref) return false;
     const d = dayjs(ref);
     if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return false;
@@ -12371,14 +12399,14 @@ function renderLatestPaid(categories, movements, monthStart, monthEnd) {
 
   // Nota: NÃO filtramos naoExibirDRE/nao_fluxo aqui — é caixa real (DFC), lista de últimos pagos.
   const inMonth = movements.filter(m => {
-    const ref = m.dt_pagamento || m.dt_emissao;
+    const ref = m.dt_pagamento; // DFC = dt_pagamento sempre, sem fallback (regra 04/08)
     if (!ref) return false;
     const d = dayjs(ref);
     if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return false;
     return liquidadoStatuses.includes((m.status || '').toUpperCase());
   });
 
-  inMonth.sort((a, b) => dayjs(b.dt_pagamento || b.dt_emissao).valueOf() - dayjs(a.dt_pagamento || a.dt_emissao).valueOf());
+  inMonth.sort((a, b) => dayjs(b.dt_pagamento).valueOf() - dayjs(a.dt_pagamento).valueOf());
   const latest = inMonth.slice(0, 5);
 
   const list = document.getElementById('latestPaidList');
@@ -12392,7 +12420,7 @@ function renderLatestPaid(categories, movements, monthStart, monthEnd) {
     const catLabel = cat ? decodeHtmlEntities(cat.descricao) : null;
     const obs = decodeHtmlEntities(m.observacao);
     const desc = catLabel || obs || (m.num_titulo ? `Título ${m.num_titulo}` : 'Lançamento sem categoria');
-    const dateRef = m.dt_pagamento || m.dt_emissao;
+    const dateRef = m.dt_pagamento;
     const tagClass = m.natureza === 'R' ? 'in' : 'out';
     return `<div class="latest-paid-row">
       <span style="display:flex;align-items:center;gap:6px;min-width:0;">
@@ -13913,8 +13941,8 @@ function renderResumoCapital(monthStart, monthEnd) {
       const inicioMes = cursorCR, fimMes = cursorCR.endOf('month');
       (financialMovementsCache || []).forEach(mv => {
         if (!empresasSelResumoCapital.includes(mv._empresa)) return;
-        if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
-        const d = dayjs(mv.dt_registro || mv.dt_emissao);
+        if (mv.natureza !== 'P' || !mv.dt_pagamento || !mv.cod_categoria) return;
+        const d = dayjs(mv.dt_pagamento);
         if (d.isBefore(inicioMes) || d.isAfter(fimMes)) return;
         const v = Number(mv.val_pago || mv.val_liquido || 0);
         if (!v) return;
@@ -13931,7 +13959,7 @@ function renderResumoCapital(monthStart, monthEnd) {
   const elCapex = document.getElementById('resumoCapitalCapex');
   if (elCapex) elCapex.textContent = capexTemAlgumaQualificada ? fmtBRL(capex) : 'R$ -----';
 
-  renderCapexRefisMensalPeriodo(monthStart, monthEnd);
+  renderCapexRefisMensalPeriodo(monthStart, monthEnd, empresasSelResumoCapital);
   renderProvaRealPorEmpresa(monthStart, monthEnd);
 }
 
@@ -15505,6 +15533,16 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       impostos: itensParaCategoria(B.impostos.itens),
       devolucoes: itensParaCategoria(B.devolucoes.itens),
       custoInsumos: itensParaCategoria(B.uso_consumo.itens),
+      custoServicosTerceiros: {}, // Novah não separa "serviços terceiros" de mão de obra própria hoje
+      acabamento: itensParaCategoria(B.acabamento.itens),
+      corte: itensParaCategoria(B.corte.itens),
+      rashBermuda: itensParaCategoria(B.rash_bermuda.itens),
+      costuraKimono: itensParaCategoria(B.costura_kimono.itens),
+      bordado: itensParaCategoria(B.bordado.itens),
+      sublimacao: itensParaCategoria(B.sublimacao.itens),
+      despPessoalIndustria: itensParaCategoria(B.desp_pessoal_industria.itens),
+      // Mantém custoMaoObra fundido também, pra quem ainda consome
+      // agregado (buildResumoDetalhadoMesAoVivo, buildMetricasGrupoDfcPeriodo).
       custoMaoObra: mergeCategoriaMaps(
         itensParaCategoria(B.acabamento.itens), itensParaCategoria(B.corte.itens), itensParaCategoria(B.rash_bermuda.itens),
         itensParaCategoria(B.costura_kimono.itens), itensParaCategoria(B.bordado.itens), itensParaCategoria(B.sublimacao.itens),
@@ -15512,6 +15550,9 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       ),
       royalties: {},
       custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens), itensParaCategoria(B.pro_labore.itens)),
+      despesasAdministracao: itensParaCategoria(B.despesas_adm.itens),
+      depPessoalAdm: itensParaCategoria(B.dep_pessoal_adm.itens),
+      proLabore: itensParaCategoria(B.pro_labore.itens),
       despesasComerciais: {},
       despesasFinanceiras: itensParaCategoria(despFin, 'P'),
       receitasFinanceiras: itensParaCategoria(despFin, 'R'),
@@ -15520,6 +15561,31 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       refis: {}, // Novah não tem categoria de refis real (confirmado 14/07/2026)
       recebimentoEmprestimos: itensParaCategoria(emprestimos, 'R'),
       pagamentoEmprestimos: itensParaCategoria(emprestimos, 'P'),
+    };
+  }
+  if (empresa === 'RT') {
+    const despFin = B.despesas_financeiras.itens;
+    return {
+      receita: itensParaCategoria(B.receita_bruta.itens),
+      deducoes: mergeCategoriaMaps(itensParaCategoria(B.impostos.itens), itensParaCategoria(B.devolucoes.itens)),
+      impostos: itensParaCategoria(B.impostos.itens),
+      devolucoes: itensParaCategoria(B.devolucoes.itens),
+      custoInsumos: itensParaCategoria(B.uso_consumo.itens),
+      custoServicos: {},
+      custoMaoObra: itensParaCategoria(B.despesas_industriais.itens),
+      royalties: {},
+      custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens), itensParaCategoria(B.pro_labore.itens)),
+      despesasAdministracao: itensParaCategoria(B.despesas_adm.itens),
+      depPessoalAdm: itensParaCategoria(B.dep_pessoal_adm.itens),
+      proLabore: itensParaCategoria(B.pro_labore.itens),
+      despesasComerciais: {},
+      despesasFinanceiras: itensParaCategoria(despFin, 'P'),
+      receitasFinanceiras: itensParaCategoria(despFin, 'R'),
+      distribuicao: {},
+      capex: itensParaCategoria(B.investimentos.itens),
+      refis: itensParaCategoria(B.outros.itens), // "REFIS (Parcelas)" está aqui
+      recebimentoEmprestimos: {},
+      pagamentoEmprestimos: {},
     };
   }
   return null;
@@ -15848,60 +15914,16 @@ function renderGrupoResumoTeste(monthStart, monthEnd) {
     + meses.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}</th><th class="total-pct">AV%</th>`).join('')
     + '<th>Total</th><th>Média</th><th class="total-pct">AV%</th>';
 
-  const empresasSel = (typeof selectedCompanyKeys !== 'undefined' && selectedCompanyKeys) ? selectedCompanyKeys : [];
-
-  if (empresasSel.length === 1 && empresasSel[0] === 'RT') {
-    // RT sem fonte de dados — mantém placeholder original ("-----", 5
-    // filhos fixos por linha pai), igual era pra todas as empresas antes
-    // dos dados reais de KMNO/NOVAH entrarem (pedido 29/07 original).
-    // Pedido 30/07: dentro da tela de Competência, a linha "Receita"
-    // passa a se chamar "Faturamento" pras 3 empresas (KMNO já usa esse
-    // nome — ver KMNO_TESTE_GRUPOS). RESUMO_POR_EMPRESA_LINHAS é
-    // compartilhado com a tela de Caixa (renderGrupoResumoPorEmpresa),
-    // que continua com "Receita (Recebimento)" — por isso o override é
-    // só aqui no label de exibição, sem tocar no array original.
-    body.innerHTML = RESUMO_POR_EMPRESA_LINHAS.map((l, i) => {
-      const labelExibido = l.chave === 'receita' ? '(+) Faturamento' : l.label;
-      const rowId = `resumo-teste-rt-${i+1}`;
-      const celulas = () => meses.map(() => `<td class="num">${RESUMO_TESTE_PLACEHOLDER}</td><td class="num total-pct">${RESUMO_TESTE_PLACEHOLDER}</td>`).join('')
-        + `<td class="num total">${RESUMO_TESTE_PLACEHOLDER}</td>`
-        + `<td class="num media">${RESUMO_TESTE_PLACEHOLDER}</td>`
-        + `<td class="num total-pct">${RESUMO_TESTE_PLACEHOLDER}</td>`;
-      const filhos = Array.from({ length: RESUMO_TESTE_QTD_FILHOS }, (_, k) => `
-        <tr class="dre-tbl-row" style="display:none;color:#DAD4C4;font-size:12px;" data-grupo-conta="${rowId}">
-          <td class="dre-tbl-sticky">${semPrefixoDre(labelExibido)} — categoria ${k + 1}</td>
-          ${celulas()}
-        </tr>`).join('');
-      const pai = `
-        <tr class="dre-tbl-row colapsavel${l.chave === 'receita' ? ' dre-tbl-row-amarelo' : ''}" id="pai-${rowId}" onclick="toggleResumoEmpresaConta('${rowId}')" title="Clique para ver as categorias"${l.chave === 'receita' ? ' style="font-weight:600;"' : ''}>
-          <td class="dre-tbl-sticky"><span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>${semPrefixoDre(labelExibido)}</td>
-          ${celulas()}
-        </tr>`;
-      return filhos + pai;
-    }).join('');
-    return;
-  }
-
-  if (empresasSel.length === 1 && empresasSel[0] === 'KMNO') {
-    body.innerHTML = renderTesteLinhas(KMNO_TESTE_GRUPOS, meses, g => g.total, g => g.filhos || [], 'resumo-teste-kmno');
-    return;
-  }
-
-  if (empresasSel.length === 1 && empresasSel[0] === 'NOVAH') {
-    body.innerHTML = renderTesteLinhas(NOVAH_TESTE_GRUPOS, meses, g => g.total, g => g.filhos || [], 'resumo-teste-novah');
-    return;
-  }
-
-  // "Todas as empresas" (0 ou 2+ selecionadas) — pedido 30/07: mostrar a
-  // estrutura "real" do DRE por Competência (RESUMO_DETALHADO_LINHAS_DRE
-  // + RESUMO_DETALHADO_MESES_DRE/buildResumoDetalhadoMesAoVivo — mesma
-  // lógica já usada no card "Copia" escondido desde 28/07), em vez da
-  // soma por conceito antiga (TESTE_CANONICO_SOMA). Lista confirmada
-  // com Lucas: Faturamento Produtos/Mercadorias/Serviços → Faturamento
-  // Bruto → Deduções → Faturamento Líquido → Custos → CMV → Royalties →
-  // Margem → Custo ADM+Indústria → Desp. Comerciais → EBITDA →
-  // Depreciação → Desp./Receitas Financeiras → Resultado Líquido →
-  // Distribuição/Capex/Outros → Saldo Líquido.
+  // FIX 04/08: os 3 desvios que existiam aqui (RT sempre placeholder,
+  // KMNO/NOVAH sempre estático via renderTesteLinhas/TESTE_GRUPOS, só
+  // Jan-Mai) foram removidos — todos travavam a tela em branco de Jun
+  // em diante quando só 1 empresa estava selecionada, mesmo já existindo
+  // dado real no Omie. renderGrupoResumoDetalhadoCopia (chamado abaixo,
+  // pra QUALQUER quantidade de empresas selecionadas) já sabe fazer
+  // congelado (Jan-Mai, via buildResumoDetalhadoMesFrozenPorEmpresa —
+  // null pra RT, que não tem) + ao vivo (Jun+, via
+  // buildResumoDetalhadoMesAoVivo/buildResumoCategoriasMes — já suporta
+  // as 3 empresas) automaticamente por empresa única.
   renderGrupoResumoDetalhadoCopia(monthStart, monthEnd, 'grupoResumoTesteHeader', 'grupoResumoTesteBody');
 }
 function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
@@ -15910,11 +15932,12 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   if (!header || !body) return;
 
   const dadosCongelado = empresaKey === 'KMNO' ? KMNO_RESUMO_CATEGORIAS : (empresaKey === 'NOVAH' ? NOVAH_RESUMO_CATEGORIAS : null);
-  if (!dadosCongelado) {
-    header.innerHTML = '<th>Descrição</th>';
-    body.innerHTML = '<tr><td style="color:var(--bone-dim);">RT ainda é placeholder — sem dado real detalhado por categoria.</td></tr>';
-    return;
-  }
+  // RT não tem congelado (Jan-Mai) — isso NÃO significa "sem dado
+  // nenhum": a partir de Jun/2026 ela tem dado real no Omie igual
+  // KMNO/NOVAH, só não passa por aqui antes por falta desse branch.
+  // Fix 04/08: removido o "return" que sempre bloqueava a RT inteira,
+  // mesmo em meses ao vivo — o filtro de mesesValidos abaixo já cuida
+  // de mostrar "-----" só nos meses sem fonte (Jan-Mai pra RT).
   if (!categoriesCache || !movementsCache) return; // dados ao vivo ainda carregando
 
   // Meses dentro do período De/Até selecionado — SEM limitar a Jan-Mai:
@@ -15932,7 +15955,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       chave,
       mesDayjs: cursor,
       live,
-      frozenIdx: live ? -1 : chavesFrozenOrdem.indexOf(chave),
+      frozenIdx: (live || !dadosCongelado) ? -1 : chavesFrozenOrdem.indexOf(chave),
     });
     cursor = cursor.add(1, 'month');
     guard++;
@@ -15968,14 +15991,14 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const mesAntes = mesesValidos[0].mesDayjs.subtract(1, 'month');
   const chaveMesAntes = mesAntes.format('YYYY-MM');
   const liveMesAntes = !mesAntes.isBefore(EXCEL_CONGELADO_ATE);
-  const frozenIdxMesAntes = liveMesAntes ? -1 : chavesFrozenOrdem.indexOf(chaveMesAntes);
+  const frozenIdxMesAntes = (liveMesAntes || !dadosCongelado) ? -1 : chavesFrozenOrdem.indexOf(chaveMesAntes);
   const temFonteMesAntes = liveMesAntes || frozenIdxMesAntes >= 0;
   const liveByMesAntes = (temFonteMesAntes && liveMesAntes)
     ? buildResumoCategoriasMes(empresaKey, categoriesCache, movementsCache, mesAntes, mesAntes.add(1, 'month'))
     : null;
   const valorMesAntes = (chave, catLabel) => {
     if (!temFonteMesAntes) return null;
-    const bucketCongelado = (chave === 'impostos' || chave === 'devolucoes')
+    const bucketCongelado = !dadosCongelado ? null : (chave === 'impostos' || chave === 'devolucoes')
       ? splitDeducoesCongelado(dadosCongelado['deducoes'], chave)
       : dadosCongelado[chave];
     if (liveMesAntes) {
@@ -15987,7 +16010,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       : somaCategoriaMes(bucketCongelado, frozenIdxMesAntes);
   };
 
-  const bucketReceitaCongelado = dadosCongelado['receita'];
+  const bucketReceitaCongelado = dadosCongelado ? dadosCongelado['receita'] : null;
   const receitaPorMes = mesesValidos.map(m => m.live
     ? Object.values((liveByMes[m.chave]['receita']) || {}).reduce((s, x) => s + x, 0)
     : somaCategoriaMes(bucketReceitaCongelado, m.frozenIdx));
@@ -16010,7 +16033,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   linhasConfig.forEach(l => {
     // impostos/devolucoes (pedido 28/07): fonte congelada só tem
     // "deducoes" mesclado — splitDeducoesCongelado() separa por nome.
-    const bucketCongelado = (l.chave === 'impostos' || l.chave === 'devolucoes')
+    const bucketCongelado = !dadosCongelado ? null : (l.chave === 'impostos' || l.chave === 'devolucoes')
       ? splitDeducoesCongelado(dadosCongelado['deducoes'], l.chave)
       : dadosCongelado[l.chave];
 
@@ -17057,7 +17080,7 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     const deducoes = impostos + devolucoes;
     const receitaLiquida = receita - deducoes;
     const custoInsumos = somaBucket('custoInsumos');
-    const custoServicos = 0;
+    const custoServicos = somaBucket('custoServicos'); // só KMNO tem essa categoria separada — Novah/RT retornam 0 naturalmente (bucket não existe nelas)
     const custoMaoObra = somaBucket('custoMaoObra');
     const cmv = custoInsumos + custoServicos + custoMaoObra;
     const royalties = somaBucket('royalties');
@@ -17075,12 +17098,14 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     const recebimentoEmprestimos = somaBucket('recebimentoEmprestimos');
     const pagamentoEmprestimos = somaBucket('pagamentoEmprestimos');
     const saldoCaixa = saldoLiquido + recebimentoEmprestimos - pagamentoEmprestimos;
+    const depreciacao = calcDepreciacao(empresaFiltro, receita); // mesma fórmula já usada no DRE por Bloco (1% do faturamento) — nunca tinha sido ligada aqui
 
     return {
       receitaProdutos, receitaMercadorias, receitaServicos, receita, impostos, devolucoes, deducoes, receitaLiquida,
       custoInsumos, custoServicos, custoMaoObra, cmv, royalties, margemContribuicao,
-      custoAdm, despesasComerciais, ebitda, despesasFinanceiras, receitasFinanceiras, lucroLiquido,
+      custoAdm, despesasComerciais, ebitda, depreciacao, despesasFinanceiras, receitasFinanceiras, lucroLiquido,
       distribuicao, capex, refis, saldoLiquido, recebimentoEmprestimos, pagamentoEmprestimos, saldoCaixa,
+      detalhes: dados, // mapa {chave: {categoria: valor}} — usado pro drill-down (clique na linha pai); só existe em meses ao vivo
     };
   }
 
@@ -17103,7 +17128,7 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   const deducoes = impostos + devolucoes;
   const receitaLiquida = receita - deducoes;
   const custoInsumos = somaBucket('custoInsumos');
-  const custoServicos = 0; // ver nota acima
+  const custoServicos = somaBucket('custoServicos'); // só KMNO tem essa categoria separada — Novah retorna 0 naturalmente
   const custoMaoObra = somaBucket('custoMaoObra');
   const cmv = custoInsumos + custoServicos + custoMaoObra;
   const royalties = somaBucket('royalties');
@@ -17121,12 +17146,17 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   const recebimentoEmprestimos = somaBucket('recebimentoEmprestimos');
   const pagamentoEmprestimos = somaBucket('pagamentoEmprestimos');
   const saldoCaixa = saldoLiquido + recebimentoEmprestimos - pagamentoEmprestimos;
+  const depreciacao = calcDepreciacao('KMNO', receitaProdutos + receitaMercadorias) + calcDepreciacao('NOVAH', receitaServicos); // Grupo = soma das 2 fórmulas individuais
+  const chavesComDetalhe = ['receita', 'impostos', 'devolucoes', 'custoInsumos', 'custoServicos', 'custoMaoObra', 'royalties', 'custoAdm', 'despesasComerciais', 'despesasFinanceiras', 'receitasFinanceiras', 'distribuicao', 'capex', 'refis', 'recebimentoEmprestimos', 'pagamentoEmprestimos'];
+  const detalhes = {};
+  chavesComDetalhe.forEach(ch => { detalhes[ch] = mergeCategoriaMaps(kmno[ch] || {}, novah[ch] || {}); });
 
   return {
     receitaProdutos, receitaMercadorias, receitaServicos, receita, impostos, devolucoes, deducoes, receitaLiquida,
     custoInsumos, custoServicos, custoMaoObra, cmv, royalties, margemContribuicao,
-    custoAdm, despesasComerciais, ebitda, despesasFinanceiras, receitasFinanceiras, lucroLiquido,
+    custoAdm, despesasComerciais, ebitda, depreciacao, despesasFinanceiras, receitasFinanceiras, lucroLiquido,
     distribuicao, capex, refis, saldoLiquido, recebimentoEmprestimos, pagamentoEmprestimos, saldoCaixa,
+    detalhes, // mapa {chave: {categoria: valor}} — usado pro drill-down; só existe em meses ao vivo
   };
 }
 
@@ -17489,29 +17519,81 @@ function renderGrupoResumoDetalhadoCopia(monthStart, monthEnd, headerId, bodyId)
     return s + (dado ? (dado.receita || 0) : 0);
   }, 0);
 
+  let seqDrillDown = 0;
   body.innerHTML = RESUMO_DETALHADO_LINHAS_DRE.map(linha => {
     const valoresMeses = meses.map(m => {
       if (indiceMes(m) > mesAtualIdxResumo) return { v: 0, futuro: true, av: null };
       const dado = dadoPorMes[m.format('YYYY-MM')];
       const v = dado ? dado[linha.chave] : null;
+      const vOk = v != null; // pega null E undefined (campo que não existe no cálculo ao vivo, ex: Depreciação)
       const baseMes = dado ? (dado.receita || 0) : 0;
-      const av = (v !== null && baseMes) ? (v / baseMes * 100) : null;
-      return { v, futuro: false, av };
+      const av = (vOk && baseMes) ? (v / baseMes * 100) : null;
+      return { v: vOk ? v : null, futuro: false, av };
     });
     const valoresValidos = valoresMeses.filter(x => !x.futuro && x.v !== null).map(x => x.v);
     const total = valoresValidos.reduce((a, b) => a + b, 0);
     const media = valoresValidos.length ? total / valoresValidos.length : 0;
 
-    const cls = linha.destaque ? ' class="dre-tbl-row-amarelo" style="font-weight:600;"' : '';
-    return `
-      <tr${cls}>
-        <td class="dre-tbl-sticky">${semPrefixoDre(linha.label)}</td>
+    // Drill-down por categoria: só existe em meses ao vivo (dado.detalhes),
+    // congelado (Excel) nunca teve esse nível de detalhe. Junta o nome de
+    // toda categoria que apareceu em QUALQUER mês do período, pra linha
+    // filha ficar consistente mesmo se uma categoria só teve movimento
+    // num mês específico.
+    const categoriasSet = new Set();
+    meses.forEach(m => {
+      if (indiceMes(m) > mesAtualIdxResumo) return;
+      const dado = dadoPorMes[m.format('YYYY-MM')];
+      const mapaCategoria = dado && dado.detalhes ? dado.detalhes[linha.chave] : null;
+      if (mapaCategoria) Object.keys(mapaCategoria).forEach(c => categoriasSet.add(c));
+    });
+    const categorias = Array.from(categoriasSet).sort();
+
+    const cls = linha.destaque ? ' dre-tbl-row-amarelo' : '';
+    const styleAttr = linha.destaque ? ' style="font-weight:600;"' : '';
+    const linhaPaiHtml = (aberturaAttrs) => `
+      <tr class="dre-tbl-row${cls}${aberturaAttrs.colapsavel ? ' colapsavel' : ''}"${aberturaAttrs.idAttrs}${styleAttr}>
+        <td class="dre-tbl-sticky">${aberturaAttrs.icone}${semPrefixoDre(linha.label)}</td>
         ${valoresMeses.map((x) => `<td class="num">${x.v === null ? '—' : fmtBRL(x.v)}</td><td class="num total-pct">${x.av === null ? '—' : x.av.toFixed(1).replace('.', ',') + '%'}</td>`).join('')}
         <td class="num total">${valoresValidos.length ? fmtBRL(total) : '—'}</td>
         <td class="num total-pct">${(valoresValidos.length && totalReceitaPeriodo) ? (total / totalReceitaPeriodo * 100).toFixed(1).replace('.', ',') + '%' : '—'}</td>
         <td class="num media">${valoresValidos.length ? fmtBRL(media) : '—'}</td>
         <td class="num total-pct">${(valoresValidos.length && totalReceitaPeriodo) ? (total / totalReceitaPeriodo * 100).toFixed(1).replace('.', ',') + '%' : '—'}</td>
       </tr>`;
+
+    if (!categorias.length) {
+      // Sem detalhe em nenhum mês (linha de subtotal, ex: CMV/Margem/EBITDA,
+      // ou período 100% congelado) — fica igual sempre foi, sem clique.
+      return linhaPaiHtml({ colapsavel: false, idAttrs: '', icone: '' });
+    }
+
+    seqDrillDown++;
+    const rowId = `resumo-dre-copia-${seqDrillDown}`;
+    const pai = linhaPaiHtml({
+      colapsavel: true,
+      idAttrs: ` id="pai-${rowId}" onclick="toggleResumoEmpresaConta('${rowId}')" title="Clique para ver as categorias"`,
+      icone: `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>`,
+    });
+    const filhas = categorias.map(cat => {
+      const valoresCat = meses.map(m => {
+        if (indiceMes(m) > mesAtualIdxResumo) return null;
+        const dado = dadoPorMes[m.format('YYYY-MM')];
+        const mapaCategoria = dado && dado.detalhes ? dado.detalhes[linha.chave] : null;
+        return mapaCategoria && mapaCategoria[cat] != null ? mapaCategoria[cat] : null;
+      });
+      const totalCat = valoresCat.reduce((s, v) => s + (v || 0), 0);
+      const mediaCat = valoresCat.filter(v => v !== null).length
+        ? totalCat / valoresCat.filter(v => v !== null).length : 0;
+      return `
+        <tr class="dre-tbl-row" data-grupo-conta="${rowId}" style="display:none;color:var(--bone-dim);font-size:12.5px;">
+          <td class="dre-tbl-sticky">${cat}</td>
+          ${valoresCat.map(v => `<td class="num">${v === null ? '—' : fmtBRL(v)}</td><td class="num total-pct">—</td>`).join('')}
+          <td class="num total">${fmtBRL(totalCat)}</td>
+          <td class="num total-pct">—</td>
+          <td class="num media">${fmtBRL(mediaCat)}</td>
+          <td class="num total-pct">—</td>
+        </tr>`;
+    }).join('');
+    return filhas + pai;
   }).join('');
 }
 
@@ -18067,8 +18149,8 @@ function buildCapexRefisMensal(financialMovements, meses, categories, empresasSe
     const catByKey = buildCatByEmpresaCodigo(categories || []);
     (financialMovements || []).forEach(mv => {
       if (!empresas.includes(mv._empresa)) return;
-      if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
-      const d = dayjs(mv.dt_registro || mv.dt_emissao);
+      if (mv.natureza !== 'P' || !mv.dt_pagamento || !mv.cod_categoria) return;
+      const d = dayjs(mv.dt_pagamento);
       if (d.isBefore(m) || d.isAfter(monthEndM)) return;
       const v = Number(mv.val_pago || mv.val_liquido || 0);
       if (!v) return;
@@ -18088,7 +18170,7 @@ function buildCapexRefisMensal(financialMovements, meses, categories, empresasSe
 // Refis mês a mês (canvas #chartCapexRefis, dentro de "Análise Caixa
 // Bancos no Período"). FIX 04/08: antes era sempre "3 empresas" fixo —
 // agora respeita empresasSelResumoCapital (mesma seleção do topo).
-function renderCapexRefisMensalPeriodo(monthStart, monthEnd) {
+function renderCapexRefisMensalPeriodo(monthStart, monthEnd, empresasSel) {
   const canvas = document.getElementById('chartCapexRefis');
   if (!canvas) return;
   const meses = [];
@@ -18097,7 +18179,7 @@ function renderCapexRefisMensalPeriodo(monthStart, monthEnd) {
   let guard = 0;
   while (!cursor.isAfter(fim) && guard < 24) { meses.push(cursor); cursor = cursor.add(1, 'month'); guard++; }
   if (!meses.length) return;
-  const evolucaoMensal = buildCapexRefisMensal(analiseBancosMovimentosCache, meses, dreArvoreCategoriesCache, empresasSelResumoCapital);
+  const evolucaoMensal = buildCapexRefisMensal(analiseBancosMovimentosCache, meses, dreArvoreCategoriesCache, empresasSel);
   renderCapexRefisChart(evolucaoMensal);
 }
 
@@ -18189,8 +18271,8 @@ function buildCapexRefisMensalCompetencia(movements, meses, categories, empresas
     const capexDetalhe = {}, refisDetalhe = {};
     (movements || []).forEach(mv => {
       if (!empresas.includes(mv._empresa)) return;
-      if (mv.natureza !== 'P' || !mv.dt_emissao || !mv.cod_categoria) return;
-      const d = dayjs(mv.dt_emissao);
+      if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
+      const d = dayjs(mv.dt_registro || mv.dt_emissao);
       if (d.isBefore(m) || d.isAfter(monthEndM)) return;
       const v = Number(mv.val_pago || mv.val_liquido || 0);
       if (!v) return;
