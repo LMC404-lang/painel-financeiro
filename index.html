@@ -4658,6 +4658,23 @@ const REFIS_CODIGOS_POR_EMPRESA = {
   NOVAH: [],
 };
 
+// Refis: KMNO sempre tem (Excel Jan-Mai, Omie Jun+). RT só existe a
+// partir de Jun/2026 — antes disso é placeholder, não R$0 (pedido
+// 04/08: "rt só aparece refis após mês 6... antes disso é placeholder").
+// Novah nunca tem Refis.
+function empresaTemRefis(empresa, mesDayjs) {
+  if (empresa === 'KMNO') return true;
+  if (empresa === 'RT') return !mesDayjs.isBefore(EXCEL_CONGELADO_ATE);
+  return false;
+}
+
+// Capex: KMNO e Novah sempre têm (Excel Jan-Mai + Omie Jun+). RT só a
+// partir de Jun/2026 — antes disso é placeholder (pedido 04/08).
+function empresaTemCapex(empresa, mesDayjs) {
+  if (empresa === 'RT') return !mesDayjs.isBefore(EXCEL_CONGELADO_ATE);
+  return true;
+}
+
 // ===================================================================
 // Flags reais do Omie (ListarCategorias) para exclusão de relatórios —
 // substituem a dependência exclusiva da lista manual acima.
@@ -10044,6 +10061,7 @@ function renderVendasFaturamento() {
   if (!meses.length) return;
 
   const EMPRESAS = ['KMNO', 'NOVAH', 'RT'];
+  const empresasAtivas = (selectedCompanyKeys && selectedCompanyKeys.length) ? selectedCompanyKeys : EMPRESAS; // FIX 04/08: gráfico/total agora respeita a seleção do topo
   const categories = dreArvoreCategoriesCache;
   const movements = dreArvoreMovementsCache;
 
@@ -10069,8 +10087,10 @@ function renderVendasFaturamento() {
         ? { vendas: 0, faturamento: 0 }
         : calcularVendasFaturamentoEmpresa(emp, categories, movements, mObj.mes, monthEnd);
       porEmpresa[emp].push({ vendas, faturamento });
-      totalPorMes[i].vendas += vendas;
-      totalPorMes[i].faturamento += faturamento;
+      if (empresasAtivas.includes(emp)) {
+        totalPorMes[i].vendas += vendas;
+        totalPorMes[i].faturamento += faturamento;
+      }
     });
   });
 
@@ -10094,7 +10114,7 @@ function renderVendasFaturamento() {
     });
     totalAnteriorPorEmpresa[emp] = { vendas, faturamento };
   });
-  const totalAnteriorGeral = EMPRESAS.reduce((acc, emp) => ({
+  const totalAnteriorGeral = empresasAtivas.reduce((acc, emp) => ({
     vendas: acc.vendas + totalAnteriorPorEmpresa[emp].vendas,
     faturamento: acc.faturamento + totalAnteriorPorEmpresa[emp].faturamento,
   }), { vendas: 0, faturamento: 0 });
@@ -10190,6 +10210,18 @@ function renderVendasFaturamento() {
         </div>
       </div>
     </div>`;
+
+  // Gráfico "Vendas x Faturamento" (card separado, mesma seção) — passa
+  // a usar o MESMO dado ao vivo já calculado aqui (meses/totalPorMes),
+  // respeitando período E empresa selecionados. Antes usava uma
+  // constante fixa (ANALISE_VENDAS_FATURAMENTO_GRUPO), travada em
+  // Jan-Jun/2026, sem nenhuma fórmula — pedido 04/08 ("não acompanha o
+  // seletor nenhum").
+  renderAnaliseVendasFaturamento(
+    meses.map(m => m.nome),
+    totalPorMes.map(d => d.vendas),
+    totalPorMes.map(d => d.faturamento)
+  );
 }
 
 // Agrupa as linhas do resumo (waterfall) em blocos colapsáveis: a
@@ -11699,17 +11731,20 @@ function renderAnalisePecasVendidasFaturadas() {
 }
 
 let chartVendasFaturamentoAnalise = null;
-function renderAnaliseVendasFaturamento() {
+function renderAnaliseVendasFaturamento(labels, vendasArr, faturamentoArr) {
   const canvas = document.getElementById('chartVendasFaturamentoAnalise');
   if (!canvas) return;
   if (chartVendasFaturamentoAnalise) chartVendasFaturamentoAnalise.destroy();
+  const lbls = labels || ANALISES_MESES_2026;
+  const vendas = vendasArr || ANALISE_VENDAS_FATURAMENTO_GRUPO.vendas;
+  const faturamento = faturamentoArr || ANALISE_VENDAS_FATURAMENTO_GRUPO.faturamento;
   chartVendasFaturamentoAnalise = new Chart(canvas.getContext('2d'), {
     type: 'bar',
     data: {
-      labels: ANALISES_MESES_2026,
+      labels: lbls,
       datasets: [
-        { label: 'Vendas', data: ANALISE_VENDAS_FATURAMENTO_GRUPO.vendas, backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 26 },
-        { label: 'Faturamento', data: ANALISE_VENDAS_FATURAMENTO_GRUPO.faturamento, backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 26 },
+        { label: 'Vendas', data: vendas, backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 26 },
+        { label: 'Faturamento', data: faturamento, backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 26 },
       ],
     },
     options: {
@@ -13450,7 +13485,7 @@ function buildFrozenMetricasCaixaPorEmpresa(empresaKey, chaveMesYYYYMM) {
   const despesasFinanceiras = soma('despesasFinanceiras');
   const lucroLiquido = ebitda - despesasFinanceiras + soma('receitasFinanceiras');
   const saldoLiquido = lucroLiquido - soma('distribuicao') - soma('capex') - soma('refis');
-  return { receitaBruta: receita, receitaLiquida, cmv, margemContribuicao, custosFixos, ebitda, despesasFinanceiras, lucroLiquido, saldoLiquido };
+  return { receitaBruta: receita, receitaLiquida, cmv, margemContribuicao, custosFixos, ebitda, despesasFinanceiras, lucroLiquido, saldoLiquido, capex: soma('capex'), refis: soma('refis') };
 }
 
 // Base COMPETÊNCIA — já vem pré-calculado (linhas "flat") em
@@ -13614,8 +13649,12 @@ function renderCartoesReceberCards() {
   const elFim = document.getElementById('resumoCapitalCartoesFim');
   const elDiff = document.getElementById('resumoCapitalCartoesDiff');
   if (!elInicio || !elFim || !elDiff) return;
-  const inicio = cartoesReceberCache && cartoesReceberCache.inicio ? Number(cartoesReceberCache.inicio.valor) : null;
-  const fim = cartoesReceberCache && cartoesReceberCache.fim ? Number(cartoesReceberCache.fim.valor) : null;
+  // Pedido 04/08: os valores salvos são só da KMNO (não é mais "sempre
+  // Grupo") — respeita a seleção de empresa do topo. Com KMNO na seleção
+  // (sozinha ou com RT/Novah), mostra o valor; sem KMNO, "-----".
+  const kmnoSelecionada = !selectedCompanyKeys || !selectedCompanyKeys.length || selectedCompanyKeys.includes('KMNO');
+  const inicio = (kmnoSelecionada && cartoesReceberCache && cartoesReceberCache.inicio) ? Number(cartoesReceberCache.inicio.valor) : null;
+  const fim = (kmnoSelecionada && cartoesReceberCache && cartoesReceberCache.fim) ? Number(cartoesReceberCache.fim.valor) : null;
   elInicio.textContent = inicio === null ? 'R$ -----' : fmtBRL(inicio);
   elFim.textContent = fim === null ? 'R$ -----' : fmtBRL(fim);
   elDiff.textContent = (inicio === null || fim === null) ? 'R$ -----' : fmtBRL(fim - inicio); // positivo = aumentou, mesma convenção do card de Bancos
@@ -13625,7 +13664,7 @@ function renderCartoesReceberCards() {
   const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
   ['cartoesEditarInicio', 'cartoesEditarFim'].forEach(id => {
     const el = document.getElementById(id);
-    if (el) el.style.display = ehAdmin ? '' : 'none';
+    if (el) el.style.display = (ehAdmin && kmnoSelecionada) ? '' : 'none';
   });
 }
 
@@ -13854,19 +13893,26 @@ function renderResumoCapital(monthStart, monthEnd) {
   // (RESUMO_DETALHADO_MESES, mesma fonte do card Resumo) pros meses
   // Jan-Mai/2026, e o cálculo ao vivo (por código de categoria) pros
   // meses Jun/2026 em diante.
-  let capex = 0, refis = 0;
+  let capex = 0, refis = 0, refisTemAlgumaQualificada = false, capexTemAlgumaQualificada = false;
   let cursorCR = monthStart.startOf('month');
   const fimCR = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo — sem o subtract, incluía 1 mês a mais
   let guardCR = 0;
   while (!cursorCR.isAfter(fimCR) && guardCR < 24) {
     const chave = cursorCR.format('YYYY-MM');
-    const congelado = RESUMO_DETALHADO_MESES[chave];
-    if (congelado) {
-      capex += congelado.capex || 0;
-      refis += congelado.refis || 0;
-    } else if (!cursorCR.isBefore(EXCEL_CONGELADO_ATE)) {
+    if (empresasSelResumoCapital.some(emp => empresaTemRefis(emp, cursorCR))) refisTemAlgumaQualificada = true;
+    if (empresasSelResumoCapital.some(emp => empresaTemCapex(emp, cursorCR))) capexTemAlgumaQualificada = true;
+    if (cursorCR.isBefore(EXCEL_CONGELADO_ATE)) {
+      empresasSelResumoCapital.forEach(emp => {
+        const dado = buildFrozenMetricasCaixaPorEmpresa(emp, chave); // RT retorna null (sem congelado) — soma 0
+        if (dado) {
+          if (empresaTemCapex(emp, cursorCR)) capex += dado.capex || 0; // RT não tem Capex Jan-Mai
+          if (empresaTemRefis(emp, cursorCR)) refis += dado.refis || 0; // Novah nunca tem Refis
+        }
+      });
+    } else {
       const inicioMes = cursorCR, fimMes = cursorCR.endOf('month');
       (financialMovementsCache || []).forEach(mv => {
+        if (!empresasSelResumoCapital.includes(mv._empresa)) return;
         if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
         const d = dayjs(mv.dt_registro || mv.dt_emissao);
         if (d.isBefore(inicioMes) || d.isAfter(fimMes)) return;
@@ -13881,9 +13927,9 @@ function renderResumoCapital(monthStart, monthEnd) {
     guardCR++;
   }
 
-  document.getElementById('resumoCapitalRefis').textContent = fmtBRL(refis);
+  document.getElementById('resumoCapitalRefis').textContent = refisTemAlgumaQualificada ? fmtBRL(refis) : 'R$ -----';
   const elCapex = document.getElementById('resumoCapitalCapex');
-  if (elCapex) elCapex.textContent = fmtBRL(capex);
+  if (elCapex) elCapex.textContent = capexTemAlgumaQualificada ? fmtBRL(capex) : 'R$ -----';
 
   renderCapexRefisMensalPeriodo(monthStart, monthEnd);
   renderProvaRealPorEmpresa(monthStart, monthEnd);
@@ -15349,10 +15395,11 @@ const NOVAH_RESUMO_CATEGORIAS = {
     '(-) Juros Bancários/Boletos': [0.0, 0.0, 17.9, 0.0, 0.0],
     '(-) IOF': [0.0, 145.71, 10.72, 22.82, 120.18],
   },
-  refis: {
+  capex: {
     'Maquinas e Equipamentos': [0.0, 0.0, 160.24, 160.18, 2182.04],
     'Móveis': [0.0, 0.0, 0.0, 0.0, 1600.0],
   },
+  refis: {},
   recebimentoEmprestimos: {
     '(+) Empréstimos de Terceiros': [10200.0, 5748.56, 1700.0, 1700.0, 1800.0],
     '(+) Empréstimos Kiko': [16460.28, 1777.93, 2232.34, 655.99, 2242.12],
@@ -17682,6 +17729,8 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
       const validos = evolucaoMensal.filter(e => e[l.chave] !== null);
       const total = validos.reduce((s, e) => s + e[l.chave], 0);
       const media = validos.length ? total / validos.length : 0;
+      const totalReceita = validos.reduce((s, e) => s + (e.receitaBruta || 0), 0);
+      const totalAvPct = (l.chave === 'receitaBruta' || !totalReceita) ? '' : (total / totalReceita * 100).toFixed(1).replace('.', ',') + '%';
       return `
       <tr>
         <td>${l.label}</td>
@@ -17693,7 +17742,9 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
             <td class="num total-pct">${avPctEvolucao(l.chave, i)}</td>`;
         }).join('')}
         <td class="num total">${validos.length ? fmtCelula(total) : '—'}</td>
+        <td class="num total-pct">${totalAvPct}</td>
         <td class="num media">${validos.length ? fmtCelula(media) : '—'}</td>
+        <td class="num total-pct">${totalAvPct}</td>
       </tr>
     `;
     }).join('');
@@ -17702,7 +17753,7 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
     if (headerRow) {
       headerRow.innerHTML = '<th>Métrica</th>' + evolucaoMensal.map(e => `
         <th>${DRE_ARVORE_NOMES_MES[e.mes.month()]}</th>
-        <th class="total-pct">AV%</th>`).join('') + '<th class="total">Total</th><th class="media">Média</th>';
+        <th class="total-pct">AV%</th>`).join('') + '<th class="total">Total</th><th class="total-pct">AV%</th><th class="media">Média</th><th class="total-pct">AV%</th>';
     }
   }
 
@@ -17903,6 +17954,8 @@ function renderGrupoDfc(monthStart, monthEnd) {
       const validos = evolucaoMensal.filter(e => e[l.chave] !== null);
       const total = validos.reduce((s, e) => s + e[l.chave], 0);
       const media = validos.length ? total / validos.length : 0;
+      const totalReceita = validos.reduce((s, e) => s + (e.receitaBruta || 0), 0);
+      const totalAvPct = (l.chave === 'receitaBruta' || !totalReceita) ? '' : (total / totalReceita * 100).toFixed(1).replace('.', ',') + '%';
       return `
       <tr>
         <td>${l.label}</td>
@@ -17914,7 +17967,9 @@ function renderGrupoDfc(monthStart, monthEnd) {
             <td class="num total-pct">${avPctEvolucao(l.chave, i)}</td>`;
         }).join('')}
         <td class="num total">${validos.length ? fmtCelula(total) : '—'}</td>
+        <td class="num total-pct">${totalAvPct}</td>
         <td class="num media">${validos.length ? fmtCelula(media) : '—'}</td>
+        <td class="num total-pct">${totalAvPct}</td>
       </tr>
     `;
     }).join('');
@@ -17923,7 +17978,7 @@ function renderGrupoDfc(monthStart, monthEnd) {
     if (headerRow) {
       headerRow.innerHTML = '<th>Métrica</th>' + evolucaoMensal.map(e => `
         <th>${DRE_ARVORE_NOMES_MES[e.mes.month()]}</th>
-        <th class="total-pct">AV%</th>`).join('') + '<th class="total">Total</th><th class="media">Média</th>';
+        <th class="total-pct">AV%</th>`).join('') + '<th class="total">Total</th><th class="total-pct">AV%</th><th class="media">Média</th><th class="total-pct">AV%</th>';
     }
   }
 
@@ -17984,20 +18039,34 @@ function renderGrupoDfcChart(evolucaoMensal, canvasId) {
 // lia só movementsCache (sempre ao vivo, e além disso filtrado pelo
 // seletor de empresa do topo) — violava a regra "Jan-Mai só Excel" e
 // não tinha canvas correspondente no HTML (ficava sem uso).
-function buildCapexRefisMensal(financialMovements, meses, categories) {
+function buildCapexRefisMensal(financialMovements, meses, categories, empresasSel) {
+  const empresas = empresasSel && empresasSel.length ? empresasSel : ['KMNO', 'NOVAH', 'RT'];
   return meses.map(m => {
     const chave = m.format('YYYY-MM');
-    const congelado = RESUMO_DETALHADO_MESES[chave];
-    if (congelado) {
+    if (m.isBefore(EXCEL_CONGELADO_ATE)) {
       // Congelado não tem detalhe categoria-a-categoria (só o total do
-      // mês) — tooltip mostra "(valor congelado da planilha)".
-      return { mes: m, capex: congelado.capex || 0, refis: congelado.refis || 0, capexDetalhe: null, refisDetalhe: null };
+      // mês) — tooltip mostra "(valor congelado da planilha)". RT sem
+      // fonte congelada — soma 0.
+      let capex = 0, refis = 0, temRefis = false, temCapex = false;
+      empresas.forEach(emp => {
+        const dado = buildFrozenMetricasCaixaPorEmpresa(emp, chave);
+        if (empresaTemCapex(emp, m)) {
+          temCapex = true;
+          if (dado) capex += dado.capex || 0;
+        }
+        if (empresaTemRefis(emp, m)) {
+          temRefis = true;
+          if (dado) refis += dado.refis || 0;
+        }
+      });
+      return { mes: m, capex: temCapex ? capex : null, refis: temRefis ? refis : null, capexDetalhe: null, refisDetalhe: null };
     }
     const monthEndM = m.endOf('month');
     let capex = 0, refis = 0;
     const capexDetalhe = {}, refisDetalhe = {};
     const catByKey = buildCatByEmpresaCodigo(categories || []);
     (financialMovements || []).forEach(mv => {
+      if (!empresas.includes(mv._empresa)) return;
       if (mv.natureza !== 'P' || !(mv.dt_registro || mv.dt_emissao) || !mv.cod_categoria) return;
       const d = dayjs(mv.dt_registro || mv.dt_emissao);
       if (d.isBefore(m) || d.isAfter(monthEndM)) return;
@@ -18010,15 +18079,15 @@ function buildCapexRefisMensal(financialMovements, meses, categories) {
       const refisCodigos = REFIS_CODIGOS_POR_EMPRESA[mv._empresa] || [];
       if (refisCodigos.includes(mv.cod_categoria)) { refis += v; refisDetalhe[chaveCat] = (refisDetalhe[chaveCat] || 0) + v; }
     });
-    return { mes: m, capex, refis, capexDetalhe, refisDetalhe };
+    const temRefisLive = empresas.some(emp => empresaTemRefis(emp, m));
+    return { mes: m, capex, refis: temRefisLive ? refis : null, capexDetalhe, refisDetalhe };
   });
 }
 
 // Monta a lista de meses do período De/Até e dispara o gráfico Capex x
 // Refis mês a mês (canvas #chartCapexRefis, dentro de "Análise Caixa
-// Bancos no Período"). Chamado a partir de renderResumoCapital, que já
-// garante que analiseBancosMovimentosCache/dreArvoreCategoriesCache
-// estão carregados (sempre 3 empresas).
+// Bancos no Período"). FIX 04/08: antes era sempre "3 empresas" fixo —
+// agora respeita empresasSelResumoCapital (mesma seleção do topo).
 function renderCapexRefisMensalPeriodo(monthStart, monthEnd) {
   const canvas = document.getElementById('chartCapexRefis');
   if (!canvas) return;
@@ -18028,7 +18097,7 @@ function renderCapexRefisMensalPeriodo(monthStart, monthEnd) {
   let guard = 0;
   while (!cursor.isAfter(fim) && guard < 24) { meses.push(cursor); cursor = cursor.add(1, 'month'); guard++; }
   if (!meses.length) return;
-  const evolucaoMensal = buildCapexRefisMensal(analiseBancosMovimentosCache, meses, dreArvoreCategoriesCache);
+  const evolucaoMensal = buildCapexRefisMensal(analiseBancosMovimentosCache, meses, dreArvoreCategoriesCache, empresasSelResumoCapital);
   renderCapexRefisChart(evolucaoMensal);
 }
 
@@ -18043,8 +18112,8 @@ function renderCapexRefisChart(evolucaoMensal) {
     data: {
       labels,
       datasets: [
-        { label: 'Capex', data: evolucaoMensal.map(e => Math.round(e.capex)), backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 28 },
-        { label: 'Refis', data: evolucaoMensal.map(e => Math.round(e.refis)), backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 28 },
+        { label: 'Capex', data: evolucaoMensal.map(e => e.capex === null ? null : Math.round(e.capex)), backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 28 },
+        { label: 'Refis', data: evolucaoMensal.map(e => e.refis === null ? null : Math.round(e.refis)), backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 28 },
       ],
     },
     options: {
@@ -18087,8 +18156,9 @@ function renderCapexRefisChart(evolucaoMensal) {
 // (data de competência) em vez de data de pagamento — sem congelado
 // equivalente na planilha pra Jan-Mai/2026 (confirmado com Ceve 29/07:
 // "usar dt_emissão/competência mesmo pra todos os meses").
-function buildCapexRefisMensalCompetencia(movements, meses, categories) {
+function buildCapexRefisMensalCompetencia(movements, meses, categories, empresasSel) {
   const catByKey = buildCatByEmpresaCodigo(categories || []);
+  const empresas = empresasSel && empresasSel.length ? empresasSel : ['KMNO', 'NOVAH', 'RT'];
   return meses.map(m => {
     const chave = m.format('YYYY-MM');
     if (m.isBefore(EXCEL_CONGELADO_ATE)) {
@@ -18097,18 +18167,28 @@ function buildCapexRefisMensalCompetencia(movements, meses, categories) {
       // não tem dado (Novah especialmente), ficava sempre 0. Usa a mesma
       // fonte "por competência" já validada (KMNO_TESTE_GRUPOS/
       // NOVAH_TESTE_GRUPOS via buildResumoDetalhadoMesFrozenPorEmpresa).
-      // RT sem congelado — conta como 0. Sem detalhe categoria-a-categoria
-      // (tooltip mostra "valor congelado da planilha").
-      const kmno = buildResumoDetalhadoMesFrozenPorEmpresa('KMNO', chave);
-      const novah = buildResumoDetalhadoMesFrozenPorEmpresa('NOVAH', chave);
-      const capex = (kmno && kmno.capex || 0) + (novah && novah.capex || 0);
-      const refis = (kmno && kmno.refis || 0) + (novah && novah.refis || 0);
-      return { mes: m, capex, refis, capexDetalhe: null, refisDetalhe: null };
+      // RT sem congelado — conta como 0. FIX 04/08: agora soma só as
+      // empresas selecionadas (antes era sempre KMNO+NOVAH fixo). Sem
+      // detalhe categoria-a-categoria (tooltip mostra "valor congelado
+      // da planilha").
+      let capex = 0, refis = 0, temRefis = false, temCapex = false;
+      empresas.forEach(emp => {
+        if (empresaTemCapex(emp, m) && emp !== 'RT') temCapex = true; // RT nunca tem congelado, mesmo qualificando por data
+        if (emp === 'RT') return; // sem congelado (nem capex nem refis)
+        const dado = buildResumoDetalhadoMesFrozenPorEmpresa(emp, chave);
+        if (dado) capex += dado.capex || 0;
+        if (empresaTemRefis(emp, m)) {
+          temRefis = true;
+          if (dado) refis += dado.refis || 0;
+        }
+      });
+      return { mes: m, capex: temCapex ? capex : null, refis: temRefis ? refis : null, capexDetalhe: null, refisDetalhe: null };
     }
     const monthEndM = m.endOf('month');
     let capex = 0, refis = 0;
     const capexDetalhe = {}, refisDetalhe = {};
     (movements || []).forEach(mv => {
+      if (!empresas.includes(mv._empresa)) return;
       if (mv.natureza !== 'P' || !mv.dt_emissao || !mv.cod_categoria) return;
       const d = dayjs(mv.dt_emissao);
       if (d.isBefore(m) || d.isAfter(monthEndM)) return;
@@ -18121,7 +18201,8 @@ function buildCapexRefisMensalCompetencia(movements, meses, categories) {
       const refisCodigos = REFIS_CODIGOS_POR_EMPRESA[mv._empresa] || [];
       if (refisCodigos.includes(mv.cod_categoria)) { refis += v; refisDetalhe[chaveCat] = (refisDetalhe[chaveCat] || 0) + v; }
     });
-    return { mes: m, capex, refis, capexDetalhe, refisDetalhe };
+    const temRefisLive = empresas.some(emp => empresaTemRefis(emp, m));
+    return { mes: m, capex, refis: temRefisLive ? refis : null, capexDetalhe, refisDetalhe };
   });
 }
 
@@ -18142,11 +18223,13 @@ function renderCapexRefisCompetenciaPeriodo(monthStart, monthEnd) {
   while (!cursor.isAfter(fim) && guard < 24) { meses.push(cursor); cursor = cursor.add(1, 'month'); guard++; }
   if (!meses.length) return;
 
-  const evolucaoMensal = buildCapexRefisMensalCompetencia(movementsCache, meses, categoriesCache);
-  const totalCapex = evolucaoMensal.reduce((s, e) => s + e.capex, 0);
-  const totalRefis = evolucaoMensal.reduce((s, e) => s + e.refis, 0);
-  if (elRefis) elRefis.textContent = fmtBRL(totalRefis);
-  if (elCapex) elCapex.textContent = fmtBRL(totalCapex);
+  const evolucaoMensal = buildCapexRefisMensalCompetencia(movementsCache, meses, categoriesCache, selectedCompanyKeys);
+  const mesesComCapex = evolucaoMensal.filter(e => e.capex !== null);
+  const totalCapex = mesesComCapex.reduce((s, e) => s + e.capex, 0);
+  const mesesComRefis = evolucaoMensal.filter(e => e.refis !== null);
+  const totalRefis = mesesComRefis.reduce((s, e) => s + e.refis, 0);
+  if (elRefis) elRefis.textContent = mesesComRefis.length ? fmtBRL(totalRefis) : 'R$ -----';
+  if (elCapex) elCapex.textContent = mesesComCapex.length ? fmtBRL(totalCapex) : 'R$ -----';
 
   renderCapexRefisCompetenciaChart(evolucaoMensal);
 }
@@ -18162,8 +18245,8 @@ function renderCapexRefisCompetenciaChart(evolucaoMensal) {
     data: {
       labels,
       datasets: [
-        { label: 'Capex', data: evolucaoMensal.map(e => Math.round(e.capex)), backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 28 },
-        { label: 'Refis', data: evolucaoMensal.map(e => Math.round(e.refis)), backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 28 },
+        { label: 'Capex', data: evolucaoMensal.map(e => e.capex === null ? null : Math.round(e.capex)), backgroundColor: CHART_COLORS.blue, borderRadius: 3, maxBarThickness: 28 },
+        { label: 'Refis', data: evolucaoMensal.map(e => e.refis === null ? null : Math.round(e.refis)), backgroundColor: '#C9A227', borderRadius: 3, maxBarThickness: 28 },
       ],
     },
     options: {
