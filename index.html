@@ -2493,7 +2493,6 @@
         <div class="global-period-range">
           <label>De: <input type="month" id="globalPeriodDe" aria-label="Período inicial"></label>
           <label>Até: <input type="month" id="globalPeriodAte" aria-label="Período final"></label>
-          <span id="currentViewLabel" style="margin-left:10px; font-family:'IBM Plex Mono',monospace; font-size:11px; color:var(--bone-dim); text-transform:uppercase;"></span>
         </div>
       </div>
     </div>
@@ -2531,8 +2530,10 @@
          lançado na planilha na época). NÃO vêm do Supabase/Omie ainda —
          ver ANALISES_GRAFICO_INDICADORES no bloco de script abaixo pra
          atualizar/estender quando entrar dado vivo. -->
-    <!-- Título/resumo removidos a pedido de Lucas (03/08/2026) — card e
-         gráficos abaixo mantidos intactos, só a section-head saiu. -->
+    <div class="section-head">
+      <h2>Análises — Peças, Vendas e Faturamento</h2>
+      <div class="desc">Fonte: planilha "Fat e Vendas" (reunião 21.07). Jan–Mai/2026 = Excel; a partir de Jun/2026 precisa ser mantido manualmente até termos pipeline do Omie pra essas 3 métricas.</div>
+    </div>
     <!-- Cards convertidos de chart-grid-3 pra standalone (pedido reunião
          27/07: "deixar o gráfico vendas x faturamento como card único,
          sem dividir espaço com mais nenhum gráfico"). Mesmo padrão visual
@@ -2775,15 +2776,6 @@
         <div>
           <div class="nav-card-title">Impostos e Análises</div>
           <div class="nav-card-desc">IRPJ, CSLL, PIS, COFINS, Difal e ICMS mês a mês x Receita Bruta (KMNO).</div>
-        </div>
-      </div>
-
-      <!-- Novo nav-card placeholder pedido por Lucas (03/08/2026) — sem
-           dados ainda, aguardando definição de fonte (ver viewSaidasEntradasPecas). -->
-      <div class="nav-card" onclick="switchView('viewSaidasEntradasPecas')">
-        <div>
-          <div class="nav-card-title">Saídas e Entradas R$ x Peças Faturadas</div>
-          <div class="nav-card-desc">Grupo (KMNO + Novah + RT) — em construção.</div>
         </div>
       </div>
 
@@ -3089,7 +3081,7 @@
           <div class="dre-empresa-tabs" id="provaRealEmpresaTabs" style="margin-bottom:10px;"></div>
           <div class="dre-tbl-wrap">
             <table class="fin-tbl fin-tbl-mes-alt fin-tbl-sticky-col">
-              <tr><th>Descrição</th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th></tr>
+              <tr id="provaRealEmpresaHeader"><th>Descrição</th><th>Jan</th><th>Fev</th><th>Mar</th><th>Abr</th><th>Mai</th></tr>
               <tbody id="provaRealEmpresaBody"></tbody>
             </table>
           </div>
@@ -3360,47 +3352,6 @@
     </div>
   </div>
 
-
-  <!-- ===== VIEW: SAÍDAS E ENTRADAS R$ x PEÇAS FATURADAS (novo card,
-       pedido 03/08/2026) — placeholder puro, sem dados/render ligado
-       ainda. Fonte e escopo (Grupo: KMNO+Novah+RT) a definir depois. ===== -->
-  <div id="viewSaidasEntradasPecas" class="view-container">
-    <div class="blocks-inner">
-      <div class="btn-back-container">
-        <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
-      </div>
-      <div class="section">
-        <div class="section-head">
-          <h2>Saídas e Entradas R$ x Peças Faturadas</h2>
-          <div class="desc">Grupo (KMNO + Novah + RT). Fonte: planilha "Fat e Vendas" (Excel congelado, Jan–Mai/2026). Jun/2026 em diante ainda não tem pipeline vivo — colunas ficam "-----" até ser definido. Colunas Meta/Tendência/Dif. também "-----": ainda não existem na planilha de referência.</div>
-        </div>
-
-        <!-- Card 1 (azul/verde na print): DFC — Saídas x Entradas de Caixa por Peça -->
-        <div class="bloco-card" style="margin-bottom:14px;">
-          <div class="bloco-head"><div class="bloco-titulo">Saídas e Entradas R$ x Peças (DFC)</div></div>
-          <div class="bloco-body">
-            <div id="wrapSaidasEntradasPecasDfc" class="dre-tbl-wrap"></div>
-          </div>
-        </div>
-
-        <!-- Card 2 (roxo/laranja na print): Faturamento do Grupo x Peça (competência) -->
-        <div class="bloco-card" style="margin-bottom:14px;">
-          <div class="bloco-head"><div class="bloco-titulo">Saídas e Faturamento x Peças (Faturamento do Grupo)</div></div>
-          <div class="bloco-body">
-            <div id="wrapSaidasFaturamentoPecas" class="dre-tbl-wrap"></div>
-          </div>
-        </div>
-
-        <!-- Card 3: Faturamento (PÇS) — pedido 03/08/2026 -->
-        <div class="bloco-card" style="margin-bottom:14px;">
-          <div class="bloco-head"><div class="bloco-titulo">Faturamento (PÇS)</div></div>
-          <div class="bloco-body">
-            <div id="wrapFaturamentoPecas" class="dre-tbl-wrap"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
 
   <!-- ===== VIEW: IMPOSTOS E ANÁLISES (novo card, reunião 21.07) =====
        Fonte: planilha "Impostos Analise KMNO" (só KMNO por enquanto — é
@@ -3725,22 +3676,6 @@
 
 <script>
   // Função responsável por alternar as secções do Dashboard de forma fluida
-// Nomes exibidos no cabeçalho (ao lado da data) — pedido 03/08/2026.
-// viewMenu fica com label vazio (é a tela inicial, não precisa dizer "Menu").
-const VIEW_DISPLAY_NAMES = {
-  viewMenu: '',
-  viewDfcArvore: 'DRE por Caixa',
-  viewDfcArvoreCopia: 'DRE por Competência',
-  viewImpostos: 'Impostos e Análises',
-  viewSaidasEntradasPecas: 'Saídas e Entradas x Peças Faturadas',
-  viewSaldoBancos: 'Saldo dos Bancos',
-  viewComercial: 'Comercial (KMNO)',
-  viewCicloFinanceiro: 'Ciclo Financeiro',
-  viewProjections: 'Projeção, Tendência e Metas',
-  viewOutrosPendentes: 'Validação de Categorias',
-  viewExtras: 'Financiamentos & Inadimplência',
-};
-
 function switchView(viewId, options = {}) {
   const { fromPopState = false } = options;
 
@@ -3754,11 +3689,7 @@ function switchView(viewId, options = {}) {
   if (targetView) {
     targetView.classList.add('active');
   }
-
-  // 2b. Atualiza o nome da view no cabeçalho, ao lado da data.
-  const viewLabelEl = document.getElementById('currentViewLabel');
-  if (viewLabelEl) viewLabelEl.textContent = VIEW_DISPLAY_NAMES[viewId] || '';
-    
+  
   /* 3. TRUQUE CRÍTICO PARA GRÁFICOS: 
     Quando elementos com gráficos do Chart.js estão escondidos com 'display: none', 
     eles não conseguem calcular o seu tamanho e ficam com 0px. Disparar um evento 'resize' 
@@ -3790,10 +3721,6 @@ function switchView(viewId, options = {}) {
     setTimeout(() => {
       window.dispatchEvent(new Event('resize'));
     }, 60);
-  }
-
-  if (viewId === 'viewSaidasEntradasPecas') {
-    try { renderSaidasEntradasPecasTudo(); } catch (e) { console.error('renderSaidasEntradasPecasTudo falhou:', e); }
   }
 
   // Validação de Categorias: lê direto de DRE_ARVORE_BLOCOS (estático, já
@@ -10178,7 +10105,7 @@ function renderVendasFaturamento() {
 
   wrapEl.innerHTML = `
     <div class="bloco-card">
-      <div class="bloco-head"><div class="bloco-titulo">Vendas x Faturamento 2026</div></div>
+      <div class="bloco-head"><div class="bloco-titulo">Vendas x Faturamento</div></div>
       <div class="bloco-body">
         <div class="dre-tbl-wrap">
           <table class="fin-tbl fin-tbl-sticky-col fin-tbl-mes-alt fin-tbl-vendas-fat-amarelo">
@@ -11485,153 +11412,6 @@ const ANALISE_PECAS_VENDIDAS_FATURADAS = {
   saidaCaixaPorPeca:   [106.26, 90.68, 119.07, 98.91, 87.03, 99.19],
   faturamentoPorPeca:  [107.11, 148.18, 127.32, 105.84, 112.36, 120.95],
 };
-
-// ===================================================================
-// "Saídas e Entradas x Peças Faturadas" (card novo, pedido 03/08/2026) —
-// 3 tabelas, dados fixos Jan-Jul/2026 (planilha "Novo Painel Lucas
-// 03.08", aba "Fat e Vendas"). Jun/Jul de Saídas/Entradas/Faturamento
-// (R$) ainda não existem na planilha (null); Faturamento (PÇS) já tem
-// Jun/Jul preenchidos. Respeita o filtro De/Até do cabeçalho igual ao
-// card "Vendas x Faturamento" — ver renderSaidasEntradasPecasTudo().
-// ===================================================================
-const SAIDAS_ENTRADAS_PECAS_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho'];
-const SAIDAS_ENTRADAS_PECAS_ANO = 2026;
-
-const SAIDAS_ENTRADAS_PECAS_DFC_DADOS = {
-  saidasCaixa:    [610452.6900000001, 591394.37, 783001.8400000001, 841358.6900000002, 811728.68, null, null],
-  saidaPorPeca:   [106.25808355091385, 90.67684299294694, 119.06962287104623, 98.91355396190926, 87.02998606197063, null, null],
-  entradaCaixa:   [792233.5000000001, 785635.2300000001, 1073049.32, 920915.4600000001, 863979.5, null, null],
-  entradaPorPeca: [137.89965187119236, 120.45925022999081, 163.17659975669102, 108.26657183164826, 92.63208963225046, null, null],
-};
-
-const SAIDAS_FATURAMENTO_PECAS_DADOS = {
-  saidasCaixa:        [610452.6900000001, 591394.37, 783001.8400000001, 841358.6900000002, 811728.68, null, null],
-  saidaPorPeca:       [106.25808355091385, 90.67684299294694, 119.06962287104623, 98.91355396190926, 87.02998606197063, null, null],
-  faturamento:        [615375.1, 966406.96, 837280.18, 900264.3600000001, 1047970.7599999999, null, null],
-  faturamentoPorPeca: [107.1148999129678, 148.17647347439436, 127.32362834549879, 105.83874441570657, 112.35882491690789, null, null],
-};
-
-const FATURAMENTO_PECAS_DADOS = {
-  gbCalca:     [1000, 1022, 700, 1128, 1122, 2588, 2811],
-  gbGandola:   [1000, 1022, 700, 1128, 1122, 2588, 2811],
-  kmnoCalca:   [915, 1256, 1483, 1787, 1680, 1846, 2247],
-  kmnoGandola: [929, 1252, 1492, 1768, 1680, 1736, 2206],
-  bermuda:     [449, 280, 273, 278, 381, 536, 294],
-  rashGuard:   [1154, 1166, 1076, 677, 1253, 1159, 1236],
-  faixaKmno:   [298, 524, 852, 586, 629, 1100, 1023],
-  faixaRt:     [null, null, null, 1154, 1460, 2818, 3846],
-};
-
-// Índices dos meses (0=Jan..6=Jul/2026) que caem dentro do período De/Até
-// selecionado no cabeçalho, intersectado com o intervalo de dados
-// disponível (Jan-Jul/2026 — fora disso não tem dado nenhum).
-function indicesMesesSaidasEntradasPecas() {
-  const { de, ate } = getSelectedPeriodRange();
-  const dadosDe = dayjs('2026-01-01');
-  const dadosAte = dayjs('2026-07-01');
-  const efDe = de.isAfter(dadosDe) ? de : dadosDe;
-  const efAte = ate.isBefore(dadosAte) ? ate : dadosAte;
-  if (efDe.isAfter(efAte)) return [];
-  const idxs = [];
-  let cursor = efDe;
-  while (!cursor.isAfter(efAte)) {
-    idxs.push(cursor.month()); // 0-11, mas nossos arrays só têm 0-6 (Jan-Jul/26)
-    cursor = cursor.add(1, 'month');
-  }
-  return idxs;
-}
-
-function somaSaidasEntradasPecas(vals) {
-  return vals.reduce((acc, v) => acc + (v == null ? 0 : v), 0);
-}
-function mediaSaidasEntradasPecas(vals) {
-  const nums = vals.filter(v => v != null);
-  return nums.length ? somaSaidasEntradasPecas(nums) / nums.length : null;
-}
-
-// Monta o <table> completo pra uma tabela (lista de linhas), já filtrado
-// pelos meses do período selecionado — mesmas colunas extras (Meta
-// Acum/Dif/Tendência/Meta 2026) sempre "-----" (não existem na planilha
-// de referência ainda).
-function renderTabelaSaidasEntradasPecas(linhas) {
-  const idxs = indicesMesesSaidasEntradasPecas();
-  if (!idxs.length) {
-    return '<div class="bloco-vazio">Período selecionado fora do intervalo de dados (Jan–Jul/2026).</div>';
-  }
-  const headerMeses = idxs.map(i => `<th>${SAIDAS_ENTRADAS_PECAS_MESES[i]}</th>`).join('');
-  const headerLabel = idxs.length < 7 ? 'Total do Período' : 'Real Acum mai26';
-  const mediaLabel = 'Média';
-  const headerRow = `<tr><th class="dre-tbl-sticky">Descrição</th>${headerMeses}<th>${headerLabel}</th><th>Meta Acum mai26</th><th>Dif. acum (qtd)</th><th>Dif. acum (%)</th><th>Tendência 2026</th><th>Meta 2026</th><th>Dif. ano (qtd)</th><th>Dif. ano (%)</th><th>${mediaLabel}</th></tr>`;
-
-  const linhasHtml = linhas.map(l => {
-    const vals = idxs.map(i => l.dados[i]);
-    const soma = somaSaidasEntradasPecas(vals);
-    const media = mediaSaidasEntradasPecas(vals);
-    const fmt = l.pct ? fmtPctSaidasEntradasPecas : (l.moeda ? fmtBRLSaidasEntradasPecas : fmtNumSaidasEntradasPecas);
-    const cells = vals.map(v => `<td class="num">${v == null ? '-----' : fmt(v)}</td>`).join('');
-    return `<tr class="${l.amarelo ? 'dre-tbl-row-amarelo' : ''}"><td class="dre-tbl-sticky">${l.label}</td>${cells}<td class="num total">${fmt(soma)}</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num media">${media == null ? '-----' : fmt(media)}</td></tr>`;
-  }).join('');
-
-  return `<table class="fin-tbl fin-tbl-mes-alt">${headerRow}${linhasHtml}</table>`;
-}
-
-function fmtBRLSaidasEntradasPecas(v) { return fmtBRL(v); }
-function fmtNumSaidasEntradasPecas(v) {
-  return Math.round(v).toLocaleString('pt-BR');
-}
-function fmtPctSaidasEntradasPecas(v) {
-  return (v * 100).toFixed(2).replace('.', ',') + '%';
-}
-
-function renderSaidasEntradasPecasTudo() {
-  const wrapDfc = document.getElementById('wrapSaidasEntradasPecasDfc');
-  const wrapFat = document.getElementById('wrapSaidasFaturamentoPecas');
-  const wrapPcs = document.getElementById('wrapFaturamentoPecas');
-  if (!wrapDfc && !wrapFat && !wrapPcs) return; // view ainda não existe no DOM
-
-  const D = SAIDAS_ENTRADAS_PECAS_DFC_DADOS;
-  const F = SAIDAS_FATURAMENTO_PECAS_DADOS;
-  const variacaoDfc = D.entradaPorPeca.map((v, i) => (v == null || D.saidaPorPeca[i] == null) ? null : (v - D.saidaPorPeca[i]) / D.saidaPorPeca[i]);
-  const variacaoFat = F.faturamentoPorPeca.map((v, i) => (v == null || F.saidaPorPeca[i] == null) ? null : (v - F.saidaPorPeca[i]) / F.saidaPorPeca[i]);
-
-  if (wrapDfc) {
-    wrapDfc.innerHTML = renderTabelaSaidasEntradasPecas([
-      { label: 'Saídas R$ Caixa', dados: D.saidasCaixa, moeda: true },
-      { label: 'Saída R$ por Peça', dados: D.saidaPorPeca, moeda: true },
-      { label: 'Entrada R$ Caixa', dados: D.entradaCaixa, moeda: true, amarelo: true },
-      { label: 'Entradas R$ Caixa por Peças', dados: D.entradaPorPeca, moeda: true },
-      { label: 'Variação %', dados: variacaoDfc, pct: true, amarelo: true },
-    ]);
-  }
-
-  if (wrapFat) {
-    wrapFat.innerHTML = renderTabelaSaidasEntradasPecas([
-      { label: 'Saídas R$ Caixa', dados: F.saidasCaixa, moeda: true },
-      { label: 'Saída R$ por Peça', dados: F.saidaPorPeca, moeda: true },
-      { label: 'Faturamento', dados: F.faturamento, moeda: true, amarelo: true },
-      { label: 'Faturamento por Peças', dados: F.faturamentoPorPeca, moeda: true },
-      { label: 'Variação %', dados: variacaoFat, pct: true, amarelo: true },
-    ]);
-  }
-
-  if (wrapPcs) {
-    const P = FATURAMENTO_PECAS_DADOS;
-    const totalGb = P.gbCalca.map((v, i) => v + P.gbGandola[i] + P.kmnoCalca[i] + P.kmnoGandola[i]);
-    const totalGeral = P.gbCalca.map((v, i) => totalGb[i] + P.bermuda[i] + P.rashGuard[i] + P.faixaKmno[i] + (P.faixaRt[i] || 0));
-    wrapPcs.innerHTML = renderTabelaSaidasEntradasPecas([
-      { label: 'GB Calça', dados: P.gbCalca },
-      { label: 'GB Gandola', dados: P.gbGandola },
-      { label: 'KMNO Calça', dados: P.kmnoCalca },
-      { label: 'KMNO Gandola', dados: P.kmnoGandola },
-      { label: 'Total', dados: totalGb, amarelo: true },
-      { label: 'Bermuda', dados: P.bermuda },
-      { label: 'Rash Guard', dados: P.rashGuard },
-      { label: 'Faixa KMNO', dados: P.faixaKmno },
-      { label: 'Faixa RT', dados: P.faixaRt },
-      { label: 'Total', dados: totalGeral, amarelo: true },
-    ]);
-  }
-}
 
 // "Vendas x Faturamento" (pedido 29/07: passou a ser o GRUPO — KMNO +
 // Blue Line/Novah + RT somadas — antes só tinha KMNO, era a única com
@@ -13218,7 +12998,6 @@ function renderForSelectedMonth() {
       renderVendasFaturamento();
     } catch (e) { console.error('renderVendasFaturamento falhou:', e); }
   })();
-  try { renderSaidasEntradasPecasTudo(); } catch (e) { console.error('renderSaidasEntradasPecasTudo falhou:', e); }
 }
 
 // Preenche a view "Resumo Consolidado": números de DRE (competência) e DFC (caixa)
@@ -13886,7 +13665,7 @@ function renderResumoCapital(monthStart, monthEnd) {
   if (elCapex) elCapex.textContent = fmtBRL(capex);
 
   renderCapexRefisMensalPeriodo(monthStart, monthEnd);
-  renderProvaRealPorEmpresa();
+  renderProvaRealPorEmpresa(monthStart, monthEnd);
 }
 
 // TODO(meta): Receita Bruta/CMV/Margem/EBITDA/Saldo Líquido ganharam um
@@ -14895,12 +14674,6 @@ const KMNO_RESUMO_CATEGORIAS = {
     'Difal (2%)': [8660.58, 9569.7, 27059.91, 19652.26, 25862.8],
     'ICMS (3%)': [22976.43, 14333.18, 26319.38, 25175.88, 23805.36],
     'Devolução de Produtos': [926.0, 2350.0, 0.0, 1198.8, 25.0],
-    // PLACEHOLDER (31/07/2026): lacuna encontrada comparando com o
-    // Excel — ABR Excel=R$6.025,46 (dash tinha só 1.198,80), MAI
-    // Excel=R$4.163,19 (dash tinha só 25,00). Confirmado depois em
-    // RESUMO_DETALHADO_MESES_DRE (fonte "DRE por Competência") que já
-    // tem devolucoes=6025.46 (ABR) e 4163.19 (MAI) certos — bate exato.
-    'Devolução (ajuste — origem a confirmar)': [0.0, 0.0, 0.0, 4826.66, 4138.19],
   },
   custoInsumos: {
     'TECIDO SARJA': [1696.17, 1413.04, 3075.5, 9629.98, 15129.85],
@@ -14916,16 +14689,10 @@ const KMNO_RESUMO_CATEGORIAS = {
     'FRETE COMPRA MATERIAIS': [701.1, 700.0, 6233.4, 1323.08, 1466.63],
     'EMBALAGEM DE PRODUTOS': [2333.61, 3425.75, 3377.76, 3377.76, 0.0],
   },
-  // FIX (31/07/2026): esses 2 itens são "Custo de Serviços" no Excel
-  // (linha 56 da aba KMNO DFC caixa, "Custo de Serviços" = R$184.643,50
-  // em JAN) — antes ficavam presos na chave "custoMaoObra" por engano,
-  // deixando a linha "Custo de Serviços" do dash zerada. custoMaoObra
-  // fica vazio pra KMNO (não existe mão de obra própria separada).
-  custoServicos: {
+  custoMaoObra: {
     'SERVIÇOS NOVAH': [175000.0, 135000.0, 200000.0, 150000.0, 150000.0],
     'SERVIÇOS TERCEIROS': [9643.5, 21515.0, 18895.0, 26790.89, 46022.02],
   },
-  custoMaoObra: {},
   royalties: {
     'Royalties': [14700.69, 3274.73, 4742.91, 23494.13, 3423.47],
   },
@@ -14971,58 +14738,6 @@ const KMNO_RESUMO_CATEGORIAS = {
     'Ricardo': [1352.0, 1352.0, 1443.0, 1443.0, 1443.0],
     'Timeless': [0.0, 0.0, 25000.0, 25000.0, 21823.94],
   },
-  // NOVO (31/07/2026): mesmos itens do "custoAdm" acima, quebrados nos
-  // 3 sub-blocos do Excel (Despesas Administração / Dep. Pessoal ADM /
-  // Pró-Labore) — pedido de replicar a estrutura 1:1. "custoAdm" acima
-  // continua existindo intacto (outros cards/funções dependem dele,
-  // ex: buildFrozenMetricasCaixaPorEmpresa) — isso aqui é aditivo, só
-  // pro card "Resumo (Grupo, R$)" da KMNO exibir as 3 linhas separadas.
-  despesasAdministracao: {
-    'Aluguel Sala': [4500.0, 5500.0, 5000.0, 5000.0, 5000.0],
-    'IPTU': [0.0, 2750.02, 0.0, 0.0, 0.0],
-    'Emasa (Agua e esgoto)': [62.7, 65.15, 65.15, 0.0, 0.0],
-    'Celesc (Energia Eletrica)': [511.35, 309.62, 541.01, 631.77, 646.03],
-    'Taxa de Lixo (Ambiental)': [57.29, 670.46, 0.0, 0.0, 0.0],
-    'Alvará PMBC, Bombeiro, Sanitário e outros': [0.0, 0.0, 229.01, 0.0, 1877.64],
-    'Faxina': [500.0, 500.0, 300.0, 600.0, 400.0],
-    'Material Copa/Cozinha/Limpeza': [71.1, 141.95, 112.9, 49.3, 156.75],
-    'Material de Papelaria': [274.88, 158.61, 21.03, 497.35, 407.4],
-    'Manutenção do Imovel': [50.0, 0.0, 313.7, 37.0, 0.0],
-    'Manutenção Móveis': [0.0, 605.97, 1377.54, 1936.67, 2384.58],
-    'Contabilidade': [2550.0, 2550.0, 2550.0, 2805.0, 2805.0],
-    'Certificado Digital': [0.0, 110.0, 309.0, 0.0, 170.0],
-    'Alterações Contratuais': [700.0, 700.0, 0.0, 0.0, 0.0],
-    'Despesas documentais': [0.0, 14.95, 0.0, 35.0, 16.96],
-    'Uber / Combustivel / Aluguel Carro': [1617.0, 1190.05, 1224.62, 2058.94, 1542.88],
-    'Despesas de Software': [2943.49, 3658.37, 5233.7, 4786.36, 5627.13],
-    'Equipamentos de Informatica': [492.9, 792.8, 1721.68, 3134.42, 0.0],
-    'Manutenção de Informatica': [909.04, 1889.04, 750.0, 750.0, 1050.0],
-    'Telefone Celular': [271.8, 279.7, 277.58, 0.0, 573.06],
-    'Internet': [267.11, 266.44, 267.11, 0.0, 391.44],
-    'Honorários Advocatícios': [2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
-    'Despesas Processos Juridicos': [1700.0, 1700.0, 1700.0, 1700.0, 1700.0],
-    'Incentivos': [0.0, 0.0, 0.0, 0.0, 662.03],
-    'Seg Trabalho/Admissão': [198.0, 198.0, 198.0, 198.0, 198.0],
-    'Implantação Sistemas e Treinamentos': [1167.0, 8393.66, 9800.0, 11132.53, 5900.0],
-    'Anúncios': [0.0, 136.68, 634.67, 0.0, 329.61],
-    'Sindicato': [0.0, 147.75, 147.75, 0.0, 0.0],
-    'Plano Odontológico/Saúde': [263.89, 275.66, 0.0, 0.0, 0.0],
-    'Embalagem Comercial': [0.0, 0.0, 10.0, 754.21, 237.27],
-    'BPO Financeiro': [5000.0, 5000.0, 4000.0, 5000.0, 5000.0],
-  },
-  depPessoalAdm: {
-    'Claudia (Adm)': [1636.0, 2119.0, 2436.0, 2791.0, 2436.0],
-    'Claudia (Bonificação)': [1500.0, 1500.0, 1500.0, 1500.0, 1500.0],
-    'Bruno': [0.0, 0.0, 0.0, 0.0, 200.0],
-    'FGTS': [340.85, 221.13, 212.0, 444.4, 413.81],
-    'GPS (INSS)': [1667.46, 1688.06, 1616.65, 2649.13, 2501.32],
-    'PJ Adm': [10000.0, 11000.0, 11000.0, 11000.0, 11000.0],
-    'Maria Tirloni (RT)': [4554.0, 4863.0, 4863.0, 4863.0, 4863.0],
-  },
-  proLabore: {
-    'Ricardo': [1352.0, 1352.0, 1443.0, 1443.0, 1443.0],
-    'Timeless': [0.0, 0.0, 25000.0, 25000.0, 21823.94],
-  },
   despesasComerciais: {
     'Site USA': [238.71, 233.33, 102.75, 101.98, 541.88],
     'Edição de Videos/Fotos': [0.0, 0.0, 1800.0, 1800.0, 0.0],
@@ -15037,35 +14752,6 @@ const KMNO_RESUMO_CATEGORIAS = {
     'Despesas de Viagens': [12013.2, 6146.09, 6997.08, 309.2, 1111.12],
     'Frete Pago pelo Cliente': [7610.74, 5541.06, 16778.3, 21090.61, 23541.41],
     'Frete pago pela KMNO': [12525.65, 9423.83, 17019.59, 0.0, 6940.69],
-    'Patricia': [13178.04, 9511.82, 19263.68, 17165.31, 11857.2],
-    'Gabriel': [15923.91, 10000.83, 16779.86, 13901.99, 15455.89],
-    'Leticia': [8050.81, 3292.53, 6553.6, 7360.43, 8000.0],
-    'Yasmin': [3364.35, 3311.75, 3251.23, 3839.78, 2265.02],
-    'Cláudio': [0.0, 0.0, 0.0, 0.0, 1591.65],
-    'Auxiliar de Vendas': [0.0, 0.0, 1350.0, 2309.0, 2321.0],
-  },
-  // NOVO (31/07/2026): mesmos itens do "despesasComerciais" acima,
-  // quebrados nos 3 sub-blocos do Excel (Despesas Comerciais / Frete
-  // Pago / Dep. Comercial) — mesmo princípio do ADM acima: aditivo,
-  // "despesasComerciais" continua intacto pra outros consumidores.
-  despesasComerciaisPuro: {
-    'Site USA': [238.71, 233.33, 102.75, 101.98, 541.88],
-    'Edição de Videos/Fotos': [0.0, 0.0, 1800.0, 1800.0, 0.0],
-    'Patrocinado Face': [1649.17, 323.9, 1219.89, 1017.9, 587.55],
-    'Google E-mail WorkBussines': [842.3, 568.79, 623.29, 624.35, 637.0],
-    'Patrocinado Google': [147.03, 29.79, 0.0, 0.0, 0.0],
-    'Marketing': [0.0, 1269.34, 6383.94, 3152.51, 3276.86],
-    'Consultoria': [6000.0, 6000.0, 6000.0, 5040.16, 8891.81],
-    'Software Ecommerce': [2129.9, 2129.9, 2319.89, 2108.72, 3420.62],
-    'CRM/GURU': [1370.45, 1366.07, 976.36, 916.36, 916.36],
-    'Despesas de Eventos/BL': [620.04, 1118.33, 1192.93, 4754.13, 3618.09],
-    'Despesas de Viagens': [12013.2, 6146.09, 6997.08, 309.2, 1111.12],
-  },
-  fretePago: {
-    'Frete Pago pelo Cliente': [7610.74, 5541.06, 16778.3, 21090.61, 23541.41],
-    'Frete pago pela KMNO': [12525.65, 9423.83, 17019.59, 0.0, 6940.69],
-  },
-  depComercial: {
     'Patricia': [13178.04, 9511.82, 19263.68, 17165.31, 11857.2],
     'Gabriel': [15923.91, 10000.83, 16779.86, 13901.99, 15455.89],
     'Leticia': [8050.81, 3292.53, 6553.6, 7360.43, 8000.0],
@@ -15089,10 +14775,6 @@ const KMNO_RESUMO_CATEGORIAS = {
   receitasFinanceiras: {
     '(+)Juros Recebidos': [11.45, 36.8, 8163.22, 8328.63, 6770.99],
     '(+)Descontos Recebidos/Devoluções Recebidas': [0.0, 0.0, 0.0, 0.0, 788.53],
-    // PLACEHOLDER (31/07/2026): MAI Excel Receitas Financeiras =
-    // R$8.279,32, dash tinha R$7.559,52 (Juros+Descontos). Origem exata
-    // não confirmada — nome genérico até Lucas confirmar a categoria.
-    'Receita Financeira (ajuste — origem a confirmar)': [0.0, 0.0, 0.0, 0.0, 719.80],
   },
   distribuicao: {
     'RICARDO': [2865.03, 3221.07, 1586.98, 2993.84, 3175.97],
@@ -15135,30 +14817,33 @@ const NOVAH_RESUMO_CATEGORIAS = {
     'Embalagens Produção': [492.39, 347.58, 2336.38, 1544.34, 958.5],
     'Embalagens Comerciais': [623.75, 1280.62, 52.7, 1651.19, 1494.94],
     'Difal': [0.0, 625.47, 0.0, 849.93, 318.79],
-    // FIX (31/07/2026): removida a chave "Total" que existia aqui — era
-    // o próprio somatório do grupo salvo como se fosse mais 1 categoria,
-    // dobrando o valor ao somar (bug pré-existente, afeta qualquer card
-    // que use este bucket, não só o "Resumo (Grupo, R$)").
+    'Total': [11682.97, 9464.3, 20444.33, 31809.76, 35685.74],
   },
   custoMaoObra: {
     'Salarios CLT Acabamento': [13043.87, 15230.66, 18482.25, 20684.04, 24046.69],
     'PPR CLT Acabamento': [0.0, 0.0, 0.0, 1000.0, 1500.0],
     'Assiduidade': [0.0, 0.0, 0.0, 2250.0, 2250.0],
+    'Total': [13043.87, 15230.66, 18482.25, 23934.04, 27796.69],
     'PJ Corte': [4720.93, 6069.78, 6969.0, 6969.0, 6969.0],
     'PPR PJ Corte': [1215.0, 4646.25, 3327.3, 5642.25, 7203.9],
+    'Total (CORTE)': [5935.93, 10716.03, 10296.3, 12611.25, 14172.9],
     'Salarios CLT Costura RASH Guard Bermuda': [2562.61, 1472.13, 2186.46, 0.0, 0.0],
     'Terceiros (Costura Externa)': [3386.0, 0.0, 116.0, 0.0, 2040.82],
+    'Total (RASH GUARD/BERMUDAS)': [5948.61, 1472.13, 2302.46, 0.0, 2040.82],
     'Salarios CLT Costura Kimono': [29063.06, 36162.0, 54260.75, 58367.43, 62436.16],
     'PPR CLT Costura Kimono': [0.0, 0.0, 0.0, 2350.0, 2300.0],
     'Assiduidade (COSTURA KIMONO)': [0.0, 0.0, 0.0, 4750.0, 4250.0],
+    'Total (COSTURA KIMONO)': [29063.06, 36162.0, 54260.75, 65467.43, 68986.16],
     'Salarios CLT Bordado': [3258.91, 6799.22, 6460.67, 7337.64, 10124.68],
     'PJ Bordado': [3387.0, 4226.0, 5000.0, 5000.0, 7500.0],
     'PPR PJ Bordado': [1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
     'Assiduidade (BORDADO)': [0.0, 0.0, 0.0, 500.0, 750.0],
+    'Total (BORDADO)': [7645.91, 12025.22, 12460.67, 13837.64, 19374.68],
     'Salarios CLT Sublimação': [1722.65, 1602.18, 0.0, 0.0, 2813.15],
     'PJ Sublimação': [3709.67, 4005.0, 4300.0, 4300.0, 4300.0],
     'PPR PJ Sublimação': [1751.0, 1112.0, 3508.55, 2895.0, 4217.2],
     'Assiduidade (SUBLIMAÇÃO)': [0.0, 0.0, 0.0, 0.0, 250.0],
+    'Total (SUBLIMAÇÃO)': [7183.32, 6719.18, 7808.55, 7195.0, 11580.35],
     'Horas Extras': [0.0, 0.0, 5738.0, 8946.5, 12370.5],
     'Free Lancers': [1050.0, 800.0, 996.67, 540.0, 2658.0],
     'Abono Indústria': [2345.0, 3336.65, 3350.0, 0.0, 0.0],
@@ -15171,75 +14856,7 @@ const NOVAH_RESUMO_CATEGORIAS = {
     'Férias': [1924.73, 1211.28, 0.0, 0.0, 0.0],
     'Aviso Prévio/Rescisão': [4824.74, 10329.82, 3973.65, 5548.26, 2005.02],
     'Multa FGTS': [8012.33, 9469.86, 2209.79, 0.0, 461.07],
-    // FIX (31/07/2026): removidas as chaves "Total"/"Total (X)" que
-    // existiam espalhadas aqui — mesmo bug de duplicação do custoInsumos
-    // acima. custoMaoObra continua intacto pra compat (buildFrozen
-    // MetricasCaixaPorEmpresa e outros); a quebra granular abaixo é
-    // aditiva, só pro card "Resumo (Grupo, R$)".
-  },
-  // NOVO (31/07/2026) — quebra granular da NOVAH replicando a estrutura
-  // do Excel (aba "NOVAH DFC caixa"): Custo de Serviços Terceiros
-  // (bloco próprio no Excel, linha 28-29 — mesma categoria "Terceiros
-  // Costura Externa" que também aparece dentro de Rash Guard/Bermudas;
-  // usada aqui como linha isolada, e removida do total de Rash Guard/
-  // Bermudas abaixo pra não contar 2x) + Acabamento/Corte/Rash Guard/
-  // Costura Kimono/Bordado/Sublimação/Desp. Pessoal Indústria cada um
-  // como linha própria (todos já existentes juntos dentro de
-  // custoMaoObra acima, sem valor novo inventado).
-  // FIX (31/07/2026): confirmado com print do Excel (linha 28-29,
-  // "CUSTO DE SERVIÇOS TERCEIROS" standalone) que esse bloco é sempre
-  // ZERO — o valor real de "Terceiros (Costura Externa)" pertence só à
-  // linha dentro de Rash Guard/Bermudas (linha 48), não aqui. Ambiguidade
-  // resolvida: são a mesma categoria, mas o bloco standalone nunca teve
-  // valor de fato. Fica vazio, mantido só pra não quebrar a linha do
-  // card (mostra R$0, igual ao Excel).
-  custoServicosTerceiros: {},
-  acabamento: {
-    'Salarios CLT Acabamento': [13043.87, 15230.66, 18482.25, 20684.04, 24046.69],
-    'PPR CLT Acabamento': [0.0, 0.0, 0.0, 1000.0, 1500.0],
-    'Assiduidade': [0.0, 0.0, 0.0, 2250.0, 2250.0],
-  },
-  corte: {
-    'PJ Corte': [4720.93, 6069.78, 6969.0, 6969.0, 6969.0],
-    'PPR PJ Corte': [1215.0, 4646.25, 3327.3, 5642.25, 7203.9],
-  },
-  rashBermuda: {
-    'Salarios CLT Costura RASH Guard Bermuda': [2562.61, 1472.13, 2186.46, 0.0, 0.0],
-    // FIX (31/07/2026): devolvido pra aqui (valor real confirmado no
-    // Excel, dentro do Total de Rash Guard/Bermudas = 5.948,61/1.472,13/
-    // 2.302,46/0/2.040,82 — bate exato incluindo este item).
-    'Terceiros (Costura Externa)': [3386.0, 0.0, 116.0, 0.0, 2040.82],
-  },
-  costuraKimono: {
-    'Salarios CLT Costura Kimono': [29063.06, 36162.0, 54260.75, 58367.43, 62436.16],
-    'PPR CLT Costura Kimono': [0.0, 0.0, 0.0, 2350.0, 2300.0],
-    'Assiduidade (COSTURA KIMONO)': [0.0, 0.0, 0.0, 4750.0, 4250.0],
-  },
-  bordado: {
-    'Salarios CLT Bordado': [3258.91, 6799.22, 6460.67, 7337.64, 10124.68],
-    'PJ Bordado': [3387.0, 4226.0, 5000.0, 5000.0, 7500.0],
-    'PPR PJ Bordado': [1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
-    'Assiduidade (BORDADO)': [0.0, 0.0, 0.0, 500.0, 750.0],
-  },
-  sublimacao: {
-    'Salarios CLT Sublimação': [1722.65, 1602.18, 0.0, 0.0, 2813.15],
-    'PJ Sublimação': [3709.67, 4005.0, 4300.0, 4300.0, 4300.0],
-    'PPR PJ Sublimação': [1751.0, 1112.0, 3508.55, 2895.0, 4217.2],
-    'Assiduidade (SUBLIMAÇÃO)': [0.0, 0.0, 0.0, 0.0, 250.0],
-  },
-  despPessoalIndustria: {
-    'Horas Extras': [0.0, 0.0, 5738.0, 8946.5, 12370.5],
-    'Free Lancers': [1050.0, 800.0, 996.67, 540.0, 2658.0],
-    'Abono Indústria': [2345.0, 3336.65, 3350.0, 0.0, 0.0],
-    'Assiduidade (DESP. PESSOAL INDUSTRIA)': [0.0, 6000.0, 7000.0, 0.0, 0.0],
-    'Salário Jeans': [5109.43, 4524.77, 0.0, 0.0, 0.0],
-    'PJ Jean': [5420.0, 0.0, 0.0, 0.0, 0.0],
-    'Facção': [17508.5, 20366.0, 0.0, 0.0, 0.0],
-    'FGTS': [11887.81, 9054.45, 8542.56, 9075.04, 12518.46],
-    'GPS (INSS)': [6206.12, 6120.18, 7646.15, 7785.35, 11508.47],
-    'Férias': [1924.73, 1211.28, 0.0, 0.0, 0.0],
-    'Aviso Prévio/Rescisão': [4824.74, 10329.82, 3973.65, 5548.26, 2005.02],
-    'Multa FGTS': [8012.33, 9469.86, 2209.79, 0.0, 461.07],
+    'Total (DESP. PESSOAL INDUSTRIA)': [64288.66, 71213.01, 39456.82, 31895.15, 41521.52],
   },
   custoAdm: {
     'Aluguel Galpão + IPTU': [25000.0, 25000.0, 25000.0, 25000.0, 27764.8],
@@ -15285,60 +14902,6 @@ const NOVAH_RESUMO_CATEGORIAS = {
     'PPR PCP': [1000.0, 1000.0, 3296.81, 0.0, 0.0],
     'LEO': [1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
     'GERALDO': [0.0, 0.0, 5500.0, 5500.0, 5500.0],
-    'Pro Labore Sócio': [1351.0, 1621.0, 1621.0, 1700.0, 1621.0],
-  },
-  // NOVO (31/07/2026) — mesmos itens do "custoAdm" acima, quebrados nos
-  // 3 sub-blocos do Excel (Despesas Administração / Dep. Pessoal ADM,
-  // que no Excel já soma junto com "PJ Terceiros ADM" num único total /
-  // Pró-Labore). custoAdm acima continua intacto pra compat.
-  despesasAdministracao: {
-    'Aluguel Galpão + IPTU': [25000.0, 25000.0, 25000.0, 25000.0, 27764.8],
-    'Celesc (Energia Eletrica)': [1277.54, 1255.44, 1501.59, 2139.07, 2587.69],
-    'Diesel (Gerador)': [274.5, 0.0, 270.0, 271.5, 215.6],
-    'Despesas com Bolo, Niver (Pessoal)': [325.61, 332.46, 366.59, 331.9, 651.92],
-    'Alvará PMBC, Bombeiro, Sanitário e outros': [0.0, 0.0, 381.68, 0.0, 0.0],
-    'Faxina': [460.0, 500.0, 840.0, 0.0, 0.0],
-    'Material Copa/Cozinha/Limpeza': [474.4, 899.18, 284.87, 827.99, 894.13],
-    'Material de Papelaria': [19.9, 1362.83, 1131.98, 816.13, 417.4],
-    'Manutenção do Imovel': [82.62, 0.0, 0.0, 0.0, 690.96],
-    'Contabilidade': [2051.4, 2050.0, 2050.0, 2255.0, 2256.05],
-    'Uber / Combustivel / Aluguel Carro': [200.0, 300.0, 215.9, 450.03, 680.0],
-    'Despesas de Software': [1027.0, 738.85, 1113.58, 1659.78, 1846.6],
-    'Manutenção de Informatica': [183.0, 280.0, 808.0, 1395.0, 940.42],
-    'Telefone Celular': [26.78, 26.68, 26.58, 26.58, 26.58],
-    'Internet': [249.91, 249.91, 309.91, 249.91, 249.91],
-    'Medicina do Trabalho': [1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
-    'Frete Produção': [142.19, 318.38, 822.53, 483.39, 912.24],
-    'Frete Manuntenção': [89.0, 0.0, 136.0, 196.0, 190.0],
-    'Manutenção Maquinas': [4503.76, 1130.2, 2079.07, 2360.98, 4056.06],
-    'Incentivos': [225.7, 523.36, 1161.46, 808.75, 884.5],
-    'Levits BPO': [2000.0, 2000.0, 2000.0, 2000.0, 2000.0],
-    'Anúncio Vagas': [0.0, 0.0, 1350.0, 350.0, 2150.0],
-    'Consultoria/Treinamento': [50.0, 0.0, 0.0, 0.0, 0.0],
-    'Serviços Diretoria': [0.0, 0.0, 0.0, 0.0, 624.38],
-    'Caçamba/Aterro/Lixo': [0.0, 520.0, 0.0, 0.0, 748.85],
-  },
-  depPessoalAdm: {
-    'Porteiro': [0.0, 0.0, 1274.15, 1400.02, 1400.02],
-    'Mecânico': [1135.62, 1437.77, 1447.33, 1428.78, 1467.11],
-    'Expedição': [782.22, 1576.47, 0.0, 5146.04, 4987.29],
-    'Faxineira': [0.0, 0.0, 0.0, 387.0, 2075.09],
-    'PCP': [1783.48, 1838.06, 0.0, 3319.88, 3312.12],
-    'Aux Adm': [0.0, 0.0, 0.0, 0.0, 1174.62],
-    'Assiduidade': [0.0, 500.0, 500.0, 250.0, 750.0],
-    'Abono': [549.5, 680.33, 1535.0, 785.0, 2400.0],
-    'Horas Extras': [0.0, 0.0, 0.0, 164.0, 0.0],
-    'FGTS': [775.35, 554.01, 316.91, 354.55, 1107.58],
-    'GPS (INSS)': [731.26, 603.46, 707.59, 401.54, 1378.93],
-    'Aviso Prévio/Rescisão': [0.0, 35.0, 7324.34, 0.0, 0.0],
-    'Multa FGTS': [0.0, 799.23, 1328.78, 0.0, 0.0],
-    'EMP SYBELI E RICHARD': [14500.0, 18500.0, 18500.0, 18500.0, 18500.0],
-    'PCP (PJ TERCERIOS ADM)': [2709.67, 2855.0, 7500.0, 0.0, 0.0],
-    'PPR PCP': [1000.0, 1000.0, 3296.81, 0.0, 0.0],
-    'LEO': [1000.0, 1000.0, 1000.0, 1000.0, 1000.0],
-    'GERALDO': [0.0, 0.0, 5500.0, 5500.0, 5500.0],
-  },
-  proLabore: {
     'Pro Labore Sócio': [1351.0, 1621.0, 1621.0, 1700.0, 1621.0],
   },
   despesasFinanceiras: {
@@ -15419,27 +14982,10 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       impostos: itensParaCategoria(B.impostos.itens),
       devolucoes: itensParaCategoria(B.devolucoes.itens),
       custoInsumos: itensParaCategoria(B.custo_materia_prima.itens),
-      // FIX (31/07/2026): o bloco "custo_mao_obra" (id) da KMNO tem
-      // "nome" real "Custo de Serviços" no cadastro (confirmado em
-      // buildTodosBlocosRealizado) — itens são Industrialização Blue
-      // Line + Serviços (Outras facções). Estava indo pra chave errada
-      // (custoMaoObra), deixando "Custo de Serviços" zerado no dash.
-      // KMNO não tem mão de obra própria separada, por isso fica {}.
-      custoServicos: itensParaCategoria(B.custo_mao_obra.itens),
-      custoMaoObra: {},
+      custoMaoObra: itensParaCategoria(B.custo_mao_obra.itens),
       royalties: itensParaCategoria(B.royalties.itens),
       custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens), itensParaCategoria(B.pro_labore.itens)),
       despesasComerciais: mergeCategoriaMaps(itensParaCategoria(B.despesas_comerciais.itens), itensParaCategoria(B.frete_pago.itens), itensParaCategoria(B.dep_comercial.itens)),
-      // NOVO (31/07/2026): campos granulares aditivos, só pro card
-      // "Resumo (Grupo, R$)" da KMNO — custoAdm/despesasComerciais
-      // acima continuam intactos pra quem já consome eles agregados
-      // (buildMetricasGrupoDfcPeriodo, buildResumoDetalhadoMesAoVivo).
-      despesasAdministracao: itensParaCategoria(B.despesas_adm.itens),
-      depPessoalAdm: itensParaCategoria(B.dep_pessoal_adm.itens),
-      proLabore: itensParaCategoria(B.pro_labore.itens),
-      despesasComerciaisPuro: itensParaCategoria(B.despesas_comerciais.itens),
-      fretePago: itensParaCategoria(B.frete_pago.itens),
-      depComercial: itensParaCategoria(B.dep_comercial.itens),
       despesasFinanceiras: itensParaCategoria(despFin, 'P'),
       receitasFinanceiras: itensParaCategoria(despFin, 'R'),
       distribuicao: itensParaCategoria(B.dividendos.itens),
@@ -15483,7 +15029,7 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
 // receita/CMV (sem a quebra Produtos/Mercadorias/Serviços que só
 // existe na aba consolidada "Grupo DFC").
 const RESUMO_POR_EMPRESA_LINHAS = [
-  { chave: 'receita', label: '(+) Recebimento' },
+  { chave: 'receita', label: '(+) Receita (Recebimento)' },
   // Pedido 28/07 (print "Deduções de Vendas"): separar Devoluções dos
   // Impostos, Devoluções numa linha logo abaixo. Antes era 1 linha só
   // ("deducoes", Impostos+Devolução misturados). Congelado (Jan-Mai):
@@ -15504,65 +15050,6 @@ const RESUMO_POR_EMPRESA_LINHAS = [
   { chave: 'refis', label: '(-) Outros (Refis)' },
   { chave: 'recebimentoEmprestimos', label: '(+) Recebimento Empréstimos' },
   { chave: 'pagamentoEmprestimos', label: '(-) Pagamento de Empréstimos' },
-];
-
-// NOVO (31/07/2026) — lista específica da KMNO pro card "Resumo (Grupo,
-// R$)", pedido de replicar a estrutura do Excel (aba "KMNO DFC caixa")
-// 1:1: Custo de Serviços (não Mão de Obra), Custo ADM/Indústria quebrado
-// em 3 linhas (Despesas Administração / Dep. Pessoal ADM / Pró-Labore),
-// Despesas Comerciais quebrado em 3 linhas (Despesas Comerciais / Frete
-// Pago / Dep. Comercial). Empréstimos ficam fora (pedido explícito).
-// NÃO afeta NOVAH/RT nem o card de teste — esses continuam usando
-// RESUMO_POR_EMPRESA_LINHAS (acima), intocado.
-const RESUMO_POR_EMPRESA_LINHAS_KMNO = [
-  { chave: 'receita', label: '(+) Recebimento' },
-  { chave: 'impostos', label: '(-) Impostos' },
-  { chave: 'devolucoes', label: '(-) Devoluções' },
-  { chave: 'custoInsumos', label: '(-) Custo de Insumos e Matéria-Prima' },
-  { chave: 'custoServicos', label: '(-) Custo de Serviços' },
-  { chave: 'royalties', label: '(-) Royalties' },
-  { chave: 'despesasAdministracao', label: '(-) Despesas Administração' },
-  { chave: 'depPessoalAdm', label: '(-) Dep. Pessoal ADM' },
-  { chave: 'proLabore', label: '(-) Pró-Labore' },
-  { chave: 'despesasComerciaisPuro', label: '(-) Despesas Comerciais' },
-  { chave: 'fretePago', label: '(-) Frete Pago' },
-  { chave: 'depComercial', label: '(-) Dep. Comercial' },
-  { chave: 'despesasFinanceiras', label: '(-) Despesas Financeiras' },
-  { chave: 'receitasFinanceiras', label: '(+) Receitas Financeiras' },
-  { chave: 'distribuicao', label: '(-) Distribuição de Lucros' },
-  { chave: 'capex', label: '(-) Capex' },
-  { chave: 'refis', label: '(-) Outros (Refis)' },
-];
-
-// NOVO (31/07/2026) — lista específica da NOVAH pro card "Resumo (Grupo,
-// R$)", replicando a estrutura do Excel (aba "NOVAH DFC caixa") 1:1:
-// Custo de Serviços Terceiros isolado + Acabamento/Corte/Rash Guard/
-// Costura Kimono/Bordado/Sublimação/Desp. Pessoal Indústria cada um
-// como linha própria, Custo ADM quebrado em 3 (Despesas Administração/
-// Dep. Pessoal ADM/Pró-Labore). Sem Royalties (não existe pra NOVAH no
-// Excel) e sem Despesas Comerciais (NOVAH não tem esse tipo de custo,
-// confirmado antes). NÃO afeta KMNO/RT nem o card de teste.
-const RESUMO_POR_EMPRESA_LINHAS_NOVAH = [
-  { chave: 'receita', label: '(+) Recebimento' },
-  { chave: 'impostos', label: '(-) Impostos' },
-  { chave: 'devolucoes', label: '(-) Devoluções' },
-  { chave: 'custoInsumos', label: '(-) Custo de Insumos e Matéria-Prima' },
-  { chave: 'custoServicosTerceiros', label: '(-) Custo de Serviços Terceiros' },
-  { chave: 'acabamento', label: '(-) Acabamento' },
-  { chave: 'corte', label: '(-) Corte' },
-  { chave: 'rashBermuda', label: '(-) Rash Guard/Bermudas' },
-  { chave: 'costuraKimono', label: '(-) Costura Kimono' },
-  { chave: 'bordado', label: '(-) Bordado' },
-  { chave: 'sublimacao', label: '(-) Sublimação' },
-  { chave: 'despPessoalIndustria', label: '(-) Desp. Pessoal Indústria' },
-  { chave: 'despesasAdministracao', label: '(-) Despesas Administração' },
-  { chave: 'depPessoalAdm', label: '(-) Dep. Pessoal ADM' },
-  { chave: 'proLabore', label: '(-) Pró-Labore' },
-  { chave: 'despesasFinanceiras', label: '(-) Despesas Financeiras' },
-  { chave: 'receitasFinanceiras', label: '(+) Receitas Financeiras' },
-  { chave: 'distribuicao', label: '(-) Distribuição de Lucros' },
-  { chave: 'capex', label: '(-) Capex' },
-  { chave: 'refis', label: '(-) Outros (Refis)' },
 ];
 
 // Separa o bucket congelado "deducoes" (Excel, Jan-Mai — só existe
@@ -15701,16 +15188,11 @@ function renderTesteLinhas(itens, meses, getTotal, getFilhos, seqPrefix, semCliq
     return s + (gReceita ? getTotal(gReceita)[idx] : 0);
   }, 0);
 
-  // FIX (31/07/2026): AV% mês a mês agora é % sobre o Faturamento
-  // DAQUELE mês (mesma base da coluna AV% final) — antes era variação
-  // % vs mês anterior (fmtPctVariacao). Array pré-calculado 1x, usado
-  // tanto nas linhas pai quanto nas linhas-filho abaixo.
-  const receitaPorMesTeste = meses.map(m => {
-    const idx = testeMesIdx(m.mesDayjs);
-    if (idx < 0) return 0;
-    const gReceita = itens.find(it => it.chave === 'receita');
-    return gReceita ? (getTotal(gReceita)[idx] || 0) : 0;
-  });
+  // Pedido 30/07: AV% mês a mês (vs mês ANTERIOR) — pra 1ª coluna
+  // exibida, olha pro índice do mês anterior no MESMO array fixo
+  // (KMNO_TESTE_GRUPOS/NOVAH_TESTE_GRUPOS só cobrem Jan-Mai/26); se o
+  // 1º mês exibido já for Jan, não tem "mês antes" nesse dataset (-1).
+  const idxMesAntes = testeMesIdx(meses[0].mesDayjs.subtract(1, 'month'));
 
   let seq = 0;
   return itens.map(it => {
@@ -15722,10 +15204,11 @@ function renderTesteLinhas(itens, meses, getTotal, getFilhos, seqPrefix, semCliq
     const total = validos.reduce((a,b) => a+b, 0);
     const media = validos.length ? total/validos.length : 0;
     const avPct = totalReceitaPeriodo ? (total/totalReceitaPeriodo*100) : null;
+    const valorAntesTotal = idxMesAntes >= 0 ? getTotal(it)[idxMesAntes] : null;
     const celulas = valoresMeses.map((v, i) => {
-      const baseRecebimentoMes = receitaPorMesTeste[i];
-      const avPctMes = (v === null || !baseRecebimentoMes) ? null : (v / baseRecebimentoMes * 100);
-      return `<td class="num">${v===null?'—':fmtBRL(v)}</td><td class="num total-pct">${avPctMes===null?'—':avPctMes.toFixed(1).replace('.', ',')+'%'}</td>`;
+      const ant = i === 0 ? valorAntesTotal : valoresMeses[i - 1];
+      const avMesAnt = (v === null || ant == null) ? '—' : fmtPctVariacao(v, ant);
+      return `<td class="num">${v===null?'—':fmtBRL(v)}</td><td class="num total-pct">${avMesAnt}</td>`;
     }).join('')
       + `<td class="num total">${fmtBRL(total)}</td>`
       + `<td class="num media">${fmtBRL(media)}</td>`
@@ -15751,10 +15234,11 @@ function renderTesteLinhas(itens, meses, getTotal, getFilhos, seqPrefix, semCliq
       const totalF = validosF.reduce((a,b) => a+b, 0);
       const mediaF = validosF.length ? totalF/validosF.length : 0;
       const avPctF = totalReceitaPeriodo ? (totalF/totalReceitaPeriodo*100) : null;
+      const valorAntesF = idxMesAntes >= 0 ? (f.valores[idxMesAntes] || 0) : null;
       const celulasF = valoresF.map((v, i) => {
-        const baseRecebimentoMes = receitaPorMesTeste[i];
-        const avPctMesF = (v === null || !baseRecebimentoMes) ? null : (v / baseRecebimentoMes * 100);
-        return `<td class="num">${v===null?'—':fmtBRL(v)}</td><td class="num total-pct">${avPctMesF===null?'—':avPctMesF.toFixed(1).replace('.', ',')+'%'}</td>`;
+        const ant = i === 0 ? valorAntesF : valoresF[i - 1];
+        const avMesAntF = (v === null || ant == null) ? '—' : fmtPctVariacao(v, ant);
+        return `<td class="num">${v===null?'—':fmtBRL(v)}</td><td class="num total-pct">${avMesAntF}</td>`;
       }).join('')
         + `<td class="num total">${fmtBRL(totalF)}</td>`
         + `<td class="num media">${fmtBRL(mediaF)}</td>`
@@ -15798,7 +15282,7 @@ function renderGrupoResumoTeste(monthStart, monthEnd) {
   }
 
   header.innerHTML = '<th class="dre-tbl-sticky">Descrição</th>'
-    + meses.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}</th><th class="total-pct">AV%</th>`).join('')
+    + meses.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}</th><th class="total-pct">AV% (mês ant.)</th>`).join('')
     + '<th>Total</th><th>Média</th><th class="total-pct">AV%</th>';
 
   const empresasSel = (typeof selectedCompanyKeys !== 'undefined' && selectedCompanyKeys) ? selectedCompanyKeys : [];
@@ -15913,7 +15397,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // (AV% por mês testado 28/07 e revertido — "fica muito poluída".)
   // Pedido 30/07: adicionada AV% MÊS A MÊS (vs mês anterior) — coexiste
   // com a AV% acima, coluna extra depois de cada mês.
-  header.innerHTML = '<th class="dre-tbl-sticky">Descrição</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th><th class="total-pct">AV%</th>`).join('') + '<th>Total</th><th>Média</th><th class="total-pct">AV%</th>';
+  header.innerHTML = '<th class="dre-tbl-sticky">Descrição</th>' + mesesValidos.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.mesDayjs.month()]}${m.live ? ' •' : ''}</th><th class="total-pct">AV% (mês ant.)</th>`).join('') + '<th>Total</th><th>Média</th><th class="total-pct">AV%</th>';
 
   // Dado do mês imediatamente ANTES do 1º mês exibido — usado como base
   // da AV% mês a mês da 1ª coluna (as demais colunas usam a coluna
@@ -15956,11 +15440,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const totalPorChave = {};
   const valoresMesesPorChave = {};
   const htmlPorChave = {};
-  // NOVO (31/07/2026): KMNO usa a lista própria (RESUMO_POR_EMPRESA_LINHAS_KMNO,
-  // com a quebra ADM/Comercial e Custo de Serviços) — NOVAH/RT continuam
-  // na lista original, sem mudança nenhuma.
-  const linhasConfig = empresaKey === 'KMNO' ? RESUMO_POR_EMPRESA_LINHAS_KMNO : (empresaKey === 'NOVAH' ? RESUMO_POR_EMPRESA_LINHAS_NOVAH : RESUMO_POR_EMPRESA_LINHAS);
-  linhasConfig.forEach(l => {
+  RESUMO_POR_EMPRESA_LINHAS.forEach(l => {
     // impostos/devolucoes (pedido 28/07): fonte congelada só tem
     // "deducoes" mesclado — splitDeducoesCongelado() separa por nome.
     const bucketCongelado = (l.chave === 'impostos' || l.chave === 'devolucoes')
@@ -15998,12 +15478,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       <tr class="dre-tbl-row${temCategorias ? ' colapsavel' : ''}${ehReceita ? ' dre-tbl-row-amarelo' : ''}"${temCategorias ? ` id="pai-${rowId}" onclick="toggleResumoEmpresaConta('${rowId}')" title="Clique para ver as categorias"` : ''}${ehReceita ? ' style="font-weight:600;"' : ''}>
         <td class="dre-tbl-sticky">${temCategorias ? `<span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>` : ''}${semPrefixoDre(l.label)}</td>
         ${valoresMeses.map((v, i) => {
-          // FIX (31/07/2026): AV% por mês agora é % sobre o Recebimento
-          // DAQUELE mês (mesma base da coluna AV% final) — antes era
-          // variação % vs mês anterior (fmtPctVariacao).
-          const baseRecebimentoMes = receitaPorMes[i];
-          const avPctMes = baseRecebimentoMes ? (v / baseRecebimentoMes * 100) : null;
-          return `<td class="num">${fmtBRL(v)}</td><td class="num total-pct">${avPctMes === null ? '—' : avPctMes.toFixed(1).replace('.', ',') + '%'}</td>`;
+          const ant = i === 0 ? valorMesAntes(l.chave) : valoresMeses[i - 1];
+          return `<td class="num">${fmtBRL(v)}</td><td class="num total-pct">${ant == null ? '—' : fmtPctVariacao(v, ant)}</td>`;
         }).join('')}
         <td class="num">${fmtBRL(total)}</td>
         <td class="num">${fmtBRL(media)}</td>
@@ -16023,9 +15499,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
         <tr class="dre-tbl-row" style="display:none;color:#DAD4C4;font-size:12px;" data-grupo-conta="${rowId}">
           <td class="dre-tbl-sticky">${catLabel}</td>
           ${valoresCat.map((v, i) => {
-            const baseRecebimentoMes = receitaPorMes[i];
-            const avPctMes = baseRecebimentoMes ? (v / baseRecebimentoMes * 100) : null;
-            return `<td class="num">${fmtBRL(v)}</td><td class="num total-pct">${avPctMes === null ? '—' : avPctMes.toFixed(1).replace('.', ',') + '%'}</td>`;
+            const ant = i === 0 ? valorMesAntes(l.chave, catLabel) : valoresCat[i - 1];
+            return `<td class="num">${fmtBRL(v)}</td><td class="num total-pct">${ant == null ? '—' : fmtPctVariacao(v, ant)}</td>`;
           }).join('')}
           <td class="num">${fmtBRL(totalCat)}</td>
           <td class="num">${fmtBRL(mediaCat)}</td>
@@ -16058,9 +15533,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       <tr class="dre-tbl-row-amarelo" style="font-weight:600;">
         <td class="dre-tbl-sticky">${label}</td>
         ${valoresPorMes.map((v, i) => {
-          const baseRecebimentoMes = receitaPorMes[i];
-          const avPctMes = baseRecebimentoMes ? (v / baseRecebimentoMes * 100) : null;
-          return `<td class="num">${fmtBRL(v)}</td><td class="num total-pct">${avPctMes === null ? '—' : avPctMes.toFixed(1).replace('.', ',') + '%'}</td>`;
+          const ant = i === 0 ? valorAntes : valoresPorMes[i - 1];
+          return `<td class="num">${fmtBRL(v)}</td><td class="num total-pct">${ant == null ? '—' : fmtPctVariacao(v, ant)}</td>`;
         }).join('')}
         <td class="num">${fmtBRL(total)}</td>
         <td class="num">${fmtBRL(media)}</td>
@@ -16069,133 +15543,40 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   };
 
   const receitaLiquidaPorMes = subtraiArraysLinhas(valoresMesesPorChave['receita'] || [], 'impostos', 'devolucoes');
-  // FIX (31/07/2026): CMV agora SEM Royalties (antes incluía Royalties
-  // dentro da variável "cmv" por engano — a MARGEM final não mudava de
-  // valor porque a subtração acontecia do mesmo jeito, mas a linha nova
-  // "(=) CMV" abaixo precisa do valor puro, batendo com o Excel: CMV
-  // Jan/KMNO = R$264.415,46, sem os R$14.700,69 de Royalties). NOVAH:
-  // CMV agora soma os 8 componentes granulares (custoInsumos +
-  // custoServicosTerceiros + acabamento+corte+rashBermuda+costuraKimono+
-  // bordado+sublimacao+despPessoalIndustria) em vez do bucket único
-  // "custoMaoObra" (que não estava mais na linhasConfig da NOVAH).
-  const cmvPorMes = empresaKey === 'NOVAH'
-    ? somaArraysLinhas('custoInsumos', 'custoServicosTerceiros', 'acabamento', 'corte', 'rashBermuda', 'costuraKimono', 'bordado', 'sublimacao', 'despPessoalIndustria')
-    : somaArraysLinhas('custoInsumos', 'custoServicos', 'custoMaoObra');
-  const margemPorMes = mesesValidos.map((_, i) => receitaLiquidaPorMes[i] - cmvPorMes[i] - (valoresMesesPorChave['royalties'] || mesesValidos.map(() => 0))[i]);
-  // KMNO/NOVAH: custoAdm/despesasComerciais não estão mais na
-  // linhasConfig (foram quebrados em linhas próprias) — soma a partir
-  // dos componentes granulares. RT (fallback): mantém comportamento
-  // original (chave única, embora nunca chegue aqui na prática).
-  const custoAdmTotalPorMes = (empresaKey === 'KMNO' || empresaKey === 'NOVAH')
-    ? somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'proLabore')
-    : (valoresMesesPorChave['custoAdm'] || mesesValidos.map(() => 0));
-  const despesasComerciaisTotalPorMes = empresaKey === 'KMNO'
-    ? somaArraysLinhas('despesasComerciaisPuro', 'fretePago', 'depComercial')
-    : (valoresMesesPorChave['despesasComerciais'] || mesesValidos.map(() => 0));
-  const ebitdaPorMes = mesesValidos.map((_, i) => margemPorMes[i] - custoAdmTotalPorMes[i] - despesasComerciaisTotalPorMes[i]);
+  const cmvPorMes = somaArraysLinhas('custoInsumos', 'custoServicos', 'custoMaoObra', 'royalties');
+  const margemPorMes = mesesValidos.map((_, i) => receitaLiquidaPorMes[i] - cmvPorMes[i]);
+  const ebitdaPorMes = mesesValidos.map((_, i) => margemPorMes[i] - (valoresMesesPorChave['custoAdm'] || [])[i] - (valoresMesesPorChave['despesasComerciais'] || [])[i]);
   const resultadoLiquidoPorMes = mesesValidos.map((_, i) => ebitdaPorMes[i] - (valoresMesesPorChave['despesasFinanceiras'] || [])[i] + (valoresMesesPorChave['receitasFinanceiras'] || [])[i]);
   const saldoLiquidoPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao'] || [])[i] - (valoresMesesPorChave['capex'] || [])[i] - (valoresMesesPorChave['refis'] || [])[i]);
 
   // Mesmas fórmulas acima, aplicadas só ao mês ANTES do período exibido
   // (pra AV% mês a mês da 1ª coluna dos subtotais).
   const receitaLiquidaAntes = temFonteMesAntes ? (valorMesAntes('receita') - valorMesAntes('impostos') - valorMesAntes('devolucoes')) : null;
-  const cmvAntes = temFonteMesAntes ? (empresaKey === 'NOVAH'
-    ? (valorMesAntes('custoInsumos') + valorMesAntes('custoServicosTerceiros') + valorMesAntes('acabamento') + valorMesAntes('corte') + valorMesAntes('rashBermuda') + valorMesAntes('costuraKimono') + valorMesAntes('bordado') + valorMesAntes('sublimacao') + valorMesAntes('despPessoalIndustria'))
-    : (valorMesAntes('custoInsumos') + valorMesAntes('custoServicos') + valorMesAntes('custoMaoObra'))) : null;
-  const margemAntes = temFonteMesAntes ? (receitaLiquidaAntes - cmvAntes - valorMesAntes('royalties')) : null;
-  const custoAdmAntes = temFonteMesAntes ? ((empresaKey === 'KMNO' || empresaKey === 'NOVAH')
-    ? (valorMesAntes('despesasAdministracao') + valorMesAntes('depPessoalAdm') + valorMesAntes('proLabore'))
-    : valorMesAntes('custoAdm')) : null;
-  const despesasComerciaisAntes = temFonteMesAntes ? (empresaKey === 'KMNO'
-    ? (valorMesAntes('despesasComerciaisPuro') + valorMesAntes('fretePago') + valorMesAntes('depComercial'))
-    : valorMesAntes('despesasComerciais')) : null;
-  const ebitdaAntes = temFonteMesAntes ? (margemAntes - custoAdmAntes - despesasComerciaisAntes) : null;
+  const cmvAntes = temFonteMesAntes ? (valorMesAntes('custoInsumos') + valorMesAntes('custoServicos') + valorMesAntes('custoMaoObra') + valorMesAntes('royalties')) : null;
+  const margemAntes = temFonteMesAntes ? (receitaLiquidaAntes - cmvAntes) : null;
+  const ebitdaAntes = temFonteMesAntes ? (margemAntes - valorMesAntes('custoAdm') - valorMesAntes('despesasComerciais')) : null;
   const resultadoLiquidoAntes = temFonteMesAntes ? (ebitdaAntes - valorMesAntes('despesasFinanceiras') + valorMesAntes('receitasFinanceiras')) : null;
   const saldoLiquidoAntes = temFonteMesAntes ? (resultadoLiquidoAntes - valorMesAntes('distribuicao') - valorMesAntes('capex') - valorMesAntes('refis')) : null;
 
-  // NOVO (31/07/2026) — KMNO e NOVAH replicam a ordem exata dos seus
-  // respectivos Excel (abas "KMNO DFC caixa" / "NOVAH DFC caixa"): CMV
-  // como linha própria (sem Royalties), Custo ADM quebrado em 3
-  // (Despesas Administração/Dep. Pessoal ADM/Pró-Labore), e "(-) EBITDA"
-  // renomeado pra "(=) Resultado Operacional [Lucro Bruto]" (mesmo
-  // valor, só o nome que bate com o Excel). KMNO ainda quebra Despesas
-  // Comerciais em 3 (Frete Pago/Dep. Comercial) e tem Royalties; NOVAH
-  // não tem Despesas Comerciais nem Royalties (não existem no Excel
-  // dela), e quebra o Custo Mão de Obra em 8 linhas (Custo de Serviços
-  // Terceiros + Acabamento/Corte/Rash Guard/Costura Kimono/Bordado/
-  // Sublimação/Desp. Pessoal Indústria) em vez de 1 linha só. RT
-  // (fallback) continua no formato antigo, embora nunca chegue aqui na
-  // prática (RT ainda não tem dado congelado).
-  const linhas = empresaKey === 'KMNO'
-    ? htmlPorChave['receita']
-      + htmlPorChave['impostos']
-      + htmlPorChave['devolucoes']
-      + linhaSubtotal('(=) Receita Líquida', receitaLiquidaPorMes, receitaLiquidaAntes)
-      + htmlPorChave['custoInsumos']
-      + htmlPorChave['custoServicos']
-      + linhaSubtotal('(=) CMV', cmvPorMes, cmvAntes)
-      + htmlPorChave['royalties']
-      + linhaSubtotal('(=) Margem de Contribuição', margemPorMes, margemAntes)
-      + htmlPorChave['despesasAdministracao']
-      + htmlPorChave['depPessoalAdm']
-      + htmlPorChave['proLabore']
-      + htmlPorChave['despesasComerciaisPuro']
-      + htmlPorChave['fretePago']
-      + htmlPorChave['depComercial']
-      + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
-      + htmlPorChave['despesasFinanceiras']
-      + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(-) Resultado Líquido (Lucro Líquido)', resultadoLiquidoPorMes, resultadoLiquidoAntes)
-      + htmlPorChave['distribuicao']
-      + htmlPorChave['capex']
-      + htmlPorChave['refis']
-      + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPorMes, saldoLiquidoAntes)
-    : empresaKey === 'NOVAH'
-    ? htmlPorChave['receita']
-      + htmlPorChave['impostos']
-      + htmlPorChave['devolucoes']
-      + linhaSubtotal('(=) Receita Líquida', receitaLiquidaPorMes, receitaLiquidaAntes)
-      + htmlPorChave['custoInsumos']
-      + htmlPorChave['custoServicosTerceiros']
-      + htmlPorChave['acabamento']
-      + htmlPorChave['corte']
-      + htmlPorChave['rashBermuda']
-      + htmlPorChave['costuraKimono']
-      + htmlPorChave['bordado']
-      + htmlPorChave['sublimacao']
-      + htmlPorChave['despPessoalIndustria']
-      + linhaSubtotal('(=) CMV', cmvPorMes, cmvAntes)
-      + linhaSubtotal('(=) Margem de Contribuição', margemPorMes, margemAntes)
-      + htmlPorChave['despesasAdministracao']
-      + htmlPorChave['depPessoalAdm']
-      + htmlPorChave['proLabore']
-      + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
-      + htmlPorChave['despesasFinanceiras']
-      + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(-) Resultado Líquido (Lucro Líquido)', resultadoLiquidoPorMes, resultadoLiquidoAntes)
-      + htmlPorChave['distribuicao']
-      + htmlPorChave['capex']
-      + htmlPorChave['refis']
-      + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPorMes, saldoLiquidoAntes)
-    : htmlPorChave['receita']
-      + htmlPorChave['impostos']
-      + htmlPorChave['devolucoes']
-      + linhaSubtotal('(=) Receita Líquida', receitaLiquidaPorMes, receitaLiquidaAntes)
-      + htmlPorChave['custoInsumos']
-      + htmlPorChave['custoServicos']
-      + htmlPorChave['custoMaoObra']
-      + htmlPorChave['royalties']
-      + linhaSubtotal('(=) Margem de Contribuição', margemPorMes, margemAntes)
-      + htmlPorChave['custoAdm']
-      + htmlPorChave['despesasComerciais']
-      + linhaSubtotal('(-) EBITDA', ebitdaPorMes, ebitdaAntes)
-      + htmlPorChave['despesasFinanceiras']
-      + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(-) Resultado Líquido (Lucro Líquido)', resultadoLiquidoPorMes, resultadoLiquidoAntes)
-      + htmlPorChave['distribuicao']
-      + htmlPorChave['capex']
-      + htmlPorChave['refis']
-      + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPorMes, saldoLiquidoAntes);
+  const linhas = htmlPorChave['receita']
+    + htmlPorChave['impostos']
+    + htmlPorChave['devolucoes']
+    + linhaSubtotal('(=) Receita Líquida', receitaLiquidaPorMes, receitaLiquidaAntes)
+    + htmlPorChave['custoInsumos']
+    + htmlPorChave['custoServicos']
+    + htmlPorChave['custoMaoObra']
+    + htmlPorChave['royalties']
+    + linhaSubtotal('(=) Margem de Contribuição', margemPorMes, margemAntes)
+    + htmlPorChave['custoAdm']
+    + htmlPorChave['despesasComerciais']
+    + linhaSubtotal('(-) EBITDA', ebitdaPorMes, ebitdaAntes)
+    + htmlPorChave['despesasFinanceiras']
+    + htmlPorChave['receitasFinanceiras']
+    + linhaSubtotal('(-) Resultado Líquido (Lucro Líquido)', resultadoLiquidoPorMes, resultadoLiquidoAntes)
+    + htmlPorChave['distribuicao']
+    + htmlPorChave['capex']
+    + htmlPorChave['refis']
+    + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPorMes, saldoLiquidoAntes);
 
   body.innerHTML = linhas;
 }
@@ -16504,16 +15885,77 @@ const PROVA_REAL_MESES_ORDEM = ['jan', 'fev', 'mar', 'abr', 'mai'];
 // DRE por Bloco / Tipo-Grupo-Conta / Resumo Grupo). 1 empresa marcada =
 // mostra só aquela; "Todas as Empresas"/2+ marcadas = mostra 1 linha
 // somada por métrica, expansível (clique) pra ver KMNO/NOVAH/RT dentro.
-function renderProvaRealPorEmpresa() {
+// Prova Real (mês ao vivo, Jun/2026+) — mesma métrica do congelado
+// (PROVA_REAL_POR_EMPRESA), calculada em cima do Supabase/Omie:
+// Saldo Inicial e Saldo Real vêm do rollback já usado no card de Bancos
+// (calcSaldoInicialRealizado); Entradas/Saídas somam analiseBancosMovimentosCache
+// com o MESMO filtro do DFC (isExcludedFromDfc), garantindo que Saldo
+// Calculado = Inicial + Entradas − Saídas seja consistente com o rollback.
+function buildProvaRealMesAoVivo(empresa, mesStart) {
+  const mesEndExcl = mesStart.add(1, 'month');
+  const saldoInicial = calcSaldoInicialRealizado(analiseBancosContasCache, dreArvoreCategoriesCache, analiseBancosMovimentosCache, empresa, mesStart);
+  const saldoReal = calcSaldoInicialRealizado(analiseBancosContasCache, dreArvoreCategoriesCache, analiseBancosMovimentosCache, empresa, mesEndExcl);
+  const catByKey = buildCatByEmpresaCodigo(dreArvoreCategoriesCache || []);
+  let entradas = 0, saidas = 0;
+  (analiseBancosMovimentosCache || []).forEach(m => {
+    if (empresa !== 'TODAS' && m._empresa !== empresa) return;
+    if (!m.dt_pagamento) return;
+    const d = dayjs(m.dt_pagamento);
+    if (d.isBefore(mesStart) || !d.isBefore(mesEndExcl)) return;
+    if (m.cod_categoria) {
+      const cat = catByKey[`${m._empresa}|${m.cod_categoria}`];
+      if (isExcludedFromDfc(cat)) return;
+    }
+    const v = Number(m.val_pago || m.val_liquido || 0);
+    if (m.natureza === 'R') entradas += v;
+    else if (m.natureza === 'P') saidas += v;
+  });
+  const saldoCalculado = saldoInicial + entradas - saidas;
+  const diferenca = saldoReal - saldoCalculado;
+  return { saldoInicial, entradas, saidas, saldoCalculado, saldoReal, diferenca };
+}
+
+function renderProvaRealPorEmpresa(monthStart, monthEnd) {
   const tabsEl = document.getElementById('provaRealEmpresaTabs');
   const bodyEl = document.getElementById('provaRealEmpresaBody');
   const wrapEl = document.getElementById('provaRealEmpresaWrap');
+  const headerEl = document.getElementById('provaRealEmpresaHeader');
   if (!tabsEl || !bodyEl || !wrapEl) return;
 
   // Aplica o estado de expandir/recolher o CARD INTEIRO logo no início
   // (independe dos dados/linhas renderizados abaixo) — cobre todos os
   // returns da função, igual ao padrão do card "Bancos".
   aplicarEstadoProvaRealCard();
+
+  // Monta a lista de meses: Jan-Mai fixo (congelado, igual sempre foi),
+  // mais Jun/2026+ ao vivo até o fim do período selecionado no topo —
+  // pedido 04/08 ("de maio pra frente precisa ter os dados do Omie").
+  // Sem período selecionado ainda (monthStart/monthEnd ausentes), mostra
+  // só o congelado, como era antes.
+  const meses = PROVA_REAL_MESES_ORDEM.map((chave, i) => ({
+    chave, live: false, label: DRE_ARVORE_NOMES_MES[i].charAt(0) + DRE_ARVORE_NOMES_MES[i].slice(1).toLowerCase(),
+  }));
+  if (monthEnd) {
+    let cursor = EXCEL_CONGELADO_ATE;
+    let guard = 0;
+    while (cursor.isBefore(monthEnd) && guard < 24) {
+      meses.push({ chave: cursor.format('YYYY-MM'), live: true, mesDayjs: cursor, label: DRE_ARVORE_NOMES_MES[cursor.month()].charAt(0) + DRE_ARVORE_NOMES_MES[cursor.month()].slice(1).toLowerCase() });
+      cursor = cursor.add(1, 'month');
+      guard++;
+    }
+  }
+  if (headerEl) {
+    headerEl.innerHTML = '<th>Descrição</th>' + meses.map(m => `<th>${m.label}${m.live ? ' •' : ''}</th>`).join('');
+  }
+
+  const getDado = (empresa, mes) => {
+    if (mes.live) {
+      if (!analiseBancosContasCache || !analiseBancosMovimentosCache) return null; // caches ainda não carregaram
+      return buildProvaRealMesAoVivo(empresa, mes.mesDayjs);
+    }
+    const d = PROVA_REAL_POR_EMPRESA[empresa];
+    return d ? d[mes.chave] : null;
+  };
 
   const empresasTodas = ['KMNO', 'NOVAH', 'RT'];
   const empresaUnica = (selectedCompanyKeys && selectedCompanyKeys.length === 1) ? selectedCompanyKeys[0] : null;
@@ -16538,50 +15980,40 @@ function renderProvaRealPorEmpresa() {
 
   // ---- 1 empresa selecionada: comportamento igual ao anterior ----
   if (empresaUnica) {
-    const dados = PROVA_REAL_POR_EMPRESA[empresaUnica];
-    if (!dados) {
-      bodyEl.innerHTML = '<tr><td style="color:var(--bone-dim);">Sem dado ainda pra essa empresa — pendente planilha/print equivalente ao da KMNO.</td></tr>';
-      return;
-    }
     bodyEl.innerHTML = linhas.map(l => `
       <tr${l.destaque ? ' style="font-weight:600;"' : ''}>
         <td>${l.label}</td>
-        ${PROVA_REAL_MESES_ORDEM.map(m => fmtCel(dados[m][l.chave])).join('')}
+        ${meses.map(m => fmtCel(getDado(empresaUnica, m)?.[l.chave])).join('')}
       </tr>`).join('');
     return;
   }
 
   // ---- Grupo/Todas as Empresas: linha somada + detalhe expansível ----
-  const empresasComDado = empresasTodas.filter(e => PROVA_REAL_POR_EMPRESA[e]);
-  if (!empresasComDado.length) {
-    bodyEl.innerHTML = '<tr><td style="color:var(--bone-dim);">Sem dado ainda — pendente planilha/print equivalente ao da KMNO.</td></tr>';
-    return;
-  }
+  // RT não tem congelado (Jan-Mai vira "-----" nela), mas TEM dado ao
+  // vivo (Jun+) — por isso as 3 empresas sempre aparecem como filha
+  // expansível agora; o que varia é se cada CÉLULA individual tem valor.
   const somaMetrica = (chave, m) => {
     let soma = null;
-    empresasComDado.forEach(e => {
-      const v = PROVA_REAL_POR_EMPRESA[e][m]?.[chave];
+    empresasTodas.forEach(e => {
+      const v = getDado(e, m)?.[chave];
       if (v === null || v === undefined) return;
       soma = (soma ?? 0) + v;
     });
     return soma;
   };
 
-  bodyEl.innerHTML = linhas.map((l, li) => {
+  bodyEl.innerHTML = linhas.map((l) => {
     const rowId = `prova-real-grupo-${l.chave}`;
     const linhaPai = `
       <tr class="dre-tbl-row colapsavel" id="pai-${rowId}" onclick="toggleResumoEmpresaConta('${rowId}')" title="Clique para ver por empresa"${l.destaque ? ' style="font-weight:600;"' : ''}>
         <td><span id="icon-${rowId}" style="display:inline-block;width:14px;">+</span> ${l.label}</td>
-        ${PROVA_REAL_MESES_ORDEM.map(m => fmtCel(somaMetrica(l.chave, m))).join('')}
+        ${meses.map(m => fmtCel(somaMetrica(l.chave, m))).join('')}
       </tr>`;
-    const linhasFilhas = empresasComDado.map(e => {
-      const dados = PROVA_REAL_POR_EMPRESA[e];
-      return `
+    const linhasFilhas = empresasTodas.map(e => `
       <tr class="dre-tbl-row" data-grupo-conta="${rowId}" style="display:none;">
         <td style="padding-left:26px;color:var(--bone-dim);">${COMPANIES[e]?.label || e}</td>
-        ${PROVA_REAL_MESES_ORDEM.map(m => fmtCel(dados[m]?.[l.chave])).join('')}
-      </tr>`;
-    }).join('');
+        ${meses.map(m => fmtCel(getDado(e, m)?.[l.chave])).join('')}
+      </tr>`).join('');
     return linhaPai + linhasFilhas;
   }).join('');
 }
