@@ -9031,6 +9031,9 @@ function buildResumoNovah(B) {
     + B.costura_kimono.total + B.bordado.total + B.sublimacao.total + B.desp_pessoal_industria.total;
   const despesasAdm = B.despesas_adm.total;
   const depPessoalAdm = B.dep_pessoal_adm.total + B.pj_terceiros_adm.total;
+  const proLabore = B.pro_labore.total;
+  const resultadoOperacional = margemContribuicao - despIndustriais - despesasAdm - proLabore - depPessoalAdm;
+  const depreciacao = calcDepreciacao('NOVAH', receitaBruta);
   const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
   const despFinanceiras = B.despesas_financeiras.total;
   const resultadoLiquido = lucroBrutoDepreciacao - despFinanceiras;
