@@ -519,7 +519,13 @@
     min-width: 150px;
     white-space: nowrap;
   }
-  .fin-tbl th { color: var(--bone-dim); font-weight: 500; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; }
+  /* Pedido 05/08: mesma coisa pra 1ª coluna da tabela "Detalhe Mensal"
+     (Impostos e Análises) — "IRPJ Presumido (15%)" quebrando em 3 linhas. */
+  #impostosDetalheHeader th:first-child, #impostosDetalheBody td:first-child {
+    min-width: 200px;
+    white-space: nowrap;
+  }
+  .fin-tbl th { color: var(--bone-dim); font-weight: 500; text-transform: uppercase; font-size: 10.5px; letter-spacing: 0.03em; white-space: nowrap; }
   .fin-tbl td.num { font-family: 'IBM Plex Mono', monospace; text-align: right; }
   .fin-tbl .status-pago { color: var(--green); }
   .fin-tbl .status-pendente { color: var(--bone-dim); }
@@ -992,7 +998,7 @@
   .dre-tbl th.total, .dre-tbl td.total, .dre-tbl th.media, .dre-tbl td.media,
   .dre-tbl th.total-pct, .dre-tbl td.total-pct, .dre-tbl th.media-pct, .dre-tbl td.media-pct {
     border-left: 1px solid var(--line);
-    background: var(--navy-2);
+    background: #2a3c42;
     font-weight: 600;
   }
   /* Total/Média e as % vs período anterior ficam fixas à direita (sticky)
@@ -4599,6 +4605,15 @@ let selectedCompanyKeys = ['RT'];
 let categoriesCache = null;
 let movementsCache = null; // unifiedMovements (receivable+payable) — usar SOMENTE para DRE/competência (dt_emissao)
 let financialMovementsCache = null; // omie_financial_movements puro — usar para DFC/caixa (dt_pagamento real)
+// NOVO (05/08/2026): mapa "empresa|titulo" -> [{cod_categoria,valor,percentual}]
+// vindo de dash_accounts_payable_categorias (rateio de Contas a Pagar).
+// Usado em 2 lugares: (1) unifiedMovements/Competência, pra não descartar
+// título sem categoria única; (2) buildTotalPorCategoriaEmpresa/Caixa, pra
+// corrigir a categoria — o Omie (ListarMovimentos) não expõe o rateio
+// nesse endpoint, só grava 1 categoria (parcial/arbitrária) pro título
+// inteiro. Mesmo título, mesma divisão real dos dois lados — confirmado
+// (2273166814, IFOOD, 14 categorias, valores idênticos nas duas fontes).
+let rateioPayableCache = {};
 let receivableCache = null;
 let payableCache = null;
 let clientsCache = null;
@@ -4788,6 +4803,13 @@ function calcTransferenciasPeriodo(transferencias, empresa, monthStart, monthEnd
 function calcSaldoInicialRealizado(contas, categories, cashMovements, empresa, monthStart) {
   const contasCaixa = contasFluxoCaixa(contas, empresa);
   const saldoAtualTotal = contasCaixa.reduce((s, c) => s + Number(c.saldo_atual || 0), 0);
+  // FIX 04/08: as movimentações também precisam ficar restritas às contas
+  // de fluxo de caixa real — antes só o saldo_atual usava contasFluxoCaixa,
+  // mas o rollback abaixo (movimentosDesdeInicio) somava QUALQUER conta,
+  // inclusive as virtuais (fluxo_caixa=false, ex: "Adiantamento de
+  // Cliente"). Reconciliado com Omie (Novah, Junho): sem esse filtro a
+  // Despesa Realizada ficava ~7% inflada.
+  const codsCaixaValidos = new Set(contasCaixa.map(c => c.n_cod_cc));
 
   const catByKey = buildCatByEmpresaCodigo(categories);
   const amanha = dayjs().add(1, 'day');
@@ -4795,6 +4817,7 @@ function calcSaldoInicialRealizado(contas, categories, cashMovements, empresa, m
   (cashMovements || []).forEach(m => {
     if (empresa !== 'TODAS' && m._empresa !== empresa) return;
     if (!m.dt_pagamento) return;
+    if (m.cod_cc != null && !codsCaixaValidos.has(m.cod_cc)) return;
     const d = dayjs(m.dt_pagamento);
     if (d.isBefore(monthStart) || !d.isBefore(amanha)) return;
     if (m.cod_categoria) {
@@ -6432,6 +6455,10 @@ const DRE_ARVORE_BLOCOS = {
         {
           "nome": "Outras Entradas",
           "natureza": "R"
+        },
+        {
+          "nome": "Empréstimos Bancários",
+          "natureza": "R"
         }
       ]
     },
@@ -6499,7 +6526,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Frete de Produção",
+          "nome": "Frete Produção",
           "natureza": "P"
         },
         {
@@ -6543,6 +6570,10 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "Produtividade CLT Acabamento",
+          "natureza": "P"
+        },
+        {
+          "nome": "Hora Extra CLT Acabamento",
           "natureza": "P"
         }
       ]
@@ -6592,7 +6623,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Terceiros (Costura Externa)",
+          "nome": "Costura Externa Rash Bermuda",
           "natureza": "P"
         }
       ]
@@ -6625,6 +6656,10 @@ const DRE_ARVORE_BLOCOS = {
         {
           "nome": "Produtividade CLT Costura",
           "natureza": "P"
+        },
+        {
+          "nome": "Hora Extra CLT Costura",
+          "natureza": "P"
         }
       ]
     },
@@ -6655,6 +6690,10 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "Produtividade CLT Bordado",
+          "natureza": "P"
+        },
+        {
+          "nome": "Hora Extra CLT Bordado",
           "natureza": "P"
         }
       ]
@@ -6757,6 +6796,10 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "Multa FGTS Indústria",
+          "natureza": "P"
+        },
+        {
+          "nome": "Rescisão Industria",
           "natureza": "P"
         }
       ]
@@ -6881,6 +6924,30 @@ const DRE_ARVORE_BLOCOS = {
         {
           "nome": "Serviços Diretoria",
           "natureza": "P"
+        },
+        {
+          "nome": "Anúncio Vagas",
+          "natureza": "P"
+        },
+        {
+          "nome": "Frete Manutenção",
+          "natureza": "P"
+        },
+        {
+          "nome": "BPO Financeiro",
+          "natureza": "P"
+        },
+        {
+          "nome": "Consultoria/Treinamentos",
+          "natureza": "P"
+        },
+        {
+          "nome": "Telefone Fixo",
+          "natureza": "P"
+        },
+        {
+          "nome": "Outras Saídas",
+          "natureza": "P"
         }
       ]
     },
@@ -6970,6 +7037,26 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
+          "nome": "Salários CLT Administrativo",
+          "natureza": "P"
+        },
+        {
+          "nome": "Assiduidade Adm CLT",
+          "natureza": "P"
+        },
+        {
+          "nome": "Hora Extra CLT Administrativo",
+          "natureza": "P"
+        },
+        {
+          "nome": "PPR CLT Administrativo",
+          "natureza": "P"
+        },
+        {
+          "nome": "Produtividade CLT Adm",
+          "natureza": "P"
+        },
+        {
           "nome": "EMP SYBELI E RICHARD",
           "natureza": "P"
         },
@@ -6987,6 +7074,25 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "GERALDO",
+          "natureza": "P"
+        }
+      ]
+    },
+    {
+      "id": "pj_terceiros_adm",
+      "nome": "PJ Terceiros ADM",
+      "natureza": "P",
+      "itens": [
+        {
+          "nome": "Consultoria ADM",
+          "natureza": "P"
+        },
+        {
+          "nome": "PPR ADM PJ",
+          "natureza": "P"
+        },
+        {
+          "nome": "PJ ADM",
           "natureza": "P"
         }
       ]
@@ -7016,11 +7122,23 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "(-) Juros Emprestimos",
+          "nome": "Juros sobre Empréstimos",
+          "natureza": "P"
+        },
+        {
+          "nome": "Taxa cartão de despesa",
           "natureza": "P"
         },
                 {
           "nome": "(-) IOF",
+          "natureza": "P"
+        },
+        {
+          "nome": "Pagamento de Empréstimos",
+          "natureza": "P"
+        },
+        {
+          "nome": "Antecipação de Boletos",
           "natureza": "P"
         },
         {
@@ -7051,11 +7169,7 @@ const DRE_ARVORE_BLOCOS = {
           "natureza": "P"
         },
         {
-          "nome": "Manutenção de Máquinas",
-          "natureza": "P"
-        },
-        {
-          "nome": "Manutenção do Imóvel",
+          "nome": "Reforma",
           "natureza": "P"
         }
       ]
@@ -8601,22 +8715,63 @@ function empresaTemOrcadoParaChave(empresa, chave) {
 
 // Monta o mapa normalizado(descrição categoria) -> valor somado no mês,
 // escopado por empresa (evita colisão de código entre empresas).
-function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStart, monthEnd) {
+function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStart, monthEnd, modo, contasCache) {
   const catLabelByCode = {};
   (categories || []).forEach(c => {
     if (c._empresa !== empresa) return;
     catLabelByCode[c.codigo] = normalizarLabelCategoria(decodeHtmlEntities(c.descricao || ''));
   });
+  // FIX 04/08: contas "virtuais" do Omie (fluxo_caixa=false — ex: "Adiantamento
+  // de Cliente", "Antecipação de Recebíveis") não representam caixa real.
+  // Reconciliado com Omie (DFC pivot da Novah): excluir essas contas no
+  // modo 'caixa' fecha a Despesa de Junho em 99,9998% de precisão
+  // (R$419.053,45 vs R$419.054,28 real). Só afeta modo='caixa' — DRE por
+  // Competência/Bloco continuam sem mudança.
+  const contasVirtuais = new Set(
+    modo === 'caixa'
+      ? (contasCache || []).filter(c => c._empresa === empresa && c.fluxo_caixa === false).map(c => c.n_cod_cc)
+      : []
+  );
   const totalPorLabel = {};
   (movements || []).forEach(m => {
     if (m._empresa !== empresa) return;
-    if (!(m.dt_registro || m.dt_emissao) || !m.cod_categoria) return;
-    const d = dayjs(m.dt_registro || m.dt_emissao);
+    if (modo === 'caixa' && contasVirtuais.has(m.cod_cc)) return;
+    // FIX 04/08: "DRE por Caixa" (renderGrupoResumoPorEmpresa) chama essa
+    // função pedindo modo='caixa' — usa dt_pagamento (regra confirmada:
+    // DFC=data do pagamento, DRE=data do registro). Antes usava sempre
+    // dt_registro/dt_emissao aqui, mesmo na tela de Caixa — números
+    // "Caixa" eram na real competência com rótulo errado. Todo o resto
+    // (DRE por Bloco, DRE por Competência) continua sem mudança (default
+    // 'competencia', comportamento intocado).
+    const dataRef = modo === 'caixa' ? m.dt_pagamento : (m.dt_registro || m.dt_emissao);
+    if (!dataRef) return;
+    const d = dayjs(dataRef);
     if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
-    const label = catLabelByCode[m.cod_categoria];
-    if (!label) return;
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
+    // FIX 05/08: título com rateio de categoria (2+ categorias) — o Omie
+    // (ListarMovimentos, fonte do Caixa) NÃO devolve o detalhe do rateio
+    // nesse endpoint, só grava 1 categoria (parcial ou até arbitrária)
+    // pro título inteiro (confirmado: R$25.185 caindo 100% em "2.15.93",
+    // quando na realidade são 14 categorias diferentes). Usamos o rateio
+    // já capturado do lado Contas a Pagar (mesmo título, mesma divisão
+    // real — confirmado nCodLancCP/cod_titulo batendo nas duas fontes)
+    // pra dividir certo. Só entra aqui em modo='caixa'; Competência já
+    // tem seu próprio tratamento de rateio em unifiedMovements.
+    const rateio = modo === 'caixa' ? rateioPayableCache[`${empresa}|${m.cod_titulo}`] : null;
+    if (rateio && rateio.length) {
+      rateio.forEach(rc => {
+        const label = catLabelByCode[rc.cod_categoria];
+        if (!label) return;
+        const parte = v * (Number(rc.percentual || 0) / 100);
+        if (!parte) return;
+        totalPorLabel[label] = (totalPorLabel[label] || 0) + parte;
+      });
+      return;
+    }
+    if (!m.cod_categoria) return;
+    const label = catLabelByCode[m.cod_categoria];
+    if (!label) return;
     totalPorLabel[label] = (totalPorLabel[label] || 0) + v;
   });
   // Item sintético "REFIS (Parcelas)" da RT: confirmado com Lucas em
@@ -8630,8 +8785,9 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
     let refisTotal = 0;
     (movements || []).forEach(m => {
       if (m._empresa !== 'RT') return;
-      if (!(m.dt_registro || m.dt_emissao) || !['2.06.06', '2.06.07'].includes(m.cod_categoria)) return;
-      const d = dayjs(m.dt_registro || m.dt_emissao);
+      const dataRef = modo === 'caixa' ? m.dt_pagamento : (m.dt_registro || m.dt_emissao);
+      if (!dataRef || !['2.06.06', '2.06.07'].includes(m.cod_categoria)) return;
+      const d = dayjs(dataRef);
       if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
       refisTotal += Number(m.val_pago || m.val_liquido || 0);
     });
@@ -8644,8 +8800,9 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
     let refisKmnoTotal = 0;
     (movements || []).forEach(m => {
       if (m._empresa !== 'KMNO') return;
-      if (!(m.dt_registro || m.dt_emissao) || !['2.14.95', '2.14.98'].includes(m.cod_categoria)) return;
-      const d = dayjs(m.dt_registro || m.dt_emissao);
+      const dataRef = modo === 'caixa' ? m.dt_pagamento : (m.dt_registro || m.dt_emissao);
+      if (!dataRef || !['2.14.95', '2.14.98'].includes(m.cod_categoria)) return;
+      const d = dayjs(dataRef);
       if (d.isBefore(monthStart) || !d.isBefore(monthEnd)) return;
       refisKmnoTotal += Number(m.val_pago || m.val_liquido || 0);
     });
@@ -8790,9 +8947,9 @@ function buildTodosBlocosDe(empresa, totalPorLabelPorBloco) {
   return B;
 }
 
-function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, monthEnd) {
+function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, monthEnd, modo, contasCache) {
   // pré-calcula uma vez só (mesmo mapa serve pra todos os blocos daquele mês)
-  const totalPorLabel = buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStart, monthEnd);
+  const totalPorLabel = buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStart, monthEnd, modo, contasCache);
   const B = buildTodosBlocosDe(empresa, () => totalPorLabel);
   // Impostos KMNO: realizado usa os valores reais lançados no Omie (não a
   // estimativa por %) — confirmado com Lucas em 21/07/2026. Fica na mesma
@@ -8873,10 +9030,7 @@ function buildResumoNovah(B) {
   const despIndustriais = B.acabamento.total + B.corte.total + B.rash_bermuda.total
     + B.costura_kimono.total + B.bordado.total + B.sublimacao.total + B.desp_pessoal_industria.total;
   const despesasAdm = B.despesas_adm.total;
-  const depPessoalAdm = B.dep_pessoal_adm.total;
-  const proLabore = B.pro_labore.total;
-  const resultadoOperacional = margemContribuicao - despIndustriais - despesasAdm - proLabore - depPessoalAdm;
-  const depreciacao = calcDepreciacao('NOVAH', receitaBruta);
+  const depPessoalAdm = B.dep_pessoal_adm.total + B.pj_terceiros_adm.total;
   const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
   const despFinanceiras = B.despesas_financeiras.total;
   const resultadoLiquido = lucroBrutoDepreciacao - despFinanceiras;
@@ -11421,16 +11575,33 @@ async function loadCompanyData() {
 lastFetchHadErrors = false;
 try {
   carregarDashMetas(); // não precisa esperar — não bloqueia o resto, renderiza quando chegar
-  const [categories, movements, receivable, payable, clients, contasCorrentes] = await Promise.all([
+  const [categories, movements, receivable, payable, clients, contasCorrentes, payableCategorias] = await Promise.all([
     sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa,natureza,transferencia,nao_exibir,nao_fluxo,categoria_superior'),
     sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_registro,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo,cod_cc'),
     sbMultiPaged('dash_accounts_receivable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
-    sbMultiPaged('dash_accounts_payable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
+    sbMultiPaged('dash_accounts_payable?select=codigo_lancamento_omie,data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
     sbMultiPaged('dash_clients?select=codigo_cliente_omie,nome_fantasia,razao_social'),
     sbMultiPaged('dash_contas_correntes?select=n_cod_cc,descricao,fluxo_caixa,saldo_inicial,saldo_data,valor_limite,saldo_atual'),
+    // NOVO (05/08/2026): rateio de categorias de Contas a Pagar (título
+    // dividido em 2+ categorias, cada uma com % — ex: "Vale Alimentação"
+    // 26%/74% entre Administrativo/Indústria). Quando existe rateio, o
+    // Omie devolve codigo_categoria=null no título principal; sem isso
+    // aqui, o título inteiro era descartado (ver uso abaixo). Confirmado
+    // com a Novah: 319 títulos, ~R$2,6mi afetados. Só Novah tem essa
+    // tabela populada por enquanto (KMNO/RT ainda não passaram pelo
+    // mesmo fix no sync) — dash_accounts_payable_categorias fica vazia
+    // pras outras, sem quebrar nada (fallback = comportamento antigo).
+    sbMultiPaged('dash_accounts_payable_categorias?select=parent_omie_id,cod_categoria,valor,percentual'),
   ]);
   clientsCache = clients;
   contasCorrentesCache = contasCorrentes;
+
+  // Mapa empresa|titulo -> [{cod_categoria, valor, percentual}, ...]
+  rateioPayableCache = {};
+  (payableCategorias || []).forEach(c => {
+    const key = `${c._empresa}|${c.parent_omie_id}`;
+    (rateioPayableCache[key] || (rateioPayableCache[key] = [])).push(c);
+  });
 
     // Build unified movements from accounts receivable + payable (more complete than omie_financial_movements)
     const unifiedMovements = [
@@ -11448,20 +11619,47 @@ try {
         num_titulo: r.numero_documento,
         _empresa: r._empresa,
       })),
-      ...(payable || []).filter(p => p.status_titulo !== 'CANCELADO').map(p => ({
-        dt_emissao: p.data_emissao,
-        dt_registro: p.data_registro,
-        dt_pagamento: p.data_pagamento || p.data_previsao,
-        dt_vencimento: p.data_vencimento,
-        natureza: 'P',
-        val_pago: Number(p.valor_documento || 0),
-        val_liquido: Number(p.valor_documento || 0),
-        cod_categoria: p.codigo_categoria,
-        status: p.status_titulo,
-        observacao: p.observacao,
-        num_titulo: p.numero_documento,
-        _empresa: p._empresa,
-      })),
+      ...(payable || []).filter(p => p.status_titulo !== 'CANCELADO').flatMap(p => {
+        const base = {
+          dt_emissao: p.data_emissao,
+          dt_registro: p.data_registro,
+          dt_pagamento: p.data_pagamento || p.data_previsao,
+          dt_vencimento: p.data_vencimento,
+          natureza: 'P',
+          status: p.status_titulo,
+          observacao: p.observacao,
+          num_titulo: p.numero_documento,
+          _empresa: p._empresa,
+        };
+        // FIX 05/08/2026: título com rateio de categoria (2+ categorias,
+        // ex: 26%/74%) vem do Omie com codigo_categoria=null — antes
+        // isso descartava o título inteiro (linhas abaixo exigem
+        // cod_categoria pra somar). Agora, quando existe rateio
+        // conhecido (rateioPayableMap), quebra em 1 linha por categoria
+        // com o valor proporcional já calculado pelo Omie (campo
+        // "valor" de cada entrada do rateio — mais confiável que
+        // recalcular a partir do percentual). Sem rateio conhecido
+        // (KMNO/RT ainda não migradas, ou título sem categoria por
+        // outro motivo), mantém o comportamento antigo (1 linha, some
+        // se cod_categoria vier vazio).
+        if (!p.codigo_categoria) {
+          const rateio = rateioPayableCache[`${p._empresa}|${p.codigo_lancamento_omie}`];
+          if (rateio && rateio.length) {
+            return rateio.map(rc => ({
+              ...base,
+              val_pago: Number(rc.valor || 0),
+              val_liquido: Number(rc.valor || 0),
+              cod_categoria: rc.cod_categoria,
+            }));
+          }
+        }
+        return [{
+          ...base,
+          val_pago: Number(p.valor_documento || 0),
+          val_liquido: Number(p.valor_documento || 0),
+          cod_categoria: p.codigo_categoria,
+        }];
+      }),
     ];
 
     categoriesCache = categories;
@@ -13873,7 +14071,7 @@ function renderResumoCapital(monthStart, monthEnd) {
     // [emp][mês].saldoReal, mesma fonte das imagens enviadas por Lucas);
     // se cair em Jun/2026 em diante (ao vivo), mantém o rollback já
     // existente (calcSaldoInicialRealizado).
-    const mesAntes = monthEnd.subtract(1, 'month').startOf('month');
+    const mesAntes = monthEnd.subtract(2, 'month').startOf('month'); // FIX 05/08: estava subtraindo só 1 mês do monthEnd exclusivo, o que dava o MESMO mês do Até (ex: Até=Maio → mesAntes=Maio), não o mês anterior (Abril) como o nome do card e o comentário abaixo sempre disseram.
     const mesAntesLive = !mesAntes.isBefore(EXCEL_CONGELADO_ATE);
     const mesAntesChave = mesAntesLive ? null : PROVA_REAL_MESES_ORDEM[mesAntes.month()]; // 'jan'..'mai', ou undefined se fora do congelado
 
@@ -15480,8 +15678,8 @@ function mergeCategoriaMaps(...maps) {
   return out;
 }
 
-function buildResumoCategoriasMes(empresa, categories, movements, monthStart, monthEnd) {
-  const B = buildTodosBlocosRealizado(empresa, categories, movements, monthStart, monthEnd);
+function buildResumoCategoriasMes(empresa, categories, movements, monthStart, monthEnd, modo, contasCache) {
+  const B = buildTodosBlocosRealizado(empresa, categories, movements, monthStart, monthEnd, modo, contasCache);
   if (empresa === 'KMNO') {
     const despFin = B.despesas_financeiras.itens;
     return {
@@ -15549,9 +15747,10 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
         itensParaCategoria(B.desp_pessoal_industria.itens)
       ),
       royalties: {},
-      custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens), itensParaCategoria(B.pro_labore.itens)),
+      custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens), itensParaCategoria(B.pro_labore.itens), itensParaCategoria(B.pj_terceiros_adm.itens)),
       despesasAdministracao: itensParaCategoria(B.despesas_adm.itens),
       depPessoalAdm: itensParaCategoria(B.dep_pessoal_adm.itens),
+      pjTerceirosAdm: itensParaCategoria(B.pj_terceiros_adm.itens),
       proLabore: itensParaCategoria(B.pro_labore.itens),
       despesasComerciais: {},
       despesasFinanceiras: itensParaCategoria(despFin, 'P'),
@@ -15670,9 +15869,12 @@ const RESUMO_POR_EMPRESA_LINHAS_NOVAH = [
   { chave: 'despPessoalIndustria', label: '(-) Desp. Pessoal Indústria' },
   { chave: 'despesasAdministracao', label: '(-) Despesas Administração' },
   { chave: 'depPessoalAdm', label: '(-) Dep. Pessoal ADM' },
+  { chave: 'pjTerceirosAdm', label: '(-) PJ Terceiros ADM' },
   { chave: 'proLabore', label: '(-) Pró-Labore' },
   { chave: 'despesasFinanceiras', label: '(-) Despesas Financeiras' },
   { chave: 'receitasFinanceiras', label: '(+) Receitas Financeiras' },
+  { chave: 'recebimentoEmprestimos', label: '(+) Recebimento Empréstimos/Adiantamentos' },
+  { chave: 'pagamentoEmprestimos', label: '(-) Pagamento de Empréstimos' },
   { chave: 'distribuicao', label: '(-) Distribuição de Lucros' },
   { chave: 'capex', label: '(-) Capex' },
   { chave: 'refis', label: '(-) Outros (Refis)' },
@@ -15974,7 +16176,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // reaproveitado tanto pro total do bucket quanto pro drill-down.
   const liveByMes = {};
   mesesValidos.filter(m => m.live).forEach(m => {
-    liveByMes[m.chave] = buildResumoCategoriasMes(empresaKey, categoriesCache, movementsCache, m.mesDayjs, m.mesDayjs.add(1, 'month'));
+    liveByMes[m.chave] = buildResumoCategoriasMes(empresaKey, categoriesCache, financialMovementsCache, m.mesDayjs, m.mesDayjs.add(1, 'month'), 'caixa', contasCorrentesCache);
   });
 
   // AV% — mesma base confirmada na planilha original (linha da Receita
@@ -15994,7 +16196,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const frozenIdxMesAntes = (liveMesAntes || !dadosCongelado) ? -1 : chavesFrozenOrdem.indexOf(chaveMesAntes);
   const temFonteMesAntes = liveMesAntes || frozenIdxMesAntes >= 0;
   const liveByMesAntes = (temFonteMesAntes && liveMesAntes)
-    ? buildResumoCategoriasMes(empresaKey, categoriesCache, movementsCache, mesAntes, mesAntes.add(1, 'month'))
+    ? buildResumoCategoriasMes(empresaKey, categoriesCache, financialMovementsCache, mesAntes, mesAntes.add(1, 'month'), 'caixa', contasCorrentesCache)
     : null;
   const valorMesAntes = (chave, catLabel) => {
     if (!temFonteMesAntes) return null;
@@ -16164,7 +16366,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     : (valoresMesesPorChave['despesasComerciais'] || mesesValidos.map(() => 0));
   const ebitdaPorMes = mesesValidos.map((_, i) => margemPorMes[i] - custoAdmTotalPorMes[i] - despesasComerciaisTotalPorMes[i]);
   const resultadoLiquidoPorMes = mesesValidos.map((_, i) => ebitdaPorMes[i] - (valoresMesesPorChave['despesasFinanceiras'] || [])[i] + (valoresMesesPorChave['receitasFinanceiras'] || [])[i]);
-  const saldoLiquidoPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao'] || [])[i] - (valoresMesesPorChave['capex'] || [])[i] - (valoresMesesPorChave['refis'] || [])[i]);
+  const saldoLiquidoPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao'] || [])[i] - (valoresMesesPorChave['capex'] || [])[i] - (valoresMesesPorChave['refis'] || [])[i] + (valoresMesesPorChave['recebimentoEmprestimos'] || [])[i] - (valoresMesesPorChave['pagamentoEmprestimos'] || [])[i]);
 
   // Mesmas fórmulas acima, aplicadas só ao mês ANTES do período exibido
   // (pra AV% mês a mês da 1ª coluna dos subtotais).
@@ -16758,12 +16960,16 @@ function renderGrupoBancos(monthStart, monthEnd) {
     liveFimByMes[m.chave] = saldoBancosPorContaRollback(contasCorrentesCache, categoriesCache, financialMovementsCache, ['KMNO', 'RT', 'NOVAH'], m.mesDayjs.add(1, 'month'));
   });
 
-  const valorBanco = (banco, m) => m.live ? Number((liveByMes[m.chave] && liveByMes[m.chave][banco]) || 0) : Number((d.valores[banco] && d.valores[banco][m.frozenIdx]) || 0);
+  const valorBanco = (banco, m) => {
+    if (!m.live && empresaDoBanco(banco) === 'RT') return null; // RT sem fonte confirmada Jan-Mai
+    return m.live ? Number((liveByMes[m.chave] && liveByMes[m.chave][banco]) || 0) : Number((d.valores[banco] && d.valores[banco][m.frozenIdx]) || 0);
+  };
   const totalMes = (m) => m.live ? Object.values(liveByMes[m.chave] || {}).reduce((s, v) => s + v, 0) : (d.total[m.frozenIdx] || 0);
   // Fim do mês: congelado usa a coluna do mês SEGUINTE (mesmo número, por
   // definição de saldo bancário); no último mês congelado (sem coluna
   // seguinte) usa `fimUltimoMesCongelado`. Banco sem dado = null ("—").
   const valorBancoFim = (banco, m) => {
+    if (!m.live && empresaDoBanco(banco) === 'RT') return null; // RT sem fonte confirmada Jan-Mai
     if (m.live) return Number((liveFimByMes[m.chave] && liveFimByMes[m.chave][banco]) || 0);
     const prox = m.frozenIdx + 1;
     if (prox < d.meses.length) return Number((d.valores[banco] && d.valores[banco][prox]) || 0);
@@ -16791,16 +16997,29 @@ function renderGrupoBancos(monthStart, monthEnd) {
   mesesValidos.filter(m => m.live).forEach(m => Object.keys(liveByMes[m.chave] || {}).forEach(b => bancosSet.add(b)));
 
   // FIX 28/07 (pedido): 1 empresa selecionada = só os bancos dela.
+  // FIX 05/08: RT sozinha NUNCA mostra banco próprio — mesma regra já
+  // usada no Resumo de Capital (RT sem fonte de saldo bancário
+  // standalone, as contas dela ficam dentro da KMNO).
   const umaEmpresa = selectedCompanyKeys && selectedCompanyKeys.length === 1 ? selectedCompanyKeys[0] : null;
-  const bancosFiltrados = umaEmpresa ? [...bancosSet].filter(b => empresaDoBanco(b) === umaEmpresa) : [...bancosSet];
+  const bancosFiltrados = umaEmpresa === 'RT' ? [] : (umaEmpresa ? [...bancosSet].filter(b => empresaDoBanco(b) === umaEmpresa) : [...bancosSet]);
+  if (umaEmpresa === 'RT') {
+    header.innerHTML = '<th>Banco</th>';
+    body.innerHTML = '<tr><td style="color:var(--bone-dim);">RT não tem saldo bancário próprio — contas ficam dentro do total da KMNO.</td></tr>';
+    return;
+  }
   // Total recalculado sobre o conjunto filtrado (soma real dos bancos
   // exibidos) — em vez do d.total fixo do Grupo, que não faz sentido
   // quando é só 1 empresa.
-  const totalMesFiltrado = (m) => bancosFiltrados.reduce((s, b) => s + valorBanco(b, m), 0);
-  const totalFimFiltrado = (m) => bancosFiltrados.reduce((s, b) => {
-    const v = valorBancoFim(b, m);
-    return v === null ? s : s + v;
-  }, 0);
+  const totalMesFiltrado = (m) => {
+    const valores = bancosFiltrados.map(b => valorBanco(b, m));
+    if (valores.length && valores.every(v => v === null)) return null;
+    return valores.reduce((s, v) => s + (v || 0), 0);
+  };
+  const totalFimFiltrado = (m) => {
+    const valores = bancosFiltrados.map(b => valorBancoFim(b, m));
+    if (valores.length && valores.every(v => v === null)) return null;
+    return valores.reduce((s, v) => s + (v || 0), 0);
+  };
 
   // Pedido 29/07: card reestruturado de "lista solta de bancos + 2
   // totais no fim" pra "2 linhas-pai clicáveis" (Bancos Início do Mês /
@@ -16813,27 +17032,36 @@ function renderGrupoBancos(monthStart, monthEnd) {
   const linhaBanco = (label, getValor, rowId) => `
     <tr class="dre-tbl-row" style="display:none;color:#DAD4C4;font-size:12px;" data-grupo-conta="${rowId}">
       <td class="dre-tbl-sticky">${limparLabelBanco(label)}${umaEmpresa ? '' : (() => { const emp = empresaDoBanco(label); return emp ? `<span class="tag-empresa-banco">${emp}</span>` : ''; })()}</td>
-      ${mesesValidos.map((m, i) => `
-        <td class="num">${fmtBRL(getValor(label, m))}</td>
-        <td class="num total-pct">${avPct(mm => getValor(label, mm), i)}</td>`).join('')}
+      ${mesesValidos.map((m, i) => {
+        const v = getValor(label, m);
+        return `
+        <td class="num">${v === null ? '-----' : fmtBRL(v)}</td>
+        <td class="num total-pct">${v === null ? '—' : avPct(mm => getValor(label, mm), i)}</td>`;
+      }).join('')}
     </tr>`;
 
   const linhasBancosInicio = bancosFiltrados.map(label => linhaBanco(label, valorBanco, 'grupo-bancos-inicio')).join('');
   const linhaPaiInicio = `
     <tr class="dre-tbl-row colapsavel" id="pai-grupo-bancos-inicio" onclick="toggleResumoEmpresaConta('grupo-bancos-inicio')" title="Clique para ver os bancos" style="font-weight:600;">
       <td class="dre-tbl-sticky"><span class="dre-tbl-toggle-icon" id="icon-grupo-bancos-inicio">+</span>Bancos Início do Mês</td>
-      ${mesesValidos.map((m, i) => `
-        <td class="num">${fmtBRL(totalMesFiltrado(m))}</td>
-        <td class="num total-pct">${avPct(totalMesFiltrado, i)}</td>`).join('')}
+      ${mesesValidos.map((m, i) => {
+        const v = totalMesFiltrado(m);
+        return `
+        <td class="num">${v === null ? '-----' : fmtBRL(v)}</td>
+        <td class="num total-pct">${v === null ? '—' : avPct(totalMesFiltrado, i)}</td>`;
+      }).join('')}
     </tr>`;
 
   const linhasBancosFim = bancosFiltrados.map(label => linhaBanco(label, valorBancoFim, 'grupo-bancos-fim')).join('');
   const linhaPaiFim = `
     <tr class="dre-tbl-row colapsavel" id="pai-grupo-bancos-fim" onclick="toggleResumoEmpresaConta('grupo-bancos-fim')" title="Clique para ver os bancos" style="font-weight:600;">
       <td class="dre-tbl-sticky"><span class="dre-tbl-toggle-icon" id="icon-grupo-bancos-fim">+</span>Bancos Fim do Mês</td>
-      ${mesesValidos.map((m, i) => `
-        <td class="num">${fmtBRL(totalFimFiltrado(m))}</td>
-        <td class="num total-pct">${avPct(totalFimFiltrado, i)}</td>`).join('')}
+      ${mesesValidos.map((m, i) => {
+        const v = totalFimFiltrado(m);
+        return `
+        <td class="num">${v === null ? '-----' : fmtBRL(v)}</td>
+        <td class="num total-pct">${v === null ? '—' : avPct(totalFimFiltrado, i)}</td>`;
+      }).join('')}
     </tr>`;
 
   // Linhas extras (Depósito/Cartão de Crédito recebidos no mês) —
