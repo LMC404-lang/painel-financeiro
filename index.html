@@ -11753,17 +11753,30 @@ const SAIDAS_ENTRADAS_PECAS_MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 
 const SAIDAS_ENTRADAS_PECAS_ANO = 2026;
 
 const SAIDAS_ENTRADAS_PECAS_DFC_DADOS = {
-  saidasCaixa:    [610452.6900000001, 591394.37, 783001.8400000001, 841358.6900000002, 811728.68, null, null],
-  saidaPorPeca:   [106.25808355091385, 90.67684299294694, 119.06962287104623, 98.91355396190926, 87.02998606197063, null, null],
-  entradaCaixa:   [792233.5000000001, 785635.2300000001, 1073049.32, 920915.4600000001, 863979.5, null, null],
-  entradaPorPeca: [137.89965187119236, 120.45925022999081, 163.17659975669102, 108.26657183164826, 92.63208963225046, null, null],
+  // Jun/Jul preenchidos 06/08/2026 — fonte: dash_financial_movements
+  // (Supabase, KMNO+NOVAH, mesma metodologia já usada no resto do
+  // dashboard: dedup título×baixa, exclui contas virtuais, dt_pagamento).
+  // Investigado antes de aplicar: não é o bug de duplicidade da KMNO
+  // (zero casos suspeitos pra KMNO nesses 2 meses) — Entrada de Caixa
+  // inclui adiantamento de clientes/empréstimos, por isso é maior que
+  // o Faturamento (competência) puro.
+  saidasCaixa:    [610452.6900000001, 591394.37, 783001.8400000001, 841358.6900000002, 811728.68, 1370011.23, 1522593.79],
+  saidaPorPeca:   [106.25808355091385, 90.67684299294694, 119.06962287104623, 98.91355396190926, 87.02998606197063, 95.33165611300535, 92.4240494111934],
+  entradaCaixa:   [792233.5000000001, 785635.2300000001, 1073049.32, 920915.4600000001, 863979.5, 1415662.77, 1864483.33],
+  entradaPorPeca: [137.89965187119236, 120.45925022999081, 163.17659975669102, 108.26657183164826, 92.63208963225046, 98.5082993528634, 113.17732973169844],
 };
 
 const SAIDAS_FATURAMENTO_PECAS_DADOS = {
-  saidasCaixa:        [610452.6900000001, 591394.37, 783001.8400000001, 841358.6900000002, 811728.68, null, null],
-  saidaPorPeca:       [106.25808355091385, 90.67684299294694, 119.06962287104623, 98.91355396190926, 87.02998606197063, null, null],
-  faturamento:        [615375.1, 966406.96, 837280.18, 900264.3600000001, 1047970.7599999999, null, null],
-  faturamentoPorPeca: [107.1148999129678, 148.17647347439436, 127.32362834549879, 105.83874441570657, 112.35882491690789, null, null],
+  // Jun/Jul preenchidos 06/08/2026 — mesmo dado real usado na tabela DFC
+  // acima (dash_financial_movements, KMNO+NOVAH), investigado antes de
+  // aplicar (não é o bug de duplicidade da KMNO).
+  saidasCaixa:        [610452.6900000001, 591394.37, 783001.8400000001, 841358.6900000002, 811728.68, 1370011.23, 1522593.79],
+  saidaPorPeca:       [106.25808355091385, 90.67684299294694, 119.06962287104623, 98.91355396190926, 87.02998606197063, 95.33165611300535, 92.4240494111934],
+  // Jun/Jul preenchidos 06/08/2026 — fonte: planilha (abas "Fat e Vendas"
+  // linha "Grupo"/Total e "Revisada CCC" linha "Faturamento (R$)", os
+  // dois batendo no mesmo valor).
+  faturamento:        [615375.1, 966406.96, 837280.18, 900264.3600000001, 1047970.7599999999, 1221127.1199999999, 1263218.79],
+  faturamentoPorPeca: [107.1148999129678, 148.17647347439436, 127.32362834549879, 105.83874441570657, 112.35882491690789, 84.97161784148634, 76.67954291611024],
 };
 
 const FATURAMENTO_PECAS_DADOS = {
@@ -11775,6 +11788,23 @@ const FATURAMENTO_PECAS_DADOS = {
   rashGuard:   [1154, 1166, 1076, 677, 1253, 1159, 1236],
   faixaKmno:   [298, 524, 852, 586, 629, 1100, 1023],
   faixaRt:     [null, null, null, 1154, 1460, 2818, 3846],
+};
+// Colunas Meta Acum/Dif. acum/Meta 2026/Tendência 2026/Dif. ano — fonte:
+// aba "Revisada CCC" da planilha (06/08/2026). Só existem pra tabela de
+// PÇS (Faturamento); as outras 2 tabelas (Saída/Entrada Caixa e
+// Faturamento x Peças, em R$) não têm essas colunas preenchidas na
+// planilha ainda, então continuam mostrando "-----".
+const FATURAMENTO_PECAS_EXTRAS = {
+  gbCalca:     { metaAcum: 10560, difAcumQtd: -189,  difAcumPct: -0.017897727272727273, meta2026: 25560, tend2026: 27871, difAnoQtd: 2311,  difAnoPct: 0.09041471048513303 },
+  gbGandola:   { metaAcum: 10560, difAcumQtd: -189,  difAcumPct: -0.017897727272727273, meta2026: 25560, tend2026: 27871, difAnoQtd: 2311,  difAnoPct: 0.09041471048513303 },
+  kmnoCalca:   { metaAcum: 10717, difAcumQtd: 497,   difAcumPct: 0.046374918354016983,  meta2026: 19717, tend2026: 23414, difAnoQtd: 3697,  difAnoPct: 0.18750316985342597 },
+  kmnoGandola: { metaAcum: 10607, difAcumQtd: 456,   difAcumPct: 0.0429904779862355,    meta2026: 19607, tend2026: 23263, difAnoQtd: 3656,  difAnoPct: 0.18646401795277198 },
+  totalGb:     { metaAcum: 42444, difAcumQtd: 575,   difAcumPct: 0.013547262274997644,  meta2026: 90444, tend2026: 102419, difAnoQtd: 11975, difAnoPct: 0.1324023705276193 },
+  bermuda:     { metaAcum: 2491,  difAcumQtd: 0,      difAcumPct: 0,                     meta2026: 2791,  tend2026: 2491,  difAnoQtd: -300,  difAnoPct: -0.10748835542816194 },
+  rashGuard:   { metaAcum: 7721,  difAcumQtd: 0,      difAcumPct: 0,                     meta2026: 8921,  tend2026: 7721,  difAnoQtd: -1200, difAnoPct: -0.1345140679296043 },
+  faixaKmno:   { metaAcum: 5012,  difAcumQtd: 0,      difAcumPct: 0,                     meta2026: 6012,  tend2026: 5012,  difAnoQtd: -1000, difAnoPct: -0.16633399866932802 },
+  faixaRt:     { metaAcum: 9278,  difAcumQtd: 0,      difAcumPct: 0,                     meta2026: 13278, tend2026: 9278,  difAnoQtd: -4000, difAnoPct: -0.3012501882813677 },
+  totalGeral:  { metaAcum: 66946, difAcumQtd: 575,   difAcumPct: 0.008589012039554268,  meta2026: 121446, tend2026: 126921, difAnoQtd: 5475,  difAnoPct: 0.04508176473494393 },
 };
 
 // Índices dos meses (0=Jan..6=Jul/2026) que caem dentro do período De/Até
@@ -11824,7 +11854,15 @@ function renderTabelaSaidasEntradasPecas(linhas) {
     const media = mediaSaidasEntradasPecas(vals);
     const fmt = l.pct ? fmtPctSaidasEntradasPecas : (l.moeda ? fmtBRLSaidasEntradasPecas : fmtNumSaidasEntradasPecas);
     const cells = vals.map(v => `<td class="num">${v == null ? '-----' : fmt(v)}</td>`).join('');
-    return `<tr class="${l.amarelo ? 'dre-tbl-row-amarelo' : ''}"><td class="dre-tbl-sticky">${l.label}</td>${cells}<td class="num total">${fmt(soma)}</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num media">${media == null ? '-----' : fmt(media)}</td></tr>`;
+    // Colunas Meta/Diferença/Tendência — só preenchidas quando a linha
+    // tem "extra" (hoje só a tabela de Peças, via FATURAMENTO_PECAS_EXTRAS
+    // — ver comentário na constante). Sem "extra", mantém "-----" de sempre.
+    const ex = l.extra;
+    const extraCell = (v, isPct) => `<td class="num">${(v === undefined || v === null) ? '-----' : (isPct ? fmtPctSaidasEntradasPecas(v) : fmt(v))}</td>`;
+    const extraCells = ex
+      ? extraCell(ex.metaAcum) + extraCell(ex.difAcumQtd) + extraCell(ex.difAcumPct, true) + extraCell(ex.tend2026) + extraCell(ex.meta2026) + extraCell(ex.difAnoQtd) + extraCell(ex.difAnoPct, true)
+      : '<td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td><td class="num">-----</td>';
+    return `<tr class="${l.amarelo ? 'dre-tbl-row-amarelo' : ''}"><td class="dre-tbl-sticky">${l.label}</td>${cells}<td class="num total">${fmt(soma)}</td>${extraCells}<td class="num media">${media == null ? '-----' : fmt(media)}</td></tr>`;
   }).join('');
 
   return `<table class="fin-tbl fin-tbl-mes-alt">${headerRow}${linhasHtml}</table>`;
@@ -11849,41 +11887,83 @@ function renderSaidasEntradasPecasTudo() {
   const variacaoDfc = D.entradaPorPeca.map((v, i) => (v == null || D.saidaPorPeca[i] == null) ? null : (v - D.saidaPorPeca[i]) / D.saidaPorPeca[i]);
   const variacaoFat = F.faturamentoPorPeca.map((v, i) => (v == null || F.saidaPorPeca[i] == null) ? null : (v - F.saidaPorPeca[i]) / F.saidaPorPeca[i]);
 
+  // Metas ANUAIS reais das 3 empresas (dash_metas, 06/08/2026) — soma
+  // Receita Bruta: KMNO 12.000.000 + Novah 4.100.000 + RT 1.800.000 =
+  // 17.900.000. "Meta Saídas" = Receita - Saldo Líquido (10% pras 3
+  // empresas), ou seja, quanto teria que SAIR pra sobrar só os 10% de
+  // meta de Saldo Líquido — não é uma meta de saída cadastrada à parte
+  // (não existe), é derivada das metas que já existem.
+  const META_ANUAL_RECEITA_GRUPO = 12000000 + 4100000 + 1800000;
+  const META_ANUAL_SAIDAS_GRUPO = META_ANUAL_RECEITA_GRUPO * (1 - 0.10);
+  // Peças (meta anual já calculada em FATURAMENTO_PECAS_EXTRAS.totalGeral)
+  const PECAS_META_ACUM = 66946, PECAS_META_2026 = 121446, PECAS_TEND_2026 = 126921;
+  const mesesRealizados = 7, mesesRestantes = 5; // Jan-Jul realizado, Ago-Dez restante
+  function calcExtraRS(dados, metaAnual) {
+    const validos = dados.filter(v => v != null);
+    const realAcum = validos.reduce((s, v) => s + v, 0);
+    const media = realAcum / validos.length;
+    const metaAcum = metaAnual * mesesRealizados / 12;
+    const tend2026 = realAcum + media * mesesRestantes;
+    return {
+      metaAcum, difAcumQtd: realAcum - metaAcum, difAcumPct: (realAcum - metaAcum) / metaAcum,
+      meta2026: metaAnual, tend2026, difAnoQtd: tend2026 - metaAnual, difAnoPct: (tend2026 - metaAnual) / metaAnual,
+      _realAcum: realAcum,
+    };
+  }
+  function calcExtraPorPeca(extraRS) {
+    const metaAcum = extraRS.metaAcum / PECAS_META_ACUM;
+    const meta2026 = extraRS.meta2026 / PECAS_META_2026;
+    const tend2026 = extraRS.tend2026 / PECAS_TEND_2026;
+    const realAcumPP = extraRS._realAcum / pecasRealAcum;
+    const difAcumQtd = realAcumPP - metaAcum;
+    const difAnoQtd = tend2026 - meta2026;
+    return {
+      metaAcum, difAcumQtd, difAcumPct: difAcumQtd / metaAcum,
+      meta2026, tend2026, difAnoQtd, difAnoPct: difAnoQtd / meta2026,
+    };
+  }
+  const pecasRealAcum = [5745, 6522, 6576, 8506, 9327, 14371, 16474].reduce((s, v) => s + v, 0);
+
+  const extraSaidas = calcExtraRS(D.saidasCaixa, META_ANUAL_SAIDAS_GRUPO);
+  const extraEntrada = calcExtraRS(D.entradaCaixa, META_ANUAL_RECEITA_GRUPO);
+  const extraFaturamento = calcExtraRS(F.faturamento, META_ANUAL_RECEITA_GRUPO);
+
   if (wrapDfc) {
     wrapDfc.innerHTML = renderTabelaSaidasEntradasPecas([
-      { label: 'Saídas R$ Caixa', dados: D.saidasCaixa, moeda: true },
-      { label: 'Saída R$ por Peça', dados: D.saidaPorPeca, moeda: true },
-      { label: 'Entrada R$ Caixa', dados: D.entradaCaixa, moeda: true, amarelo: true },
-      { label: 'Entradas R$ Caixa por Peças', dados: D.entradaPorPeca, moeda: true },
+      { label: 'Saídas R$ Caixa', dados: D.saidasCaixa, moeda: true, extra: extraSaidas },
+      { label: 'Saída R$ por Peça', dados: D.saidaPorPeca, moeda: true, extra: calcExtraPorPeca(extraSaidas) },
+      { label: 'Entrada R$ Caixa', dados: D.entradaCaixa, moeda: true, amarelo: true, extra: extraEntrada },
+      { label: 'Entradas R$ Caixa por Peças', dados: D.entradaPorPeca, moeda: true, extra: calcExtraPorPeca(extraEntrada) },
       { label: 'Variação %', dados: variacaoDfc, pct: true, amarelo: true },
     ]);
   }
 
   if (wrapFat) {
     wrapFat.innerHTML = renderTabelaSaidasEntradasPecas([
-      { label: 'Saídas R$ Caixa', dados: F.saidasCaixa, moeda: true },
-      { label: 'Saída R$ por Peça', dados: F.saidaPorPeca, moeda: true },
-      { label: 'Faturamento', dados: F.faturamento, moeda: true, amarelo: true },
-      { label: 'Faturamento por Peças', dados: F.faturamentoPorPeca, moeda: true },
+      { label: 'Saídas R$ Caixa', dados: F.saidasCaixa, moeda: true, extra: extraSaidas },
+      { label: 'Saída R$ por Peça', dados: F.saidaPorPeca, moeda: true, extra: calcExtraPorPeca(extraSaidas) },
+      { label: 'Faturamento', dados: F.faturamento, moeda: true, amarelo: true, extra: extraFaturamento },
+      { label: 'Faturamento por Peças', dados: F.faturamentoPorPeca, moeda: true, extra: calcExtraPorPeca(extraFaturamento) },
       { label: 'Variação %', dados: variacaoFat, pct: true, amarelo: true },
     ]);
   }
 
   if (wrapPcs) {
     const P = FATURAMENTO_PECAS_DADOS;
+    const E = FATURAMENTO_PECAS_EXTRAS;
     const totalGb = P.gbCalca.map((v, i) => v + P.gbGandola[i] + P.kmnoCalca[i] + P.kmnoGandola[i]);
     const totalGeral = P.gbCalca.map((v, i) => totalGb[i] + P.bermuda[i] + P.rashGuard[i] + P.faixaKmno[i] + (P.faixaRt[i] || 0));
     wrapPcs.innerHTML = renderTabelaSaidasEntradasPecas([
-      { label: 'GB Calça', dados: P.gbCalca },
-      { label: 'GB Gandola', dados: P.gbGandola },
-      { label: 'KMNO Calça', dados: P.kmnoCalca },
-      { label: 'KMNO Gandola', dados: P.kmnoGandola },
-      { label: 'Total', dados: totalGb, amarelo: true },
-      { label: 'Bermuda', dados: P.bermuda },
-      { label: 'Rash Guard', dados: P.rashGuard },
-      { label: 'Faixa KMNO', dados: P.faixaKmno },
-      { label: 'Faixa RT', dados: P.faixaRt },
-      { label: 'Total', dados: totalGeral, amarelo: true },
+      { label: 'GB Calça', dados: P.gbCalca, extra: E.gbCalca },
+      { label: 'GB Gandola', dados: P.gbGandola, extra: E.gbGandola },
+      { label: 'KMNO Calça', dados: P.kmnoCalca, extra: E.kmnoCalca },
+      { label: 'KMNO Gandola', dados: P.kmnoGandola, extra: E.kmnoGandola },
+      { label: 'Total', dados: totalGb, amarelo: true, extra: E.totalGb },
+      { label: 'Bermuda', dados: P.bermuda, extra: E.bermuda },
+      { label: 'Rash Guard', dados: P.rashGuard, extra: E.rashGuard },
+      { label: 'Faixa KMNO', dados: P.faixaKmno, extra: E.faixaKmno },
+      { label: 'Faixa RT', dados: P.faixaRt, extra: E.faixaRt },
+      { label: 'Total', dados: totalGeral, amarelo: true, extra: E.totalGeral },
     ]);
   }
 }
