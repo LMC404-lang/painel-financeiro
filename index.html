@@ -837,7 +837,7 @@
     font-size: 13px;
     padding: 8px 12px;
     border-radius: 6px;
-    color-scheme: dark;
+    color-scheme: light;
   }
   .dre-periodo-selector input[type="month"]:focus-visible { outline: 2px solid var(--blue-belt-light); }
 
@@ -857,7 +857,7 @@
     font-size: 12px;
     padding: 6px 9px;
     border-radius: 6px;
-    color-scheme: dark;
+    color-scheme: light;
   }
   .global-period-range input[type="month"]:focus-visible { outline: 2px solid var(--blue-belt-light); }
 
@@ -1448,6 +1448,7 @@
     font-weight: 600;
   }
   .btn-requests.hidden { display: none; }
+  .btn-logout.hidden { display: none; }
 
   .requests-overlay {
     position: fixed;
@@ -2124,7 +2125,7 @@
   font-family: 'IBM Plex Mono', monospace;
   font-size: 13px;
   outline: none;
-  color-scheme: dark;
+  color-scheme: light;
   cursor: pointer;
 }
 
@@ -2476,6 +2477,7 @@
   <div class="requests-box">
     <div class="requests-box-header">
       <h2>Solicitações de troca de senha</h2>
+      <button type="button" class="req-close" onclick="closePasswordRequestsPanel(); openPasswordModal();" title="Trocar minha senha" style="margin-right:8px;font-size:12px;width:auto;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:none;color:var(--blue-belt-light);">Trocar minha senha</button>
       <button type="button" class="req-close" onclick="closePasswordRequestsPanel()">&times;</button>
     </div>
     <div id="passwordRequestsList">
@@ -4116,14 +4118,20 @@ function showDashboard() {
   // Botão de solicitações pendentes — só visível para admin
   const btnReq = document.getElementById('btnRequests');
   const btnPwReq = document.getElementById('btnPasswordRequests');
+  const btnTrocarSenha = document.getElementById('btnTrocarSenha');
   if (currentProfile && currentProfile.role === 'admin') {
     btnReq.classList.remove('hidden');
     refreshRequestsBadge();
     btnPwReq.classList.remove('hidden');
     refreshPasswordRequestsBadge();
+    // Pedido 06/08: admin troca a própria senha de dentro do painel
+    // "Senhas" (botão "Trocar minha senha" no cabeçalho) — botão "Senha"
+    // separado só faz sentido pra viewer (que não vê "Senhas").
+    if (btnTrocarSenha) btnTrocarSenha.classList.add('hidden');
   } else {
     btnReq.classList.add('hidden');
     btnPwReq.classList.add('hidden');
+    if (btnTrocarSenha) btnTrocarSenha.classList.remove('hidden');
   }
 }
 
