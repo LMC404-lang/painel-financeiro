@@ -3147,13 +3147,6 @@
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagtos Impostos Atrasados / Refis (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalRefis">R$ 0</div></div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Capex (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalCapex">R$ 0</div></div>
       </div>
-      <!-- Capex e Refis mês a mês (pedido 28/07: "todo mês aumenta, fazer
-           mês a mês" — os 2 cards acima só mostravam 1 número acumulado
-           do período inteiro). -->
-      <div class="chart-card-title" style="margin-top:18px;">Capex e Refis — Mês a Mês (R$)</div>
-      <div style="position: relative; height: 260px;">
-        <canvas id="chartCapexRefis" role="img" aria-label="Gráfico de barras mostrando Capex e Refis (Pagtos Impostos Atrasados) mês a mês no período selecionado">Evolução mensal de Capex e Refis.</canvas>
-      </div>
     </div>
       </div>
     </div>
@@ -3352,10 +3345,6 @@
       <div class="grupo-dfc-cards" style="margin-top:18px;">
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Pagtos Impostos Atrasados / Refis (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalRefisCopia">R$ 0</div></div>
         <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Capex (Período)</div><div class="grupo-dfc-card-val" id="resumoCapitalCapexCopia">R$ 0</div></div>
-      </div>
-      <div class="chart-card-title" style="margin-top:18px;">Capex e Refis — Mês a Mês (R$)</div>
-      <div style="position: relative; height: 260px;">
-        <canvas id="chartCapexRefisCopia" role="img" aria-label="Gráfico de barras mostrando Capex e Refis (Pagtos Impostos Atrasados) mês a mês, por competência">Evolução mensal de Capex e Refis (competência).</canvas>
       </div>
     </div>
       </div>
@@ -10315,9 +10304,7 @@ function renderVendasFaturamento() {
       <td class="num total ${diffTotalCls}">${fmtBRL(diffTotal)}</td>
       <td class="num media">${fmtBRL(mediaVendas)}</td>
       <td class="num media">${fmtBRL(mediaFat)}</td>
-      <td class="num media ${diffMediaCls}">${fmtBRL(diffMedia)}</td>
-      <td class="num total-pct">${fmtPctVariacao(totalVendas, totalAnterior.vendas)}</td>
-      <td class="num total-pct">${fmtPctVariacao(totalFat, totalAnterior.faturamento)}</td>`;
+      <td class="num media ${diffMediaCls}">${fmtBRL(diffMedia)}</td>`;
   };
 
   const linhaEmpresa = (label, dados, totalAnterior) => {
@@ -10345,8 +10332,7 @@ function renderVendasFaturamento() {
   // anterior.
   const headerMeses = meses.map(m => `<th colspan="3" class="mes-inicio" style="text-align:center;">${m.nome}</th>`).join('')
     + '<th colspan="3" class="mes-inicio total" style="text-align:center;">Total do período</th>'
-    + '<th colspan="3" class="media" style="text-align:center;">Média do período</th>'
-    + '<th colspan="2" class="total-pct" style="text-align:center;">AV%</th>';
+    + '<th colspan="3" class="media" style="text-align:center;">Média do período</th>';
   const headerSub = meses.map(() => `
     <th class="num mes-inicio">Vendas</th>
     <th class="num">Faturamento</th>
@@ -10357,9 +10343,7 @@ function renderVendasFaturamento() {
     <th class="num total">Dif. R$</th>
     <th class="num media">Vendas</th>
     <th class="num media">Faturamento</th>
-    <th class="num media">Dif. R$</th>
-    <th class="num total-pct">Vendas</th>
-    <th class="num total-pct">Faturamento</th>`;
+    <th class="num media">Dif. R$</th>`;
 
   const linhasEmpresas = EMPRESAS.map(emp => linhaEmpresa(COMPANIES[emp].label, porEmpresa[emp], totalAnteriorPorEmpresa[emp])).join('');
   const linhaTotal = `<tr style="font-weight:600;border-top:2px solid var(--line);">
@@ -14196,16 +14180,25 @@ function renderResumoCapital(monthStart, monthEnd) {
   // (RESUMO_DETALHADO_MESES, mesma fonte do card Resumo) pros meses
   // Jan-Mai/2026, e o cálculo ao vivo (por código de categoria) pros
   // meses Jun/2026 em diante.
+  // FIX 07/08 (bug: "RT sem dados" nesses 2 cards mesmo em Jun/Jul, que
+  // já tem dado real no Omie): empresasSelResumoCapital tira RT da lista
+  // de propósito, mas isso é só pra "Saldo Bancos 01/01" (RT não tem essa
+  // fonte) — Capex/Refis é outro cálculo, RT TEM dado a partir de Jun/26
+  // (ver empresaTemCapex/empresaTemRefis). Usa a seleção do topo direto
+  // (com RT incluído), sem o filtro que exclui RT.
+  const empresasSelCapexRefis = (selectedCompanyKeys && selectedCompanyKeys.length)
+    ? selectedCompanyKeys
+    : ['KMNO', 'NOVAH', 'RT'];
   let capex = 0, refis = 0, refisTemAlgumaQualificada = false, capexTemAlgumaQualificada = false;
   let cursorCR = monthStart.startOf('month');
   const fimCR = monthEnd.subtract(1, 'month').startOf('month'); // monthEnd é exclusivo — sem o subtract, incluía 1 mês a mais
   let guardCR = 0;
   while (!cursorCR.isAfter(fimCR) && guardCR < 24) {
     const chave = cursorCR.format('YYYY-MM');
-    if (empresasSelResumoCapital.some(emp => empresaTemRefis(emp, cursorCR))) refisTemAlgumaQualificada = true;
-    if (empresasSelResumoCapital.some(emp => empresaTemCapex(emp, cursorCR))) capexTemAlgumaQualificada = true;
+    if (empresasSelCapexRefis.some(emp => empresaTemRefis(emp, cursorCR))) refisTemAlgumaQualificada = true;
+    if (empresasSelCapexRefis.some(emp => empresaTemCapex(emp, cursorCR))) capexTemAlgumaQualificada = true;
     if (cursorCR.isBefore(EXCEL_CONGELADO_ATE)) {
-      empresasSelResumoCapital.forEach(emp => {
+      empresasSelCapexRefis.forEach(emp => {
         const dado = buildFrozenMetricasCaixaPorEmpresa(emp, chave); // RT retorna null (sem congelado) — soma 0
         if (dado) {
           if (empresaTemCapex(emp, cursorCR)) capex += dado.capex || 0; // RT não tem Capex Jan-Mai
@@ -14215,7 +14208,7 @@ function renderResumoCapital(monthStart, monthEnd) {
     } else {
       const inicioMes = cursorCR, fimMes = cursorCR.endOf('month');
       (financialMovementsCache || []).forEach(mv => {
-        if (!empresasSelResumoCapital.includes(mv._empresa)) return;
+        if (!empresasSelCapexRefis.includes(mv._empresa)) return;
         if (mv.natureza !== 'P' || !mv.dt_pagamento || !mv.cod_categoria) return;
         const d = dayjs(mv.dt_pagamento);
         if (d.isBefore(inicioMes) || d.isAfter(fimMes)) return;
