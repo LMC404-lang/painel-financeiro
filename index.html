@@ -17374,7 +17374,15 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     const receitaMercadorias = empresaFiltro === 'NOVAH' ? 0 : revendaMercadoria;
     const receitaServicos = empresaFiltro === 'NOVAH' ? receitaTotalEmpresa : 0;
 
-    const receita = receitaProdutos + receitaMercadorias + receitaServicos;
+    // Pedido 10/08/2026: "Recebimento" precisa bater com "Receitas
+    // Realizadas" do relatório nativo do Omie — que soma TODO dinheiro que
+    // entra no caixa, sem separar venda de adiantamento/empréstimo. Antes,
+    // recebimentoEmprestimos (Adiantamento de Clientes + Recebimentos
+    // Empréstimos + Outras Entradas) era calculado mas nunca entrava no
+    // total — por isso o "Recebimento" do dash ficava bem menor que o
+    // "Receitas Realizadas" do Omie (ex: Novah Jun/26, R$143k vs R$417k).
+    const recebimentoEmprestimosPreReceita = somaBucket('recebimentoEmprestimos');
+    const receita = receitaProdutos + receitaMercadorias + receitaServicos + recebimentoEmprestimosPreReceita;
     // Pedido 30/07: impostos/devolucoes expostos separados (buckets já
     // existiam em buildResumoCategoriasMes, só "deducoes" combinado
     // era usado aqui antes).
@@ -17397,10 +17405,16 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     const distribuicao = somaBucket('distribuicao');
     const capex = somaBucket('capex');
     const refis = somaBucket('refis');
-    const saldoLiquido = lucroLiquido - distribuicao - capex - refis;
     const recebimentoEmprestimos = somaBucket('recebimentoEmprestimos');
     const pagamentoEmprestimos = somaBucket('pagamentoEmprestimos');
-    const saldoCaixa = saldoLiquido + recebimentoEmprestimos - pagamentoEmprestimos;
+    // Pedido 10/08/2026: já que recebimentoEmprestimos entrou no
+    // "Recebimento" acima, o Saldo Líquido também precisa descontar
+    // pagamentoEmprestimos (saída de caixa por pagamento de empréstimo) —
+    // senão o resultado final não bate com o "Resultado Realizado" do
+    // Omie (que soma TODAS as entradas menos TODAS as saídas reais,
+    // adiantamento/empréstimo incluso dos dois lados).
+    const saldoLiquido = lucroLiquido - distribuicao - capex - refis - pagamentoEmprestimos;
+    const saldoCaixa = saldoLiquido; // mantido só por compatibilidade — saldoLiquido já é o "de caixa" agora
     const depreciacao = calcDepreciacao(empresaFiltro, receita); // mesma fórmula já usada no DRE por Bloco (1% do faturamento) — nunca tinha sido ligada aqui
 
     return {
@@ -17423,7 +17437,13 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   const receitaMercadorias = kmnoRevendaMercadoria;
   const receitaServicos = somaMapa(novah.receita);
 
-  const receita = receitaProdutos + receitaMercadorias + receitaServicos;
+  // Pedido 10/08/2026: mesmo ajuste do branch com empresaFiltro acima —
+  // "Recebimento" do Grupo também precisa incluir recebimentoEmprestimos
+  // (Adiantamento de Clientes + Recebimentos Empréstimos + Outras
+  // Entradas de KMNO e Novah), pra bater com "Receitas Realizadas" do
+  // relatório nativo do Omie.
+  const recebimentoEmprestimosPreReceita = somaBucket('recebimentoEmprestimos');
+  const receita = receitaProdutos + receitaMercadorias + receitaServicos + recebimentoEmprestimosPreReceita;
   // Pedido 30/07: impostos/devolucoes expostos separados, mesmo padrão
   // do branch com empresaFiltro acima.
   const impostos = somaBucket('impostos');
@@ -17445,10 +17465,13 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   const distribuicao = somaBucket('distribuicao');
   const capex = somaBucket('capex');
   const refis = somaBucket('refis');
-  const saldoLiquido = lucroLiquido - distribuicao - capex - refis;
   const recebimentoEmprestimos = somaBucket('recebimentoEmprestimos');
   const pagamentoEmprestimos = somaBucket('pagamentoEmprestimos');
-  const saldoCaixa = saldoLiquido + recebimentoEmprestimos - pagamentoEmprestimos;
+  // Pedido 10/08/2026: mesmo ajuste do branch com empresaFiltro — Saldo
+  // Líquido do Grupo desconta pagamentoEmprestimos, já que
+  // recebimentoEmprestimos entrou no Recebimento acima.
+  const saldoLiquido = lucroLiquido - distribuicao - capex - refis - pagamentoEmprestimos;
+  const saldoCaixa = saldoLiquido; // mantido só por compatibilidade — saldoLiquido já é o "de caixa" agora
   const depreciacao = calcDepreciacao('KMNO', receitaProdutos + receitaMercadorias) + calcDepreciacao('NOVAH', receitaServicos); // Grupo = soma das 2 fórmulas individuais
   const chavesComDetalhe = ['receita', 'impostos', 'devolucoes', 'custoInsumos', 'custoServicos', 'custoMaoObra', 'royalties', 'custoAdm', 'despesasComerciais', 'despesasFinanceiras', 'receitasFinanceiras', 'distribuicao', 'capex', 'refis', 'recebimentoEmprestimos', 'pagamentoEmprestimos'];
   const detalhes = {};
