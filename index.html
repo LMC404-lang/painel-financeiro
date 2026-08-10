@@ -3365,9 +3365,14 @@
           <h2>Saídas e Entradas R$ x Peças Faturadas</h2>
         </div>
 
-        <!-- Card 1 (azul/verde na print): DFC — Saídas x Entradas de Caixa por Peça -->
+        <!-- Card 1 (azul/verde na print): DRE por Caixa — Saídas x Entradas de Caixa
+             por Peça. Pedido 10/08/2026: "DFC" e "DRE por Caixa" são a mesma coisa
+             (regra: tudo que entra/sai das contas com fluxo de caixa marcado no
+             cadastro), só trocado o nome do card pra alinhar com a convenção já
+             usada no resto do dashboard (viewDfcArvore etc.) — regra/dados iguais,
+             só o rótulo mudou. -->
         <div class="bloco-card" style="margin-bottom:14px;">
-          <div class="bloco-head"><div class="bloco-titulo">Saídas e Entradas R$ x Peças (DFC)</div></div>
+          <div class="bloco-head"><div class="bloco-titulo">Saídas e Entradas R$ x Peças (DRE por Caixa)</div></div>
           <div class="bloco-body">
             <div id="wrapSaidasEntradasPecasDfc" class="dre-tbl-wrap"></div>
           </div>
