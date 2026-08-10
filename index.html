@@ -7116,6 +7116,17 @@ const DRE_ARVORE_BLOCOS = {
       ]
     },
     {
+      "id": "pcp_pj_terceiros",
+      "nome": "PCP (PJ Terceiros)",
+      "natureza": "P",
+      "itens": [
+        {
+          "nome": "PCP (PJ Terceiros)",
+          "natureza": "P"
+        }
+      ]
+    },
+    {
       "id": "pro_labore",
       "nome": "Pró-Labore",
       "natureza": "P",
@@ -15912,10 +15923,11 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
         itensParaCategoria(B.desp_pessoal_industria.itens)
       ),
       royalties: {},
-      custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens), itensParaCategoria(B.pro_labore.itens), itensParaCategoria(B.pj_terceiros_adm.itens)),
+      custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens), itensParaCategoria(B.pro_labore.itens), itensParaCategoria(B.pj_terceiros_adm.itens), itensParaCategoria(B.pcp_pj_terceiros.itens)),
       despesasAdministracao: itensParaCategoria(B.despesas_adm.itens),
       depPessoalAdm: itensParaCategoria(B.dep_pessoal_adm.itens),
       pjTerceirosAdm: itensParaCategoria(B.pj_terceiros_adm.itens),
+      pcpPjTerceiros: itensParaCategoria(B.pcp_pj_terceiros.itens),
       proLabore: itensParaCategoria(B.pro_labore.itens),
       despesasComerciais: {},
       despesasFinanceiras: itensParaCategoria(despFin, 'P'),
@@ -16035,6 +16047,7 @@ const RESUMO_POR_EMPRESA_LINHAS_NOVAH = [
   { chave: 'despesasAdministracao', label: '(-) Despesas Administração' },
   { chave: 'depPessoalAdm', label: '(-) Dep. Pessoal ADM' },
   { chave: 'pjTerceirosAdm', label: '(-) PJ Terceiros ADM' },
+  { chave: 'pcpPjTerceiros', label: '(-) PCP (PJ Terceiros)' },
   { chave: 'proLabore', label: '(-) Pró-Labore' },
   { chave: 'despesasFinanceiras', label: '(-) Despesas Financeiras' },
   { chave: 'receitasFinanceiras', label: '(+) Receitas Financeiras' },
