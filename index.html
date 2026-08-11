@@ -11174,7 +11174,7 @@ async function sbMultiPaged(path) {
 // caixa, mas não devem ser descartadas caso apareçam em algum cálculo que
 // não exija liquidação). Títulos sem nenhuma baixa correspondente são
 // mantidos como estão.
-const ORIGENS_BAIXA_REAL = new Set(['BAXR', 'BAXP', 'EXTR', 'EXTP']);
+const ORIGENS_BAIXA_REAL = new Set(['BAXR', 'BAXP', 'EXTR', 'EXTP', 'APBR', 'APBP', 'APIR']); // FIX 11/08/2026: cartão (RedeCard etc.) tava sem essas 3 origens de baixa real de máquina de cartão, causando dobra de valor (título+baixa contados juntos) no rollback ao vivo do card Bancos.
 const ORIGENS_TRANSFERENCIA = new Set(['TRAR', 'TRAP']);
 
 function dedupFinancialMovements(movements) {
