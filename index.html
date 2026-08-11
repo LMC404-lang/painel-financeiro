@@ -8772,12 +8772,19 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
   const chaveOficial = `${empresa}|${monthStart.format('YYYY-MM')}`;
   const categoriaOficial = modo === 'caixa' ? orcamentoRealizadoCategoriaCache[chaveOficial] : null;
   const totalPorLabel = {};
+  // NOVO (11/08/2026): mesmo total, mas indexado pelo código da
+  // categoria (não pelo nome) — usado por buildBlocoArvorePorPrefixo pra
+  // montar bloco direto do agrupamento nativo do Omie, sem depender de
+  // bater nome fixo (ver decisão Novah despesas_adm/dep_pessoal_adm/
+  // pj_terceiros_adm abaixo).
+  const totalPorCodigo = {};
   if (categoriaOficial) {
     Object.keys(categoriaOficial).forEach(cod => {
       if (cod.split('.').length < 3) return; // só folha
       const label = catLabelByCode[cod];
       if (!label) return;
       totalPorLabel[label] = (totalPorLabel[label] || 0) + categoriaOficial[cod];
+      totalPorCodigo[cod] = (totalPorCodigo[cod] || 0) + categoriaOficial[cod];
     });
   } else {
 
@@ -8825,6 +8832,7 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
         const parte = v * (Number(rc.percentual || 0) / 100);
         if (!parte) return;
         totalPorLabel[label] = (totalPorLabel[label] || 0) + parte;
+        totalPorCodigo[rc.cod_categoria] = (totalPorCodigo[rc.cod_categoria] || 0) + parte;
       });
       return;
     }
@@ -8832,6 +8840,7 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
     const label = catLabelByCode[m.cod_categoria];
     if (!label) return;
     totalPorLabel[label] = (totalPorLabel[label] || 0) + v;
+    totalPorCodigo[m.cod_categoria] = (totalPorCodigo[m.cod_categoria] || 0) + v;
   });
   } // fim do "else" (categoriaOficial ausente) — ver início da função
   // Item sintético "REFIS (Parcelas)" da RT: confirmado com Lucas em
@@ -8869,7 +8878,7 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
     totalPorLabel[normalizarLabelCategoria('REFIS (SIMPLES)/ICMS (Parcelas)')] = refisKmnoTotal;
   }
 
-  return totalPorLabel;
+  return { totalPorLabel, totalPorCodigo };
 }
 
 function totalPorLabelOrcado(empresa, blocoId, chave) {
@@ -8905,6 +8914,26 @@ function buildBlocoArvore(blocoDef, totalPorLabel) {
   let total = 0;
   itens.forEach(it => { total += (it.natureza === blocoDef.natureza) ? it.val : -it.val; });
   return { id: blocoDef.id, nome: blocoDef.nome, natureza: blocoDef.natureza, itens, total };
+}
+
+// NOVO (11/08/2026): monta um bloco somando TODAS as categorias-folha do
+// Omie cujo código começa com `prefixo` (ex: '2.04.' = Despesas
+// Administração da Novah) — em vez de bater por lista fixa de nomes.
+// Usado onde o nome fixo historicamente ficava desalinhado do Omie real
+// (ver decisão 11/08/2026, Novah despesas_adm/dep_pessoal_adm/
+// pj_terceiros_adm). Os itens exibidos passam a ser as descrições reais
+// das categorias do Omie, não os nomes antigos do Excel.
+function buildBlocoArvorePorPrefixo(id, nome, natureza, prefixo, empresa, categories, totalPorCodigo) {
+  const itens = (categories || [])
+    .filter(c => c._empresa === empresa && c.codigo && c.codigo.startsWith(prefixo) && c.codigo.split('.').length >= 3)
+    .sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
+    .map(c => ({
+      nome: decodeHtmlEntities(c.descricao || c.codigo),
+      natureza,
+      val: totalPorCodigo[c.codigo] || 0,
+    }));
+  const total = itens.reduce((acc, it) => acc + it.val, 0);
+  return { id, nome, natureza, itens, total };
 }
 
 // Usada só na coluna Orçado (projeção estática da planilha não separa os
@@ -9009,8 +9038,22 @@ function buildTodosBlocosDe(empresa, totalPorLabelPorBloco) {
 
 function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, monthEnd, modo, contasCache) {
   // pré-calcula uma vez só (mesmo mapa serve pra todos os blocos daquele mês)
-  const totalPorLabel = buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStart, monthEnd, modo, contasCache);
+  const { totalPorLabel, totalPorCodigo } = buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStart, monthEnd, modo, contasCache);
   const B = buildTodosBlocosDe(empresa, () => totalPorLabel);
+  // FIX 11/08/2026 (pedido Lucas): Novah, meses ao vivo (Jun/2026+) —
+  // despesas_adm/dep_pessoal_adm/pj_terceiros_adm batiam por NOME fixo
+  // (herdado do Excel, que rastreava custo por PESSOA — "Porteiro", "EMP
+  // SYBELI E RICHARD", "LEO", "GERALDO" — nomes que não existem como
+  // categoria no Omie de verdade). Trocado por agrupamento DIRETO pelo
+  // código nativo do Omie (2.03.*=Dep.Pessoal ADM, 2.04.*=Despesas Adm,
+  // 2.19.*=PJ Terceiros ADM) — bate 1:1 com o relatório nativo sempre,
+  // mesmo se o Omie renomear/criar categoria. Congelado (Jan-Mai) NÃO
+  // muda — Lucas confirmou que já bate certo do jeito antigo (Excel).
+  if (empresa === 'NOVAH' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
+    B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', '2.04.', empresa, categories, totalPorCodigo);
+    B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo);
+    B.pj_terceiros_adm = buildBlocoArvorePorPrefixo('pj_terceiros_adm', 'PJ Terceiros ADM', 'P', '2.19.', empresa, categories, totalPorCodigo);
+  }
   // Impostos KMNO: realizado usa os valores reais lançados no Omie (não a
   // estimativa por %) — confirmado com Lucas em 21/07/2026. Fica na mesma
   // posição de antes (logo após os blocos de DRE_ARVORE_BLOCOS, antes dos
