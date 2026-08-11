@@ -6319,15 +6319,22 @@ const DRE_ARVORE_BLOCOS = {
         {
           "nome": "(-) Cotas Capital",
           "natureza": "P"
-        },
-        {
-          "nome": "(+)Juros Recebidos",
-          "natureza": "R"
-        },
-        {
-          "nome": "(+) Descontos Recebidos",
-          "natureza": "R"
         }
+      ]
+    },
+    {
+      "id": "receitas_financeiras",
+      "nome": "Receitas Financeiras",
+      "natureza": "R",
+      "itens": [
+        { "nome": "(+)Juros Recebidos", "natureza": "R" },
+        { "nome": "(+)Descontos Recebidos/Devoluções Recebidas", "natureza": "R" },
+        { "nome": "(+) Descontos Recebidos", "natureza": "R" },
+        { "nome": "Rendimentos de Aplicações", "natureza": "R" },
+        { "nome": "Descontos Recebidos", "natureza": "R" },
+        { "nome": "Outras Entradas", "natureza": "R" },
+        { "nome": "Clientes - Venda de Ativo", "natureza": "R" },
+        { "nome": "Juros Recebidos Investimentos", "natureza": "R" }
       ]
     },
     {
@@ -7182,6 +7189,19 @@ const DRE_ARVORE_BLOCOS = {
       ]
     },
     {
+      "id": "receitas_financeiras",
+      "nome": "Receitas Financeiras",
+      "natureza": "R",
+      "itens": [
+        { "nome": "(+)Juros Recebidos", "natureza": "R" },
+        { "nome": "(+)Descontos Recebidos/Devoluções Recebidas", "natureza": "R" },
+        { "nome": "Rendimentos de Aplicações", "natureza": "R" },
+        { "nome": "Descontos Recebidos", "natureza": "R" },
+        { "nome": "Outras Entradas", "natureza": "R" },
+        { "nome": "Clientes - Venda de Ativo", "natureza": "R" }
+      ]
+    },
+    {
       "id": "outros_investimentos",
       "nome": "Outros / Investimentos",
       "natureza": "P",
@@ -7365,11 +7385,21 @@ const DRE_ARVORE_BLOCOS = {
                 {
           "nome": "IOF",
           "natureza": "P"
-        },
-        {
-          "nome": "Juros Recebidos Investimentos",
-          "natureza": "R",
         }
+      ]
+    },
+    {
+      "id": "receitas_financeiras",
+      "nome": "Receitas Financeiras",
+      "natureza": "R",
+      "itens": [
+        { "nome": "Juros Recebidos Investimentos", "natureza": "R" },
+        { "nome": "(+)Juros Recebidos", "natureza": "R" },
+        { "nome": "(+)Descontos Recebidos/Devoluções Recebidas", "natureza": "R" },
+        { "nome": "Rendimentos de Aplicações", "natureza": "R" },
+        { "nome": "Descontos Recebidos", "natureza": "R" },
+        { "nome": "Outras Entradas", "natureza": "R" },
+        { "nome": "Clientes - Venda de Ativo", "natureza": "R" }
       ]
     },
     {
@@ -9108,20 +9138,26 @@ function buildResumoKMNO(B) {
   const cmv = B.custo_materia_prima.total + B.custo_mao_obra.total;
   const royalties = B.royalties.total;
   const margemContribuicao = receitaLiquida - cmv - royalties;
-  const custosFixos = B.despesas_adm.total + B.dep_pessoal_adm.total + B.pro_labore.total
-    + B.despesas_comerciais.total + B.frete_pago.total + B.dep_comercial.total;
-  const resultadoOperacional = margemContribuicao - custosFixos;
-  const depreciacao = calcDepreciacao('KMNO', totalRecebimentos);
-  const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
+  // FIX (11/08/2026, confirmado com Lucas): EBITDA = Margem - Custo ADM
+  // Indústria - Despesas Comerciais. "Custo ADM Indústria" junta ADM +
+  // Dep. Pessoal ADM + Pró-Labore (mesmo critério já usado na Árvore de
+  // DRE, onde "despesas_adm" já engloba pessoal/pró-labore). "Despesas
+  // Comerciais" junta Despesas Comerciais + Frete + Dep. Comercial.
+  // Depreciação SAI da conta (não é caixa — só existe no DRE por
+  // Competência, confirmado com Lucas 11/08/2026).
+  const custoAdmIndustria = B.despesas_adm.total + B.dep_pessoal_adm.total + B.pro_labore.total;
+  const despesasComerciaisTotal = B.despesas_comerciais.total + B.frete_pago.total + B.dep_comercial.total;
+  const ebitda = margemContribuicao - custoAdmIndustria - despesasComerciaisTotal;
   const despFinanceiras = B.despesas_financeiras.total;
-  const resultadoLiquido = lucroBrutoDepreciacao - despFinanceiras;
-  const investimentos = B.investimentos.total;
+  const receitasFinanceiras = B.receitas_financeiras.total;
+  const resultadoLiquido = ebitda - despFinanceiras + receitasFinanceiras;
+  const dividendos = B.dividendos.total;
+  const capex = B.investimentos.total;
+  const outrasSaidas = B.outras_saidas.total;
+  const saldoLiquido = resultadoLiquido - dividendos - capex - outrasSaidas;
   const recebimentosEmprestimos = B.recebimentos_emprestimos.total;
   const pagtosEmprestimos = B.pagtos_emprestimos.total;
-  const resultadoPosInvEmp = resultadoLiquido - investimentos - pagtosEmprestimos + recebimentosEmprestimos;
-  const dividendos = B.dividendos.total;
-  const outrasSaidas = B.outras_saidas.total;
-  const totalDistribuicao = resultadoPosInvEmp - dividendos - outrasSaidas;
+  const saldoCaixa = saldoLiquido + recebimentosEmprestimos - pagtosEmprestimos;
   return [
     { label: 'Total de Recebimentos', val: totalRecebimentos, cls: 'total' },
     { label: '(-) Total de Impostos', val: totalImpostos, cls: 'item' },
@@ -9130,19 +9166,19 @@ function buildResumoKMNO(B) {
     { label: '(-) CMV (Matéria-Prima + Mão de Obra)', val: cmv, cls: 'item' },
     { label: '(-) Royalties', val: royalties, cls: 'item' },
     { label: '(=) Margem de Contribuição', val: margemContribuicao, cls: 'total', destaque: true },
-    { label: '(-) Custos Fixos (ADM + Pessoal + Comercial + Frete)', val: custosFixos, cls: 'item' },
-    { label: '(=) Resultado Operacional (Lucro Bruto)', val: resultadoOperacional, cls: 'total', destaque: true },
-    { label: `(-) Depreciação (${fmtPct(DRE_ARVORE_DEPRECIACAO_PCT.KMNO)})`, val: depreciacao, cls: 'item' },
-    { label: '(=) Lucro Bruto - Depreciação', val: lucroBrutoDepreciacao, cls: 'total' },
+    { label: '(-) Custo ADM Indústria (ADM + Pessoal + Pró-Labore)', val: custoAdmIndustria, cls: 'item' },
+    { label: '(-) Despesas Comerciais (Comercial + Frete + Dep.Comercial)', val: despesasComerciaisTotal, cls: 'item' },
+    { label: '(=) Resultado Operacional (EBITDA)', val: ebitda, cls: 'total', destaque: true },
     { label: '(-) Despesas Financeiras', val: despFinanceiras, cls: 'item' },
+    { label: '(+) Receitas Financeiras', val: receitasFinanceiras, cls: 'item' },
     { label: '(=) Resultado Líquido', val: resultadoLiquido, cls: 'total', destaque: true },
-    { label: '(-) Investimentos', val: investimentos, cls: 'item' },
+    { label: '(-) Distribuição de Lucros', val: dividendos, cls: 'item' },
+    { label: '(-) Capex', val: capex, cls: 'item' },
+    { label: '(-) Outros (Refis)', val: outrasSaidas, cls: 'item' },
+    { label: '(=) Saldo Líquido', val: saldoLiquido, cls: 'total', destaque: true },
     { label: '(+) Recebimentos Empréstimos', val: recebimentosEmprestimos, cls: 'item' },
     { label: '(-) Pagtos Empréstimos', val: pagtosEmprestimos, cls: 'item' },
-    { label: '(=) Resultado após Investimentos/Empréstimos', val: resultadoPosInvEmp, cls: 'total' },
-    { label: '(-) Dividendos', val: dividendos, cls: 'item' },
-    { label: '(-) Outras Saídas', val: outrasSaidas, cls: 'item' },
-    { label: '(=) Total de Distribuição', val: totalDistribuicao, cls: 'total', destaque: true },
+    { label: '(=) Saldo de Caixa', val: saldoCaixa, cls: 'total' },
   ];
 }
 
@@ -9152,37 +9188,45 @@ function buildResumoNovah(B) {
   const devolucoes = B.devolucoes.total;
   const receitaLiquida = receitaBruta - impostos - devolucoes;
   const usoConsumo = B.uso_consumo.total;
-  const margemContribuicao = receitaLiquida - usoConsumo;
+  // FIX (11/08/2026, confirmado com Lucas): os custos de mão de obra de
+  // produção (Acabamento/Corte/Rash/Costura Kimono/Bordado/Sublimação/
+  // Desp.Pessoal Indústria) estavam sendo descontados DEPOIS da Margem
+  // de Contribuição, como se fossem despesa operacional. No Excel
+  // congelado (Jan-Mai) esses mesmos itens sempre entraram no CMV, antes
+  // da margem — bate com a fórmula confirmada (CMV = Mão de Obra +
+  // Serviço + Insumos). Corrigido pra entrar no CMV.
   const despIndustriais = B.acabamento.total + B.corte.total + B.rash_bermuda.total
     + B.costura_kimono.total + B.bordado.total + B.sublimacao.total + B.desp_pessoal_industria.total;
+  const margemContribuicao = receitaLiquida - usoConsumo - despIndustriais;
   const despesasAdm = B.despesas_adm.total;
   const depPessoalAdm = B.dep_pessoal_adm.total + B.pj_terceiros_adm.total;
   const proLabore = B.pro_labore.total;
-  const resultadoOperacional = margemContribuicao - despIndustriais - despesasAdm - proLabore - depPessoalAdm;
-  const depreciacao = calcDepreciacao('NOVAH', receitaBruta);
-  const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
+  const ebitda = margemContribuicao - despesasAdm - depPessoalAdm - proLabore;
   const despFinanceiras = B.despesas_financeiras.total;
-  const resultadoLiquido = lucroBrutoDepreciacao - despFinanceiras;
-  const outrosInvest = B.outros_investimentos.total;
-  const resultadoFinal = resultadoLiquido - outrosInvest;
+  const receitasFinanceiras = B.receitas_financeiras.total;
+  const resultadoLiquido = ebitda - despFinanceiras + receitasFinanceiras;
+  // Confirmado com Lucas 11/08/2026: bloco único "Outros/Investimentos"
+  // da Novah = Refis/Outros (Novah não tem Distribuição de Lucros/Capex
+  // separados hoje).
+  const outrosRefis = B.outros_investimentos.total;
+  const saldoLiquido = resultadoLiquido - outrosRefis;
   return [
     { label: 'Total de Receita Bruta', val: receitaBruta, cls: 'total' },
     { label: '(-) Total de Impostos', val: impostos, cls: 'item' },
     { label: '(-) Total de Devoluções', val: devolucoes, cls: 'item' },
     { label: '(=) Receita Líquida', val: receitaLiquida, cls: 'total', destaque: true },
     { label: '(-) Uso e Consumo', val: usoConsumo, cls: 'item' },
+    { label: '(-) Despesas Industriais (Mão de Obra)', val: despIndustriais, cls: 'item' },
     { label: '(=) Margem de Contribuição', val: margemContribuicao, cls: 'total', destaque: true },
-    { label: '(-) Despesas Industriais', val: despIndustriais, cls: 'item' },
     { label: '(-) Despesas Administração', val: despesasAdm, cls: 'item' },
     { label: '(-) Dep. Pessoal ADM / PJ Terceiros', val: depPessoalAdm, cls: 'item' },
     { label: '(-) Pró-Labore', val: proLabore, cls: 'item' },
-    { label: '(=) Resultado Operacional (Lucro Bruto)', val: resultadoOperacional, cls: 'total', destaque: true },
-    { label: `(-) Depreciação (${fmtPct(DRE_ARVORE_DEPRECIACAO_PCT.NOVAH)})`, val: depreciacao, cls: 'item' },
-    { label: '(=) Lucro Bruto - Depreciação', val: lucroBrutoDepreciacao, cls: 'total' },
+    { label: '(=) Resultado Operacional (EBITDA)', val: ebitda, cls: 'total', destaque: true },
     { label: '(-) Despesas Financeiras', val: despFinanceiras, cls: 'item' },
+    { label: '(+) Receitas Financeiras', val: receitasFinanceiras, cls: 'item' },
     { label: '(=) Resultado Líquido', val: resultadoLiquido, cls: 'total', destaque: true },
-    { label: '(-) Outros / Investimentos', val: outrosInvest, cls: 'item' },
-    { label: '(=) Resultado Final', val: resultadoFinal, cls: 'total', destaque: true },
+    { label: '(-) Outros (Refis)', val: outrosRefis, cls: 'item' },
+    { label: '(=) Saldo Líquido', val: saldoLiquido, cls: 'total', destaque: true },
   ];
 }
 
@@ -9192,38 +9236,41 @@ function buildResumoRT(B) {
   const devolucoes = B.devolucoes.total;
   const receitaLiquida = receitaBruta - impostos - devolucoes;
   const usoConsumo = B.uso_consumo.total;
-  const margemContribuicao = receitaLiquida - usoConsumo;
+  // FIX (11/08/2026, confirmado com Lucas): mesmo bug da Novah — Despesas
+  // Industriais (mão de obra de produção) estava depois da margem;
+  // corrigido pra entrar no CMV, antes da margem.
   const despIndustriais = B.despesas_industriais.total;
+  const margemContribuicao = receitaLiquida - usoConsumo - despIndustriais;
   const despesasAdm = B.despesas_adm.total;
   const depPessoalAdm = B.dep_pessoal_adm.total;
   const proLabore = B.pro_labore.total;
-  const resultadoOperacional = margemContribuicao - despIndustriais - despesasAdm - proLabore - depPessoalAdm;
-  const depreciacao = calcDepreciacao('RT', receitaBruta);
-  const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
+  const ebitda = margemContribuicao - despesasAdm - depPessoalAdm - proLabore;
   const despFinanceiras = B.despesas_financeiras.total;
-  const resultadoLiquido = lucroBrutoDepreciacao - despFinanceiras;
-  const investimentos = B.investimentos.total;
-  const outros = B.outros.total;
-  const resultadoFinal = resultadoLiquido - investimentos - outros;
+  const receitasFinanceiras = B.receitas_financeiras.total;
+  const resultadoLiquido = ebitda - despFinanceiras + receitasFinanceiras;
+  // Confirmado com Lucas 11/08/2026: Investimentos=Capex, Outros=Refis
+  // (RT não tem Distribuição de Lucros separada hoje, fica 0).
+  const capex = B.investimentos.total;
+  const outrosRefis = B.outros.total;
+  const saldoLiquido = resultadoLiquido - capex - outrosRefis;
   return [
     { label: 'Total de Receita Bruta', val: receitaBruta, cls: 'total' },
     { label: '(-) Total de Impostos', val: impostos, cls: 'item' },
     { label: '(-) Total de Devoluções', val: devolucoes, cls: 'item' },
     { label: '(=) Receita Líquida', val: receitaLiquida, cls: 'total', destaque: true },
     { label: '(-) Uso e Consumo', val: usoConsumo, cls: 'item' },
+    { label: '(-) Despesas Industriais (Mão de Obra)', val: despIndustriais, cls: 'item' },
     { label: '(=) Margem de Contribuição', val: margemContribuicao, cls: 'total', destaque: true },
-    { label: '(-) Despesas Industriais', val: despIndustriais, cls: 'item' },
     { label: '(-) Despesas Administração', val: despesasAdm, cls: 'item' },
     { label: '(-) Dep. Pessoal ADM', val: depPessoalAdm, cls: 'item' },
     { label: '(-) Pró-Labore', val: proLabore, cls: 'item' },
-    { label: '(=) Resultado Operacional (Lucro Bruto)', val: resultadoOperacional, cls: 'total', destaque: true },
-    { label: '(-) Depreciação', val: depreciacao, cls: 'item' },
-    { label: '(=) Lucro Bruto - Depreciação', val: lucroBrutoDepreciacao, cls: 'total' },
+    { label: '(=) Resultado Operacional (EBITDA)', val: ebitda, cls: 'total', destaque: true },
     { label: '(-) Despesas Financeiras', val: despFinanceiras, cls: 'item' },
+    { label: '(+) Receitas Financeiras', val: receitasFinanceiras, cls: 'item' },
     { label: '(=) Resultado Líquido', val: resultadoLiquido, cls: 'total', destaque: true },
-    { label: '(-) Investimentos', val: investimentos, cls: 'item' },
-    { label: '(-) Outros', val: outros, cls: 'item' },
-    { label: '(=) Resultado Final', val: resultadoFinal, cls: 'total', destaque: true },
+    { label: '(-) Capex', val: capex, cls: 'item' },
+    { label: '(-) Outros (Refis)', val: outrosRefis, cls: 'item' },
+    { label: '(=) Saldo Líquido', val: saldoLiquido, cls: 'total', destaque: true },
   ];
 }
 
@@ -9257,7 +9304,7 @@ function extrairMetricasResumo(rows) {
   // definição: tudo que foi descontado entre as duas linhas é custo direto).
   const cmvExplicito = acha(/^\(-\) CMV/);
   const cmv = cmvExplicito !== null ? cmvExplicito : (receitaLiquida - margemContribuicao);
-  const ebitda = acha(/Resultado Operacional \(Lucro Bruto\)/) || 0;
+  const ebitda = acha(/Resultado Operacional \(EBITDA\)/) || 0;
   // Despesas Financeiras: linha isolada e com o MESMO rótulo nas 3
   // empresas — extração direta, sem precisar de fallback.
   const despesasFinanceiras = acha(/^\(-\) Despesas Financeiras/) || 0;
@@ -9278,7 +9325,11 @@ function extrairMetricasResumo(rows) {
     ebitda,
     despesasFinanceiras,
     lucroLiquido: acha(/^\(=\) Resultado Líquido/) || 0,
-    saldoLiquido: rows.length ? rows[rows.length - 1].val : 0, // última linha = resultado final/distribuição
+    // FIX (11/08/2026): antes pegava a ÚLTIMA linha do array (funcionava
+    // enquanto Saldo Líquido era sempre a linha final). Agora a KMNO tem
+    // uma linha extra depois (Saldo de Caixa, com Recebimentos/Pagtos
+    // Empréstimos) — busca pelo rótulo explícito em vez de por posição.
+    saldoLiquido: acha(/^\(=\) Saldo Líquido/) || 0,
   };
 }
 
@@ -9304,54 +9355,64 @@ function buildResumoConsolidado(B_RT, B_KMNO, B_BL) {
   const devolucoes = B_KMNO.devolucoes.total + B_BL.devolucoes.total + B_RT.devolucoes.total;
   const receitaLiquida = receitaBruta - impostos - devolucoes;
 
+  // FIX (11/08/2026, confirmado com Lucas): mão de obra de produção da
+  // Novah/RT entra no CMV (antes era descontada depois da margem —
+  // mesmo bug corrigido em buildResumoNovah/buildResumoRT).
   const custoDireto = (B_KMNO.custo_materia_prima.total + B_KMNO.custo_mao_obra.total)
-    + B_BL.uso_consumo.total + B_RT.uso_consumo.total;
+    + B_BL.uso_consumo.total + (B_BL.acabamento.total + B_BL.corte.total + B_BL.rash_bermuda.total
+      + B_BL.costura_kimono.total + B_BL.bordado.total + B_BL.sublimacao.total + B_BL.desp_pessoal_industria.total)
+    + B_RT.uso_consumo.total + B_RT.despesas_industriais.total;
   const royalties = B_KMNO.royalties.total;
   const margemContribuicao = receitaLiquida - custoDireto - royalties;
 
-  const custosFixosKMNO = B_KMNO.despesas_adm.total + B_KMNO.dep_pessoal_adm.total + B_KMNO.pro_labore.total
-    + B_KMNO.despesas_comerciais.total + B_KMNO.frete_pago.total + B_KMNO.dep_comercial.total;
-  const custosFixosBL = B_BL.acabamento.total + B_BL.corte.total + B_BL.rash_bermuda.total
-    + B_BL.costura_kimono.total + B_BL.bordado.total + B_BL.sublimacao.total + B_BL.desp_pessoal_industria.total
-    + B_BL.despesas_adm.total + B_BL.dep_pessoal_adm.total + B_BL.pro_labore.total;
-  const custosFixosRT = B_RT.despesas_industriais.total + B_RT.despesas_adm.total + B_RT.dep_pessoal_adm.total + B_RT.pro_labore.total;
-  const custosFixos = custosFixosKMNO + custosFixosBL + custosFixosRT;
-  const resultadoOperacional = margemContribuicao - custosFixos;
+  // EBITDA = Margem - Custo ADM Indústria - Despesas Comerciais (das 3
+  // empresas). Despesas Comerciais só existe como bloco próprio na KMNO
+  // (confirmado com Lucas: Novah/RT não têm despesa comercial separada).
+  const custoAdmIndustria = (B_KMNO.despesas_adm.total + B_KMNO.dep_pessoal_adm.total + B_KMNO.pro_labore.total)
+    + (B_BL.despesas_adm.total + B_BL.dep_pessoal_adm.total + B_BL.pj_terceiros_adm.total + B_BL.pro_labore.total)
+    + (B_RT.despesas_adm.total + B_RT.dep_pessoal_adm.total + B_RT.pro_labore.total);
+  const despesasComerciais = B_KMNO.despesas_comerciais.total + B_KMNO.frete_pago.total + B_KMNO.dep_comercial.total;
+  const ebitda = margemContribuicao - custoAdmIndustria - despesasComerciais;
 
-  const depreciacao = calcDepreciacao('KMNO', B_KMNO.faturamento.total)
-    + calcDepreciacao('NOVAH', B_BL.receita_bruta.total)
-    + calcDepreciacao('RT', B_RT.receita_bruta.total);
-  const lucroBrutoDepreciacao = resultadoOperacional - depreciacao;
-
+  // Depreciação SAI da conta (não é caixa, só existe no DRE por
+  // Competência — confirmado com Lucas 11/08/2026).
   const despesasFinanceiras = B_KMNO.despesas_financeiras.total + B_BL.despesas_financeiras.total + B_RT.despesas_financeiras.total;
-  const resultadoLiquido = lucroBrutoDepreciacao - despesasFinanceiras;
+  const receitasFinanceiras = B_KMNO.receitas_financeiras.total + B_BL.receitas_financeiras.total + B_RT.receitas_financeiras.total;
+  const resultadoLiquido = ebitda - despesasFinanceiras + receitasFinanceiras;
 
-  const investimentosOutros = B_KMNO.investimentos.total + B_KMNO.pagtos_emprestimos.total - B_KMNO.recebimentos_emprestimos.total
-    + B_BL.outros_investimentos.total + B_RT.outros.total;
-  const resultadoPosInvest = resultadoLiquido - investimentosOutros;
-
+  // Dividendos: só KMNO tem bloco próprio. Capex: KMNO (Investimentos) +
+  // RT (Investimentos). Outros/Refis: KMNO (Outras Saídas) + Novah
+  // (Outros/Investimentos, confirmado = Refis) + RT (Outros).
   const dividendos = B_KMNO.dividendos.total;
-  const outrasSaidas = B_KMNO.outras_saidas.total;
-  const resultadoFinal = resultadoPosInvest - dividendos - outrasSaidas;
+  const capex = B_KMNO.investimentos.total + B_RT.investimentos.total;
+  const outrosRefis = B_KMNO.outras_saidas.total + B_BL.outros_investimentos.total + B_RT.outros.total;
+  const saldoLiquido = resultadoLiquido - dividendos - capex - outrosRefis;
+
+  const recebimentosEmprestimos = B_KMNO.recebimentos_emprestimos.total;
+  const pagtosEmprestimos = B_KMNO.pagtos_emprestimos.total;
+  const saldoCaixa = saldoLiquido + recebimentosEmprestimos - pagtosEmprestimos;
 
   return [
     { label: 'Receita Bruta (3 empresas)', val: receitaBruta, cls: 'total' },
     { label: '(-) Impostos', val: impostos, cls: 'item' },
     { label: '(-) Devoluções', val: devolucoes, cls: 'item' },
     { label: '(=) Receita Líquida', val: receitaLiquida, cls: 'total', destaque: true },
-    { label: '(-) Custo Direto (Matéria-Prima + Mão de Obra + Uso e Consumo)', val: custoDireto, cls: 'item' },
+    { label: '(-) CMV (Matéria-Prima + Mão de Obra, das 3 empresas)', val: custoDireto, cls: 'item' },
     { label: '(-) Royalties', val: royalties, cls: 'item' },
     { label: '(=) Margem de Contribuição', val: margemContribuicao, cls: 'total', destaque: true },
-    { label: '(-) Custos Fixos (ADM + Pessoal + Comercial + Industrial, das 3 empresas)', val: custosFixos, cls: 'item' },
-    { label: '(=) Resultado Operacional (Lucro Bruto)', val: resultadoOperacional, cls: 'total', destaque: true },
-    { label: '(-) Depreciação', val: depreciacao, cls: 'item' },
-    { label: '(=) Lucro Bruto - Depreciação', val: lucroBrutoDepreciacao, cls: 'total' },
+    { label: '(-) Custo ADM Indústria (das 3 empresas)', val: custoAdmIndustria, cls: 'item' },
+    { label: '(-) Despesas Comerciais (KMNO)', val: despesasComerciais, cls: 'item' },
+    { label: '(=) Resultado Operacional (EBITDA)', val: ebitda, cls: 'total', destaque: true },
     { label: '(-) Despesas Financeiras', val: despesasFinanceiras, cls: 'item' },
+    { label: '(+) Receitas Financeiras', val: receitasFinanceiras, cls: 'item' },
     { label: '(=) Resultado Líquido', val: resultadoLiquido, cls: 'total', destaque: true },
-    { label: '(-) Investimentos / Empréstimos / Outros', val: investimentosOutros, cls: 'item' },
-    { label: '(-) Dividendos', val: dividendos, cls: 'item' },
-    { label: '(-) Outras Saídas', val: outrasSaidas, cls: 'item' },
-    { label: '(=) Resultado Final Consolidado', val: resultadoFinal, cls: 'total', destaque: true },
+    { label: '(-) Dividendos (KMNO)', val: dividendos, cls: 'item' },
+    { label: '(-) Capex (KMNO + RT)', val: capex, cls: 'item' },
+    { label: '(-) Outros / Refis (das 3 empresas)', val: outrosRefis, cls: 'item' },
+    { label: '(=) Saldo Líquido', val: saldoLiquido, cls: 'total', destaque: true },
+    { label: '(+) Recebimentos Empréstimos (KMNO)', val: recebimentosEmprestimos, cls: 'item' },
+    { label: '(-) Pagtos Empréstimos (KMNO)', val: pagtosEmprestimos, cls: 'item' },
+    { label: '(=) Saldo de Caixa', val: saldoCaixa, cls: 'total' },
   ];
 }
 
@@ -11739,27 +11800,10 @@ try {
   }
 
   try {
-    // FIX 11/08/2026: .limit(10000) sozinho NÃO bastava — Supabase aplica
-    // teto hard de 1000 linhas por request no servidor (ignora .limit()
-    // do client quando o valor pedido excede o teto do projeto). Tabela
-    // tem 1113+ linhas, então a query sempre voltava truncada em exatas
-    // 1000 (confirmado no console: data.length === 1000), cortando fora
-    // parte de NOVAH/jun-2026 (ex: 2.06.99) de forma não-determinística
-    // (sem order by). Fix real: paginar com .range() até esgotar.
-    let orcCatRows = [];
-    let pagina = 0;
-    const PAGE_SIZE = 1000;
-    while (true) {
-      const { data: pageData, error: orcCatErr } = await supabaseClient
-        .from('dash_orcamento_realizado_categoria')
-        .select('empresa_id,ano,mes,cod_categoria,valor_realizado')
-        .range(pagina * PAGE_SIZE, (pagina + 1) * PAGE_SIZE - 1);
-      if (orcCatErr) throw orcCatErr;
-      if (!pageData || pageData.length === 0) break;
-      orcCatRows = orcCatRows.concat(pageData);
-      if (pageData.length < PAGE_SIZE) break;
-      pagina++;
-    }
+    const { data: orcCatRows, error: orcCatErr } = await supabaseClient
+      .from('dash_orcamento_realizado_categoria')
+      .select('empresa_id,ano,mes,cod_categoria,valor_realizado');
+    if (orcCatErr) throw orcCatErr;
     orcamentoRealizadoCategoriaCache = {};
     (orcCatRows || []).forEach(r => {
       const chave = `${r.empresa_id}|${r.ano}-${String(r.mes).padStart(2, '0')}`;
@@ -16691,14 +16735,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // linhasConfig (foram quebrados em linhas próprias) — soma a partir
   // dos componentes granulares. RT (fallback): mantém comportamento
   // original (chave única, embora nunca chegue aqui na prática).
-  // FIX 11/08/2026 (pedido Lucas): NOVAH tem 2 componentes extras
-  // (pjTerceirosAdm/pcpPjTerceiros) que não entravam nessa soma — o
-  // "Resultado Operacional" ficava inflado (não descontava esses 2
-  // custos). KMNO não tem essas chaves (ficam undefined→0 com ?? abaixo).
   const custoAdmTotalPorMes = (empresaKey === 'KMNO' || empresaKey === 'NOVAH')
-    ? (empresaKey === 'NOVAH'
-        ? somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'pjTerceirosAdm', 'pcpPjTerceiros', 'proLabore')
-        : somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'proLabore'))
+    ? somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'proLabore')
     : (valoresMesesPorChave['custoAdm'] || mesesValidos.map(() => 0));
   const despesasComerciaisTotalPorMes = empresaKey === 'KMNO'
     ? somaArraysLinhas('despesasComerciaisPuro', 'fretePago', 'depComercial')
@@ -16720,12 +16758,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     ? (valorMesAntes('custoInsumos') + valorMesAntes('custoServicosTerceiros') + valorMesAntes('acabamento') + valorMesAntes('corte') + valorMesAntes('rashBermuda') + valorMesAntes('costuraKimono') + valorMesAntes('bordado') + valorMesAntes('sublimacao') + valorMesAntes('despPessoalIndustria'))
     : (valorMesAntes('custoInsumos') + valorMesAntes('custoServicos') + valorMesAntes('custoMaoObra'))) : null;
   const margemAntes = temFonteMesAntes ? (receitaLiquidaAntes - cmvAntes - valorMesAntes('royalties')) : null;
-  // FIX 11/08/2026 (pedido Lucas): mesmo ajuste do custoAdmTotalPorMes
-  // acima, aplicado à versão "mês anterior" (usada no AV% da 1ª coluna).
   const custoAdmAntes = temFonteMesAntes ? ((empresaKey === 'KMNO' || empresaKey === 'NOVAH')
-    ? (empresaKey === 'NOVAH'
-        ? (valorMesAntes('despesasAdministracao') + valorMesAntes('depPessoalAdm') + valorMesAntes('pjTerceirosAdm') + valorMesAntes('pcpPjTerceiros') + valorMesAntes('proLabore'))
-        : (valorMesAntes('despesasAdministracao') + valorMesAntes('depPessoalAdm') + valorMesAntes('proLabore')))
+    ? (valorMesAntes('despesasAdministracao') + valorMesAntes('depPessoalAdm') + valorMesAntes('proLabore'))
     : valorMesAntes('custoAdm')) : null;
   const despesasComerciaisAntes = temFonteMesAntes ? (empresaKey === 'KMNO'
     ? (valorMesAntes('despesasComerciaisPuro') + valorMesAntes('fretePago') + valorMesAntes('depComercial'))
@@ -16789,13 +16823,6 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + linhaSubtotal('(=) Margem de Contribuição', margemPorMes, margemAntes)
       + htmlPorChave['despesasAdministracao']
       + htmlPorChave['depPessoalAdm']
-      // FIX 11/08/2026 (pedido Lucas): "PJ Terceiros ADM" e "PCP (PJ
-      // Terceiros)" já eram calculados (RESUMO_POR_EMPRESA_LINHAS_NOVAH +
-      // htmlPorChave já tinham essas 2 linhas prontas, com drill-down),
-      // mas essa lista final de concatenação esquecia de incluí-las —
-      // ficavam invisíveis no card, mesmo com dado correto por baixo.
-      + htmlPorChave['pjTerceirosAdm']
-      + htmlPorChave['pcpPjTerceiros']
       + htmlPorChave['proLabore']
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
