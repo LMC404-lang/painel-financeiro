@@ -16813,14 +16813,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // linhasConfig (foram quebrados em linhas próprias) — soma a partir
   // dos componentes granulares. RT (fallback): mantém comportamento
   // original (chave única, embora nunca chegue aqui na prática).
-  // FIX 11/08/2026 (pedido Lucas): NOVAH tem 2 componentes extras
-  // (pjTerceirosAdm/pcpPjTerceiros) que não entravam nessa soma — o
-  // "Resultado Operacional" ficava inflado (não descontava esses 2
-  // custos). KMNO não tem essas chaves (ficam undefined→0 com ?? abaixo).
   const custoAdmTotalPorMes = (empresaKey === 'KMNO' || empresaKey === 'NOVAH')
-    ? (empresaKey === 'NOVAH'
-        ? somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'pjTerceirosAdm', 'pcpPjTerceiros', 'proLabore')
-        : somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'proLabore'))
+    ? somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'proLabore')
     : (valoresMesesPorChave['custoAdm'] || mesesValidos.map(() => 0));
   const despesasComerciaisTotalPorMes = empresaKey === 'KMNO'
     ? somaArraysLinhas('despesasComerciaisPuro', 'fretePago', 'depComercial')
@@ -16848,12 +16842,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     ? (valorMesAntes('custoInsumos') + valorMesAntes('custoServicosTerceiros') + valorMesAntes('acabamento') + valorMesAntes('corte') + valorMesAntes('rashBermuda') + valorMesAntes('costuraKimono') + valorMesAntes('bordado') + valorMesAntes('sublimacao') + valorMesAntes('despPessoalIndustria'))
     : (valorMesAntes('custoInsumos') + valorMesAntes('custoServicos') + valorMesAntes('custoMaoObra'))) : null;
   const margemAntes = temFonteMesAntes ? (receitaLiquidaAntes - cmvAntes - valorMesAntes('royalties')) : null;
-  // FIX 11/08/2026 (pedido Lucas): mesmo ajuste do custoAdmTotalPorMes
-  // acima, aplicado à versão "mês anterior" (usada no AV% da 1ª coluna).
   const custoAdmAntes = temFonteMesAntes ? ((empresaKey === 'KMNO' || empresaKey === 'NOVAH')
-    ? (empresaKey === 'NOVAH'
-        ? (valorMesAntes('despesasAdministracao') + valorMesAntes('depPessoalAdm') + valorMesAntes('pjTerceirosAdm') + valorMesAntes('pcpPjTerceiros') + valorMesAntes('proLabore'))
-        : (valorMesAntes('despesasAdministracao') + valorMesAntes('depPessoalAdm') + valorMesAntes('proLabore')))
+    ? (valorMesAntes('despesasAdministracao') + valorMesAntes('depPessoalAdm') + valorMesAntes('proLabore'))
     : valorMesAntes('custoAdm')) : null;
   const despesasComerciaisAntes = temFonteMesAntes ? (empresaKey === 'KMNO'
     ? (valorMesAntes('despesasComerciaisPuro') + valorMesAntes('fretePago') + valorMesAntes('depComercial'))
@@ -16920,8 +16910,6 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + linhaSubtotal('(=) Margem de Contribuição', margemPorMes, margemAntes)
       + htmlPorChave['despesasAdministracao']
       + htmlPorChave['depPessoalAdm']
-      + htmlPorChave['pjTerceirosAdm']
-      + htmlPorChave['pcpPjTerceiros']
       + htmlPorChave['proLabore']
       + htmlPorChave['despesasDiretoria']
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
