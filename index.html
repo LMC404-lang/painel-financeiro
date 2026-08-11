@@ -8917,15 +8917,23 @@ function buildBlocoArvore(blocoDef, totalPorLabel) {
 }
 
 // NOVO (11/08/2026): monta um bloco somando TODAS as categorias-folha do
-// Omie cujo código começa com `prefixo` (ex: '2.04.' = Despesas
+// Omie cujo código começa com algum de `prefixos` (ex: '2.04.' = Despesas
 // Administração da Novah) — em vez de bater por lista fixa de nomes.
 // Usado onde o nome fixo historicamente ficava desalinhado do Omie real
-// (ver decisão 11/08/2026, Novah despesas_adm/dep_pessoal_adm/
-// pj_terceiros_adm). Os itens exibidos passam a ser as descrições reais
-// das categorias do Omie, não os nomes antigos do Excel.
-function buildBlocoArvorePorPrefixo(id, nome, natureza, prefixo, empresa, categories, totalPorCodigo) {
+// (ver decisão 11/08/2026, despesas_adm/dep_pessoal_adm/pj_terceiros_adm
+// das 3 empresas). Os itens exibidos passam a ser as descrições reais das
+// categorias do Omie, não os nomes antigos do Excel/planilha.
+// `prefixos`: string ou array de strings (KMNO precisa de 2 — "2.04." e
+// "2.17.", que são dois códigos-raiz diferentes pro mesmo grupo "5.
+// DESPESAS ADMINISTRATIVAS" no Omie deles).
+// `excluirCodigos`: códigos exatos a pular (RT: "2.03.98" Pró-Labore
+// sócio já é bloco próprio — sem isso, contaria 2x).
+function buildBlocoArvorePorPrefixo(id, nome, natureza, prefixos, empresa, categories, totalPorCodigo, excluirCodigos) {
+  const listaPrefixos = Array.isArray(prefixos) ? prefixos : [prefixos];
+  const excluir = new Set(excluirCodigos || []);
   const itens = (categories || [])
-    .filter(c => c._empresa === empresa && c.codigo && c.codigo.startsWith(prefixo) && c.codigo.split('.').length >= 3)
+    .filter(c => c._empresa === empresa && c.codigo && c.codigo.split('.').length >= 3
+      && listaPrefixos.some(p => c.codigo.startsWith(p)) && !excluir.has(c.codigo))
     .sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
     .map(c => ({
       nome: decodeHtmlEntities(c.descricao || c.codigo),
@@ -9040,19 +9048,34 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
   // pré-calcula uma vez só (mesmo mapa serve pra todos os blocos daquele mês)
   const { totalPorLabel, totalPorCodigo } = buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStart, monthEnd, modo, contasCache);
   const B = buildTodosBlocosDe(empresa, () => totalPorLabel);
-  // FIX 11/08/2026 (pedido Lucas): Novah, meses ao vivo (Jun/2026+) —
-  // despesas_adm/dep_pessoal_adm/pj_terceiros_adm batiam por NOME fixo
-  // (herdado do Excel, que rastreava custo por PESSOA — "Porteiro", "EMP
-  // SYBELI E RICHARD", "LEO", "GERALDO" — nomes que não existem como
-  // categoria no Omie de verdade). Trocado por agrupamento DIRETO pelo
-  // código nativo do Omie (2.03.*=Dep.Pessoal ADM, 2.04.*=Despesas Adm,
-  // 2.19.*=PJ Terceiros ADM) — bate 1:1 com o relatório nativo sempre,
-  // mesmo se o Omie renomear/criar categoria. Congelado (Jan-Mai) NÃO
-  // muda — Lucas confirmou que já bate certo do jeito antigo (Excel).
+  // FIX 11/08/2026 (pedido Lucas): meses ao vivo (Jun/2026+), nas 3
+  // empresas — despesas_adm/dep_pessoal_adm/pj_terceiros_adm batiam por
+  // NOME fixo (herdado do Excel, que rastreava custo por PESSOA —
+  // "Porteiro", "EMP SYBELI E RICHARD", "LEO", "GERALDO" etc — nomes que
+  // não existem como categoria no Omie de verdade). Trocado por
+  // agrupamento DIRETO pelo código nativo do Omie de cada empresa — bate
+  // 1:1 com o relatório nativo sempre, mesmo se o Omie renomear/criar
+  // categoria. Congelado (Jan-Mai) NÃO muda em nenhuma das 3 — já bate
+  // certo do jeito antigo (Excel).
+  //   NOVAH: 2.03=Dep.Pessoal ADM, 2.04=Despesas Adm, 2.19=PJ Terceiros ADM
+  //   KMNO:  2.03=Dep.Pessoal ADM, 2.04+2.17=Despesas Adm (2.17 é raiz
+  //          separada só com "PJ ADM", mesmo número "5" no Omie da KMNO)
+  //   RT:    2.03=Dep.Pessoal ADM (exceto 2.03.98, que já é o bloco
+  //          Pró-Labore — RT aninha os dois no mesmo código-raiz),
+  //          2.04=Despesas Adm. Bloco Dep.Pessoal ADM da RT estava
+  //          cadastrado com ZERO itens (sempre R$0) — bug mais grave dos 3.
   if (empresa === 'NOVAH' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
     B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', '2.04.', empresa, categories, totalPorCodigo);
     B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo);
     B.pj_terceiros_adm = buildBlocoArvorePorPrefixo('pj_terceiros_adm', 'PJ Terceiros ADM', 'P', '2.19.', empresa, categories, totalPorCodigo);
+  }
+  if (empresa === 'KMNO' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
+    B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', ['2.04.', '2.17.'], empresa, categories, totalPorCodigo);
+    B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo);
+  }
+  if (empresa === 'RT' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
+    B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', '2.04.', empresa, categories, totalPorCodigo);
+    B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo, ['2.03.98']);
   }
   // Impostos KMNO: realizado usa os valores reais lançados no Omie (não a
   // estimativa por %) — confirmado com Lucas em 21/07/2026. Fica na mesma
