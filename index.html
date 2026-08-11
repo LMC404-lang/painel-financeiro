@@ -11841,10 +11841,26 @@ try {
   }
 
   try {
-    const { data: orcCatRows, error: orcCatErr } = await supabaseClient
-      .from('dash_orcamento_realizado_categoria')
-      .select('empresa_id,ano,mes,cod_categoria,valor_realizado');
-    if (orcCatErr) throw orcCatErr;
+    // FIX 11/08/2026: tabela passou de 1.000 linhas (hoje: 1.113) — sem
+    // paginação, o Supabase corta silenciosamente na linha 1000 (limite
+    // padrão), e a ordem de quais linhas ficam de fora não é garantida.
+    // Isso explicava categorias/meses aparecendo zerados de forma
+    // aparentemente aleatória (ex: Despesas Diretoria de Junho da Novah
+    // ausente, mas a de Julho presente). Paginado em lotes de 1000, igual
+    // ao padrão já usado em sbPaged/sbMultiPaged pras outras tabelas.
+    let orcCatRows = [];
+    let fromIdx = 0;
+    const PAGE = 1000;
+    while (true) {
+      const { data: page, error: pageErr } = await supabaseClient
+        .from('dash_orcamento_realizado_categoria')
+        .select('empresa_id,ano,mes,cod_categoria,valor_realizado')
+        .range(fromIdx, fromIdx + PAGE - 1);
+      if (pageErr) throw pageErr;
+      orcCatRows = orcCatRows.concat(page || []);
+      if (!page || page.length < PAGE) break;
+      fromIdx += PAGE;
+    }
     orcamentoRealizadoCategoriaCache = {};
     (orcCatRows || []).forEach(r => {
       const chave = `${r.empresa_id}|${r.ano}-${String(r.mes).padStart(2, '0')}`;
