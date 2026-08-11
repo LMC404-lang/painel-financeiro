@@ -4636,6 +4636,11 @@ let orcamentoRealizadoCache = {};
 // Receita Líquida menor que Impostos, %s absurdos). Mapa "empresa|ano-mes"
 // -> mapa {cod_categoria: valor}.
 let orcamentoRealizadoCategoriaCache = {};
+// NOVO (11/08/2026): saldo bancário OFICIAL do Omie (ListarExtrato, dia 1
+// de cada mês), substitui o rollback client-side pra Jun/2026+ no card
+// "Bancos" — ver saldoBancarioMensalPorConta(). Chave "empresa|ano-mes" ->
+// {label (descrição+empresa): saldo}.
+let saldoBancarioMensalCache = {};
 let transferenciasCache = null; // movimentos TRAR/TRAP (transferência entre contas) — bloco "Transferências e Ajustes de Saldo" do DFC
 
 // --- GRUPO 2: Árvore de DRE por Bloco ---
@@ -11683,6 +11688,28 @@ try {
     orcamentoRealizadoCategoriaCache = {};
   }
 
+  // NOVO (11/08/2026): saldo bancário oficial (dash_saldo_bancario_mensal)
+  // — mesma lógica de "tabela pequena, sem filtro de empresa, busca direto"
+  // do bloco de orçamento realizado acima. Substitui saldoBancosPorContaRollback
+  // pra Jun/2026+ no card "Bancos" (rollback tinha bug de double-count e
+  // não incluía transferência entre contas — ver decisão 11/08/2026).
+  try {
+    const { data: saldoRows, error: saldoErr } = await supabaseClient
+      .from('dash_saldo_bancario_mensal')
+      .select('empresa_id,cod_cc,descricao,ano,mes,saldo_dia1');
+    if (saldoErr) throw saldoErr;
+    saldoBancarioMensalCache = {};
+    (saldoRows || []).forEach(r => {
+      const chave = `${r.empresa_id}|${r.ano}-${String(r.mes).padStart(2, '0')}`;
+      if (!saldoBancarioMensalCache[chave]) saldoBancarioMensalCache[chave] = {};
+      const label = `${r.descricao || 'Conta ' + r.cod_cc} (${r.empresa_id})`;
+      saldoBancarioMensalCache[chave][label] = Number(r.saldo_dia1);
+    });
+  } catch (e) {
+    console.error('Erro ao carregar dash_saldo_bancario_mensal:', e);
+    saldoBancarioMensalCache = {};
+  }
+
   // Mapa empresa|titulo -> [{cod_categoria, valor, percentual}, ...]
   rateioPayableCache = {};
   (payableCategorias || []).forEach(c => {
@@ -16881,6 +16908,20 @@ function saldoBancosPorContaRollback(contasCorrentes, categories, financialMovem
   return out;
 }
 
+// NOVO (11/08/2026): junta as 3 empresas de dash_saldo_bancario_mensal
+// (saldo oficial do Omie, ver fetch em loadCompanyData) num mapa único
+// {label: saldo}, no mesmo formato que saldoBancosPorContaRollback
+// produzia — pra não precisar tocar no resto de renderGrupoBancos.
+function saldoBancarioMensalCombinado(ano, mes) {
+  const sufixo = `${ano}-${String(mes).padStart(2, '0')}`;
+  const out = {};
+  ['KMNO', 'RT', 'NOVAH'].forEach(emp => {
+    const mapa = saldoBancarioMensalCache[`${emp}|${sufixo}`];
+    if (mapa) Object.assign(out, mapa);
+  });
+  return out;
+}
+
 // Mapa banco (label) -> empresa, pra filtrar o card "Bancos" quando só
 // 1 empresa está selecionada (pedido 28/07). Congelado (Jan-Mai): mapa
 // fixo abaixo. Ao vivo (Jun+): o label já vem no formato "Conta
@@ -17173,20 +17214,27 @@ function renderGrupoBancos(monthStart, monthEnd) {
   const infoMesAnterior = { chave: chaveAntes, mesDayjs: mesAntes, live: liveAntes, frozenIdx: liveAntes ? -1 : d.meses.indexOf(chaveAntes) };
   const temMesAnterior = infoMesAnterior.live || infoMesAnterior.frozenIdx >= 0;
 
-  // Ao vivo: rollback banco a banco (KMNO+RT+NOVAH), 1x por mês —
-  // incluindo o mês anterior ao 1º exibido (só pra alimentar o AV%).
+  // FIX 11/08/2026: rollback client-side (saldoBancosPorContaRollback)
+  // tinha bug de double-count (título+baixa de cartão contados juntos) e
+  // não considerava transferência entre contas (TRAR/TRAP, que muda o
+  // saldo de uma conta individual mesmo excluída do total do Grupo) —
+  // dava valores 5x maiores que o saldo real em contas de giro alto
+  // (Omie.CASH, Sicredi Novah), confirmado contra o nSaldoAtual oficial
+  // do Omie (ListarExtrato). Trocado por dash_saldo_bancario_mensal:
+  // saldo OFICIAL do Omie no dia 1 de cada mês, sincronizado 1x/mês
+  // (sync-saldo-mensal.js nos 3 repos). Ver saldoBancarioMensalCombinado.
   const liveByMes = {};
   mesesValidos.filter(m => m.live).forEach(m => {
-    liveByMes[m.chave] = saldoBancosPorContaRollback(contasCorrentesCache, categoriesCache, financialMovementsCache, ['KMNO', 'RT', 'NOVAH'], m.mesDayjs);
+    liveByMes[m.chave] = saldoBancarioMensalCombinado(m.mesDayjs.year(), m.mesDayjs.month() + 1);
   });
   if (temMesAnterior && infoMesAnterior.live) {
-    liveByMes[infoMesAnterior.chave] = saldoBancosPorContaRollback(contasCorrentesCache, categoriesCache, financialMovementsCache, ['KMNO', 'RT', 'NOVAH'], infoMesAnterior.mesDayjs);
+    liveByMes[infoMesAnterior.chave] = saldoBancarioMensalCombinado(infoMesAnterior.mesDayjs.year(), infoMesAnterior.mesDayjs.month() + 1);
   }
   // Saldo no FIM do mês (pedido 28/07) = saldo no 1º dia do mês SEGUINTE.
-  // Ao vivo: mesmo rollback, um mês à frente.
   const liveFimByMes = {};
   mesesValidos.filter(m => m.live).forEach(m => {
-    liveFimByMes[m.chave] = saldoBancosPorContaRollback(contasCorrentesCache, categoriesCache, financialMovementsCache, ['KMNO', 'RT', 'NOVAH'], m.mesDayjs.add(1, 'month'));
+    const seguinte = m.mesDayjs.add(1, 'month');
+    liveFimByMes[m.chave] = saldoBancarioMensalCombinado(seguinte.year(), seguinte.month() + 1);
   });
 
   const valorBanco = (banco, m) => {
