@@ -9098,10 +9098,51 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', '2.04.', empresa, categories, totalPorCodigo);
     B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo);
     B.pj_terceiros_adm = buildBlocoArvorePorPrefixo('pj_terceiros_adm', 'PJ Terceiros ADM', 'P', '2.19.', empresa, categories, totalPorCodigo);
+    // NOVO (11/08/2026, pedido Lucas): "19. Despesas Diretoria" (2.21) é
+    // raiz PRÓPRIA no Omie, separada de Despesas Administração — no
+    // Excel congelado esse valor (ex: "Serviços Diretoria") ficava
+    // misturado dentro de Despesas ADM, mas ao vivo tem categoria só
+    // dela. Fica como linha pai/filhos separada (não fundida em ADM).
+    B.despesas_diretoria = buildBlocoArvorePorPrefixo('despesas_diretoria', 'Despesas Diretoria', 'P', '2.21.', empresa, categories, totalPorCodigo);
+    // NOVO (11/08/2026, pedido Lucas): "os zerados voltaram" — achado o
+    // motivo real. A Novah tem raiz numerada própria pra CADA bloco no
+    // Omie (1.01 a 1.04, 2.01 a 2.21), mas quase nada usava isso — batia
+    // por nome fixo herdado do Excel/planilha antiga, que não existe mais
+    // igual no Omie (ex: "Terceiros (Costura Externa)" no Excel vs
+    // "Costura Externa Rash Bermuda" no Omie real — nunca bate, fica R$0
+    // mesmo com dinheiro real lançado). Convertido TODO o resto da Novah
+    // pra código/prefixo, mesmo padrão já usado em despesas_adm.
+    B.uso_consumo         = buildBlocoArvorePorPrefixo('uso_consumo', 'Uso e Consumo', 'P', '2.01.', empresa, categories, totalPorCodigo);
+    B.impostos            = buildBlocoArvorePorPrefixo('impostos', 'Impostos', 'P', '2.06.', empresa, categories, totalPorCodigo);
+    B.acabamento          = buildBlocoArvorePorPrefixo('acabamento', 'Acabamento', 'P', '2.11.', empresa, categories, totalPorCodigo);
+    B.corte               = buildBlocoArvorePorPrefixo('corte', 'Corte', 'P', '2.13.', empresa, categories, totalPorCodigo);
+    B.rash_bermuda        = buildBlocoArvorePorPrefixo('rash_bermuda', 'Rash Guard/Bermudas', 'P', '2.14.', empresa, categories, totalPorCodigo);
+    B.costura_kimono      = buildBlocoArvorePorPrefixo('costura_kimono', 'Costura Kimono', 'P', '2.15.', empresa, categories, totalPorCodigo);
+    B.bordado             = buildBlocoArvorePorPrefixo('bordado', 'Bordado', 'P', '2.16.', empresa, categories, totalPorCodigo);
+    B.sublimacao          = buildBlocoArvorePorPrefixo('sublimacao', 'Sublimação', 'P', '2.17.', empresa, categories, totalPorCodigo);
+    B.desp_pessoal_industria = buildBlocoArvorePorPrefixo('desp_pessoal_industria', 'Desp. Pessoal Indústria', 'P', '2.18.', empresa, categories, totalPorCodigo);
+    B.pro_labore          = buildBlocoArvorePorPrefixo('pro_labore', 'Pró-Labore', 'P', '2.20.', empresa, categories, totalPorCodigo);
+    B.receita_bruta       = buildBlocoArvorePorPrefixo('receita_bruta', 'Receita Bruta', 'R', '1.01.', empresa, categories, totalPorCodigo);
+    B.devolucoes          = buildBlocoArvorePorPrefixo('devolucoes', 'Devoluções', 'P', '1.03.', empresa, categories, totalPorCodigo);
+    // Capex/Investimentos (2.07) — confirmado com Lucas 11/08 que esse
+    // bloco da Novah é tratado como Refis/Outros no card, não Capex de
+    // verdade (Novah não separa os dois hoje).
+    B.outros_investimentos = buildBlocoArvorePorPrefixo('outros_investimentos', 'Outros / Investimentos', 'P', '2.07.', empresa, categories, totalPorCodigo);
+    // Despesas/Receitas Financeiras — exclui os códigos exatos de
+    // empréstimo (recebimento fica em 1.02, pagamento em 2.05.03), que
+    // ganham bloco PRÓPRIO abaixo, senão contariam 2x.
+    B.despesas_financeiras = buildBlocoArvorePorPrefixo('despesas_financeiras', 'Despesas Financeiras', 'P', '2.05.', empresa, categories, totalPorCodigo, ['2.05.03']);
+    B.receitas_financeiras = buildBlocoArvorePorPrefixo('receitas_financeiras', 'Receitas Financeiras', 'R', '1.02.', empresa, categories, totalPorCodigo, ['1.02.98', '1.02.99']);
+    B.emprestimos_recebidos = buildBlocoArvorePorPrefixo('emprestimos_recebidos', 'Recebimento Empréstimos', 'R', ['1.02.98', '1.02.99'], empresa, categories, totalPorCodigo);
+    B.emprestimos_pagos    = buildBlocoArvorePorPrefixo('emprestimos_pagos', 'Pagamento de Empréstimos', 'P', ['2.05.03'], empresa, categories, totalPorCodigo);
   }
   if (empresa === 'KMNO' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
     B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', ['2.04.', '2.17.'], empresa, categories, totalPorCodigo);
     B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo);
+    // NOVO (11/08/2026, pedido Lucas): "6 Despesas Administrativas
+    // Diretoria" (2.10) é raiz própria no Omie, separada de Despesas
+    // Administração — linha pai/filhos separada (não fundida em ADM).
+    B.despesas_diretoria = buildBlocoArvorePorPrefixo('despesas_diretoria', 'Despesas Diretoria', 'P', '2.10.', empresa, categories, totalPorCodigo);
   }
   if (empresa === 'RT' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
     B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', '2.04.', empresa, categories, totalPorCodigo);
@@ -16043,8 +16084,16 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       despesasComerciaisPuro: itensParaCategoria(B.despesas_comerciais.itens),
       fretePago: itensParaCategoria(B.frete_pago.itens),
       depComercial: itensParaCategoria(B.dep_comercial.itens),
+      // NOVO (11/08/2026): raiz própria "Despesas Diretoria" (2.10),
+      // separada de Despesas Administração (pedido Lucas). Congelado
+      // (Jan-Mai) não tem esse bloco — B.despesas_diretoria fica
+      // undefined, por isso o fallback {itens:[]}.
+      despesasDiretoria: itensParaCategoria((B.despesas_diretoria || { itens: [] }).itens),
       despesasFinanceiras: itensParaCategoria(despFin, 'P'),
-      receitasFinanceiras: itensParaCategoria(despFin, 'R'),
+      // FIX (11/08/2026): antes pegava os itens 'R' de DENTRO de
+      // despesas_financeiras (netagem antiga). Agora que criamos o bloco
+      // receitas_financeiras separado (formulas do DRE), usa ele direto.
+      receitasFinanceiras: itensParaCategoria(B.receitas_financeiras.itens),
       distribuicao: itensParaCategoria(B.dividendos.itens),
       capex: itensParaCategoria(B.investimentos.itens),
       refis: itensParaCategoria(B.outras_saidas.itens),
@@ -16054,7 +16103,6 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
   }
   if (empresa === 'NOVAH') {
     const despFin = B.despesas_financeiras.itens;
-    const emprestimos = B.emprestimos_outras_entradas.itens;
     return {
       receita: itensParaCategoria(B.receita_bruta.itens),
       deducoes: mergeCategoriaMaps(itensParaCategoria(B.impostos.itens), itensParaCategoria(B.devolucoes.itens)),
@@ -16083,14 +16131,20 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       pjTerceirosAdm: itensParaCategoria(B.pj_terceiros_adm.itens),
       pcpPjTerceiros: itensParaCategoria(B.pcp_pj_terceiros.itens),
       proLabore: itensParaCategoria(B.pro_labore.itens),
+      // NOVO (11/08/2026): raiz própria "Despesas Diretoria" (2.21),
+      // separada de Despesas Administração (pedido Lucas). Congelado
+      // (Jan-Mai) não tem esse bloco.
+      despesasDiretoria: itensParaCategoria((B.despesas_diretoria || { itens: [] }).itens),
       despesasComerciais: {},
       despesasFinanceiras: itensParaCategoria(despFin, 'P'),
-      receitasFinanceiras: itensParaCategoria(despFin, 'R'),
+      // FIX (11/08/2026): idem KMNO — usa o bloco receitas_financeiras
+      // dedicado em vez de filtrar 'R' dentro de despesas_financeiras.
+      receitasFinanceiras: itensParaCategoria(B.receitas_financeiras.itens),
       distribuicao: {},
       capex: itensParaCategoria(B.outros_investimentos.itens),
       refis: {}, // Novah não tem categoria de refis real (confirmado 14/07/2026)
-      recebimentoEmprestimos: itensParaCategoria(emprestimos, 'R'),
-      pagamentoEmprestimos: itensParaCategoria(emprestimos, 'P'),
+      recebimentoEmprestimos: itensParaCategoria((B.emprestimos_recebidos || { itens: [] }).itens),
+      pagamentoEmprestimos: itensParaCategoria((B.emprestimos_pagos || { itens: [] }).itens),
     };
   }
   if (empresa === 'RT') {
@@ -16110,7 +16164,9 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       proLabore: itensParaCategoria(B.pro_labore.itens),
       despesasComerciais: {},
       despesasFinanceiras: itensParaCategoria(despFin, 'P'),
-      receitasFinanceiras: itensParaCategoria(despFin, 'R'),
+      // FIX (11/08/2026): idem KMNO/NOVAH — usa o bloco receitas_financeiras
+      // dedicado em vez de filtrar 'R' dentro de despesas_financeiras.
+      receitasFinanceiras: itensParaCategoria(B.receitas_financeiras.itens),
       distribuicao: {},
       capex: itensParaCategoria(B.investimentos.itens),
       refis: itensParaCategoria(B.outros.itens), // "REFIS (Parcelas)" está aqui
@@ -16170,6 +16226,9 @@ const RESUMO_POR_EMPRESA_LINHAS_KMNO = [
   { chave: 'despesasComerciaisPuro', label: '(-) Despesas Comerciais' },
   { chave: 'fretePago', label: '(-) Frete Pago' },
   { chave: 'depComercial', label: '(-) Dep. Comercial' },
+  // NOVO (11/08/2026, pedido Lucas): "Despesas Diretoria" (2.10) — raiz
+  // própria no Omie, linha pai/filhos separada de Despesas Administração.
+  { chave: 'despesasDiretoria', label: '(-) Despesas Diretoria' },
   { chave: 'despesasFinanceiras', label: '(-) Despesas Financeiras' },
   { chave: 'receitasFinanceiras', label: '(+) Receitas Financeiras' },
   { chave: 'distribuicao', label: '(-) Distribuição de Lucros' },
@@ -16203,6 +16262,9 @@ const RESUMO_POR_EMPRESA_LINHAS_NOVAH = [
   { chave: 'pjTerceirosAdm', label: '(-) PJ Terceiros ADM' },
   { chave: 'pcpPjTerceiros', label: '(-) PCP (PJ Terceiros)' },
   { chave: 'proLabore', label: '(-) Pró-Labore' },
+  // NOVO (11/08/2026, pedido Lucas): "Despesas Diretoria" (2.21) — raiz
+  // própria no Omie, linha pai/filhos separada de Despesas Administração.
+  { chave: 'despesasDiretoria', label: '(-) Despesas Diretoria' },
   { chave: 'despesasFinanceiras', label: '(-) Despesas Financeiras' },
   { chave: 'receitasFinanceiras', label: '(+) Receitas Financeiras' },
   { chave: 'recebimentoEmprestimos', label: '(+) Recebimento Empréstimos/Adiantamentos' },
@@ -16741,7 +16803,13 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const despesasComerciaisTotalPorMes = empresaKey === 'KMNO'
     ? somaArraysLinhas('despesasComerciaisPuro', 'fretePago', 'depComercial')
     : (valoresMesesPorChave['despesasComerciais'] || mesesValidos.map(() => 0));
-  const ebitdaPorMes = mesesValidos.map((_, i) => margemPorMes[i] - custoAdmTotalPorMes[i] - despesasComerciaisTotalPorMes[i]);
+  // NOVO (11/08/2026): Despesas Diretoria entra como termo PRÓPRIO na
+  // subtração do EBITDA (não fundido em custoAdmTotalPorMes) — pedido
+  // Lucas de manter como linha separada.
+  const despesasDiretoriaPorMes = (empresaKey === 'KMNO' || empresaKey === 'NOVAH')
+    ? (valoresMesesPorChave['despesasDiretoria'] || mesesValidos.map(() => 0))
+    : mesesValidos.map(() => 0);
+  const ebitdaPorMes = mesesValidos.map((_, i) => margemPorMes[i] - custoAdmTotalPorMes[i] - despesasComerciaisTotalPorMes[i] - despesasDiretoriaPorMes[i]);
   const resultadoLiquidoPorMes = mesesValidos.map((_, i) => ebitdaPorMes[i] - (valoresMesesPorChave['despesasFinanceiras'] || [])[i] + (valoresMesesPorChave['receitasFinanceiras'] || [])[i]);
   // FIX 10/08/2026: quando a empresa não tem "recebimentoEmprestimos"/
   // "pagamentoEmprestimos" na linhasConfig (KMNO — "Empréstimos ficam
@@ -16764,7 +16832,9 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const despesasComerciaisAntes = temFonteMesAntes ? (empresaKey === 'KMNO'
     ? (valorMesAntes('despesasComerciaisPuro') + valorMesAntes('fretePago') + valorMesAntes('depComercial'))
     : valorMesAntes('despesasComerciais')) : null;
-  const ebitdaAntes = temFonteMesAntes ? (margemAntes - custoAdmAntes - despesasComerciaisAntes) : null;
+  const despesasDiretoriaAntes = temFonteMesAntes ? ((empresaKey === 'KMNO' || empresaKey === 'NOVAH')
+    ? valorMesAntes('despesasDiretoria') : 0) : null;
+  const ebitdaAntes = temFonteMesAntes ? (margemAntes - custoAdmAntes - despesasComerciaisAntes - despesasDiretoriaAntes) : null;
   const resultadoLiquidoAntes = temFonteMesAntes ? (ebitdaAntes - valorMesAntes('despesasFinanceiras') + valorMesAntes('receitasFinanceiras')) : null;
   const saldoLiquidoAntes = temFonteMesAntes ? (resultadoLiquidoAntes - valorMesAntes('distribuicao') - valorMesAntes('capex') - valorMesAntes('refis')) : null;
 
@@ -16797,6 +16867,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + htmlPorChave['despesasComerciaisPuro']
       + htmlPorChave['fretePago']
       + htmlPorChave['depComercial']
+      + htmlPorChave['despesasDiretoria']
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
@@ -16824,6 +16895,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + htmlPorChave['despesasAdministracao']
       + htmlPorChave['depPessoalAdm']
       + htmlPorChave['proLabore']
+      + htmlPorChave['despesasDiretoria']
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
