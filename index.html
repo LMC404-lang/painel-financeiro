@@ -11741,7 +11741,8 @@ try {
   try {
     const { data: orcCatRows, error: orcCatErr } = await supabaseClient
       .from('dash_orcamento_realizado_categoria')
-      .select('empresa_id,ano,mes,cod_categoria,valor_realizado');
+      .select('empresa_id,ano,mes,cod_categoria,valor_realizado')
+      .limit(10000);
     if (orcCatErr) throw orcCatErr;
     orcamentoRealizadoCategoriaCache = {};
     (orcCatRows || []).forEach(r => {
