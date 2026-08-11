@@ -11739,11 +11739,27 @@ try {
   }
 
   try {
-    const { data: orcCatRows, error: orcCatErr } = await supabaseClient
-      .from('dash_orcamento_realizado_categoria')
-      .select('empresa_id,ano,mes,cod_categoria,valor_realizado')
-      .limit(10000);
-    if (orcCatErr) throw orcCatErr;
+    // FIX 11/08/2026: .limit(10000) sozinho NÃO bastava — Supabase aplica
+    // teto hard de 1000 linhas por request no servidor (ignora .limit()
+    // do client quando o valor pedido excede o teto do projeto). Tabela
+    // tem 1113+ linhas, então a query sempre voltava truncada em exatas
+    // 1000 (confirmado no console: data.length === 1000), cortando fora
+    // parte de NOVAH/jun-2026 (ex: 2.06.99) de forma não-determinística
+    // (sem order by). Fix real: paginar com .range() até esgotar.
+    let orcCatRows = [];
+    let pagina = 0;
+    const PAGE_SIZE = 1000;
+    while (true) {
+      const { data: pageData, error: orcCatErr } = await supabaseClient
+        .from('dash_orcamento_realizado_categoria')
+        .select('empresa_id,ano,mes,cod_categoria,valor_realizado')
+        .range(pagina * PAGE_SIZE, (pagina + 1) * PAGE_SIZE - 1);
+      if (orcCatErr) throw orcCatErr;
+      if (!pageData || pageData.length === 0) break;
+      orcCatRows = orcCatRows.concat(pageData);
+      if (pageData.length < PAGE_SIZE) break;
+      pagina++;
+    }
     orcamentoRealizadoCategoriaCache = {};
     (orcCatRows || []).forEach(r => {
       const chave = `${r.empresa_id}|${r.ano}-${String(r.mes).padStart(2, '0')}`;
