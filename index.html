@@ -9122,7 +9122,13 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     B.sublimacao          = buildBlocoArvorePorPrefixo('sublimacao', 'Sublimação', 'P', '2.17.', empresa, categories, totalPorCodigo);
     B.desp_pessoal_industria = buildBlocoArvorePorPrefixo('desp_pessoal_industria', 'Desp. Pessoal Indústria', 'P', '2.18.', empresa, categories, totalPorCodigo);
     B.pro_labore          = buildBlocoArvorePorPrefixo('pro_labore', 'Pró-Labore', 'P', '2.20.', empresa, categories, totalPorCodigo);
-    B.receita_bruta       = buildBlocoArvorePorPrefixo('receita_bruta', 'Receita Bruta', 'R', ['1.01.', '1.02.97'], empresa, categories, totalPorCodigo);
+    // Pedido 12/08/2026: "Adiantamento de Clientes" (1.04.01) passa a
+    // compor Receita Bruta/Recebimento direto. Confirmado que não tinha
+    // risco de contar em dobro — o bloco emprestimos_recebidos só pega
+    // 1.02.98/1.02.99 (empréstimo bancário), nunca pegou 1.04.01. Antes
+    // dessa mudança, Adiantamento de Clientes não aparecia em NENHUM
+    // lugar do dash nos meses ao vivo (Jun/2026+).
+    B.receita_bruta       = buildBlocoArvorePorPrefixo('receita_bruta', 'Receita Bruta', 'R', ['1.01.', '1.02.97', '1.04.01'], empresa, categories, totalPorCodigo);
     B.devolucoes          = buildBlocoArvorePorPrefixo('devolucoes', 'Devoluções', 'P', '1.03.', empresa, categories, totalPorCodigo);
     // Capex/Investimentos (2.07) — confirmado com Lucas 11/08 que esse
     // bloco da Novah é tratado como Refis/Outros no card, não Capex de
