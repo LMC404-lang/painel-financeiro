@@ -16281,9 +16281,9 @@ const RESUMO_POR_EMPRESA_LINHAS_NOVAH = [
   { chave: 'despPessoalIndustria', label: '(-) Desp. Pessoal Indústria' },
   { chave: 'despesasAdministracao', label: '(-) Despesas Administração' },
   { chave: 'depPessoalAdm', label: '(-) Dep. Pessoal ADM' },
+  { chave: 'proLabore', label: '(-) Pró-Labore' },
   { chave: 'pjTerceirosAdm', label: '(-) PJ Terceiros ADM' },
   { chave: 'pcpPjTerceiros', label: '(-) PCP (PJ Terceiros)' },
-  { chave: 'proLabore', label: '(-) Pró-Labore' },
   // NOVO (11/08/2026, pedido Lucas): "Despesas Diretoria" (2.21) — raiz
   // própria no Omie, linha pai/filhos separada de Despesas Administração.
   { chave: 'despesasDiretoria', label: '(-) Despesas Diretoria' },
@@ -16899,6 +16899,16 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + htmlPorChave['refis']
       + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPorMes, saldoLiquidoAntes)
     : empresaKey === 'NOVAH'
+    // Reordenado 12/08/2026 (pedido Lucas): sem "(=) CMV" (Novah não
+    // compra material, só presta serviço — diferente de KMNO/RT, que
+    // continuam com CMV intocado nos outros branches). Margem de
+    // Contribuição passa a vir logo depois do detalhamento de mão de
+    // obra (Acabamento..Desp.Pessoal Indústria), sem o subtotal CMV no
+    // meio. Também reinseridas 4 linhas que eram CALCULADAS mas nunca
+    // coladas na exibição (bug real do "PJ Terceiros sumiu de novo"):
+    // pjTerceirosAdm, pcpPjTerceiros, recebimentoEmprestimos,
+    // pagamentoEmprestimos. "(=) Saldo Líquido" renomeado pra "(=) Lucro
+    // Líquido" (só o nome, mesmo cálculo/saldoLiquidoPorMes).
     ? htmlPorChave['receita']
       + htmlPorChave['impostos']
       + htmlPorChave['devolucoes']
@@ -16912,20 +16922,23 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + htmlPorChave['bordado']
       + htmlPorChave['sublimacao']
       + htmlPorChave['despPessoalIndustria']
-      + linhaSubtotal('(=) CMV', cmvPorMes, cmvAntes)
       + linhaSubtotal('(=) Margem de Contribuição', margemPorMes, margemAntes)
       + htmlPorChave['despesasAdministracao']
       + htmlPorChave['depPessoalAdm']
       + htmlPorChave['proLabore']
+      + htmlPorChave['pjTerceirosAdm']
+      + htmlPorChave['pcpPjTerceiros']
       + htmlPorChave['despesasDiretoria']
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
+      + htmlPorChave['recebimentoEmprestimos']
+      + htmlPorChave['pagamentoEmprestimos']
       + linhaSubtotal('(-) Resultado Líquido (Lucro Líquido)', resultadoLiquidoPorMes, resultadoLiquidoAntes)
       + htmlPorChave['distribuicao']
       + htmlPorChave['capex']
       + htmlPorChave['refis']
-      + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPorMes, saldoLiquidoAntes)
+      + linhaSubtotal('(=) Lucro Líquido', saldoLiquidoPorMes, saldoLiquidoAntes)
     : htmlPorChave['receita']
       + htmlPorChave['impostos']
       + htmlPorChave['devolucoes']
