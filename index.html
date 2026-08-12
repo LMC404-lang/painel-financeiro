@@ -17013,8 +17013,12 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       return apareceRec && !apareceNeg;
     };
     const rotuloComSinal = (catLabel) => {
-      if (/^\(\+\)|^\(-\)/.test(catLabel)) return catLabel; // já tem sinal embutido no nome (congelado) — não toca
-      return `${catLabel} ${ehPositivo(catLabel) ? '( + )' : '( - )'}`;
+      // FIX 12/08/2026 (pedido Lucas, corrigido): sinal sempre ATRÁS,
+      // sem exceção — inclusive nas categorias congeladas que já vinham
+      // com "(+)"/"(-)" na FRENTE (herdado do Excel). Tira o prefixo e
+      // recoloca como sufixo, igual as categorias ao vivo já ficaram.
+      const semSinal = catLabel.replace(/^\(\+\)\s*|^\(-\)\s*/, '');
+      return `${semSinal} ${ehPositivo(catLabel) ? '( + )' : '( - )'}`;
     };
     const categoriasOrdenadas = [...categoriasSet].sort((a, b) => {
       const posA = ehPositivo(a), posB = ehPositivo(b);
