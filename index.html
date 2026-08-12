@@ -17013,12 +17013,11 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       return apareceRec && !apareceNeg;
     };
     const rotuloComSinal = (catLabel) => {
-      // FIX 12/08/2026 (pedido Lucas, corrigido): sinal sempre ATRÁS,
-      // sem exceção — inclusive nas categorias congeladas que já vinham
-      // com "(+)"/"(-)" na FRENTE (herdado do Excel). Tira o prefixo e
-      // recoloca como sufixo, igual as categorias ao vivo já ficaram.
+      // FIX 12/08/2026 (pedido Lucas, corrigido de vez): sinal sempre
+      // ANTES da palavra, sem exceção. Tira qualquer "(+)"/"(-)" que já
+      // exista na frente (congelado) e recoloca do jeito certo.
       const semSinal = catLabel.replace(/^\(\+\)\s*|^\(-\)\s*/, '');
-      return `${semSinal} ${ehPositivo(catLabel) ? '( + )' : '( - )'}`;
+      return `${ehPositivo(catLabel) ? '( + )' : '( - )'} ${semSinal}`;
     };
     const categoriasOrdenadas = [...categoriasSet].sort((a, b) => {
       const posA = ehPositivo(a), posB = ehPositivo(b);
@@ -17250,7 +17249,7 @@ const RESUMO_DETALHADO_LINHAS = [
   { label: '(+) Receita Produtos',                                  chave: 'receitaProdutos' },
   { label: '(+) Receita de Mercadorias (Site)',                      chave: 'receitaMercadorias' },
   { label: '(+) Receita de Serviços',                                chave: 'receitaServicos' },
-  { label: '(=) Recebimento ( + )',                                 chave: 'receita', destaque: true },
+  { label: '( + ) Recebimento',                                     chave: 'receita', destaque: true },
   { label: '(-) Impostos',                                           chave: 'impostos' },
   { label: '(-) Devoluções',                                         chave: 'devolucoes' },
   { label: '(=) Receita Líquida',                                    chave: 'receitaLiquida', destaque: true },
