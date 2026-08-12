@@ -16995,7 +16995,33 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       </tr>`;
     if (!temCategorias) return linhaPai;
     const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
-    const linhasCategorias = [...categoriasSet].sort().map(catLabel => {
+    // FIX 12/08/2026 (pedido Lucas): categorias congeladas já vêm com
+    // "(+)"/"(-)" no próprio nome (herdado do Excel), mas as categorias
+    // AO VIVO (nome real do Omie: "Pagamento de Empréstimos",
+    // "Recebimentos Empréstimos", "Recebimentos Empréstimos Kiko") não
+    // tinham sinal nenhum. ehPositivo() decide o lado (aparece em
+    // qualquer fonte do bucket recebimento e NÃO aparece no de
+    // pagamento = positivo; vice-versa = negativo) e monta o rótulo com
+    // "( + )"/"( - )" quando o nome não já tiver sinal embutido.
+    // Também reordena: todas as "(-)" (pagamento) vão pro final da
+    // lista de filhas, positivas primeiro — pedido explícito.
+    const ehPositivo = (catLabel) => {
+      const apareceRec = !!(bucketCongRec && bucketCongRec[catLabel])
+        || mesesValidos.some(m => m.live && ((liveByMes[m.chave] || {})[chaveRec] || {})[catLabel]);
+      const apareceNeg = !!(bucketCongPag && bucketCongPag[catLabel])
+        || mesesValidos.some(m => m.live && ((liveByMes[m.chave] || {})[chavePag] || {})[catLabel]);
+      return apareceRec && !apareceNeg;
+    };
+    const rotuloComSinal = (catLabel) => {
+      if (/^\(\+\)|^\(-\)/.test(catLabel)) return catLabel; // já tem sinal embutido no nome (congelado) — não toca
+      return `${catLabel} ${ehPositivo(catLabel) ? '( + )' : '( - )'}`;
+    };
+    const categoriasOrdenadas = [...categoriasSet].sort((a, b) => {
+      const posA = ehPositivo(a), posB = ehPositivo(b);
+      if (posA !== posB) return posA ? -1 : 1; // positivas primeiro, negativas no final
+      return a.localeCompare(b);
+    });
+    const linhasCategorias = categoriasOrdenadas.map(catLabel => {
       const chaveManual = (empresaKey === 'NOVAH') ? CATEGORIA_PARA_LINHA_MANUAL[catLabel] : null;
       const valoresCat = mesesValidos.map(m => {
         if (chaveManual && m.live) {
@@ -17016,7 +17042,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       const avPctCat = totalReceitaPeriodo ? (totalCat / totalReceitaPeriodo * 100) : null;
       return `
         <tr class="dre-tbl-row" style="display:none;color:#5a7268;font-size:12px;" data-grupo-conta="${rowId}">
-          <td class="dre-tbl-sticky">${catLabel}</td>
+          <td class="dre-tbl-sticky">${rotuloComSinal(catLabel)}</td>
           ${valoresCat.map((v, i) => {
             const baseRecebimentoMes = receitaPorMes[i];
             const avPctMes = baseRecebimentoMes ? (v / baseRecebimentoMes * 100) : null;
