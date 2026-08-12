@@ -16705,8 +16705,18 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
         })
       : valoresMesesBase;
     const total = valoresMeses.reduce((a, b) => a + b, 0);
-    totalPorChave[l.chave] = valoresMesesBase.reduce((a, b) => a + b, 0);
-    valoresMesesPorChave[l.chave] = valoresMesesBase;
+    // FIX 12/08/2026 (pedido Lucas): totalPorChave/valoresMesesPorChave
+    // agora usam valoresMeses (o valor MOSTRADO na linha, com oficial/
+    // recebimentoEmprestimos já embutido pra 'receita') em vez de
+    // valoresMesesBase (valor puro da classificação). Antes disso a
+    // linha "(=) Receita Líquida" (e toda a cascata: Margem, EBITDA,
+    // Resultado Líquido, Saldo/Lucro Líquido) subtraía de um número
+    // DIFERENTE do que aparecia na linha "Recebimento" acima — a conta
+    // nunca fechava. Ver saldoLiquidoPorMes abaixo: o "+ recebimento
+    // Empréstimos" que existia lá foi removido, porque agora já está
+    // embutido aqui em 'receita' -- mantinha dobrado.
+    totalPorChave[l.chave] = total;
+    valoresMesesPorChave[l.chave] = valoresMeses;
     const media = valoresMeses.length ? total / valoresMeses.length : 0;
     const avPct = totalReceitaPeriodo ? (total / totalReceitaPeriodo * 100) : null;
 
@@ -16839,7 +16849,11 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // e "(undefined || [])[i]" dá undefined (não 0) — resultadoLiquido -
   // undefined = NaN, virando "NaN%" na tela ("(=) Saldo Líquido").
   // "?.[i] ?? 0" garante 0 quando a linha não existir pra essa empresa.
-  const saldoLiquidoPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao']?.[i] ?? 0) - (valoresMesesPorChave['capex']?.[i] ?? 0) - (valoresMesesPorChave['refis']?.[i] ?? 0) + (valoresMesesPorChave['recebimentoEmprestimos']?.[i] ?? 0) - (valoresMesesPorChave['pagamentoEmprestimos']?.[i] ?? 0));
+  // FIX 12/08/2026: "+ recebimentoEmprestimos" removido daqui -- já está
+  // embutido em valoresMesesPorChave['receita'] (ver fix acima), somar
+  // de novo aqui contaria em dobro. "- pagamentoEmprestimos" continua
+  // (é saída/despesa, nunca fez parte de 'receita').
+  const saldoLiquidoPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao']?.[i] ?? 0) - (valoresMesesPorChave['capex']?.[i] ?? 0) - (valoresMesesPorChave['refis']?.[i] ?? 0) - (valoresMesesPorChave['pagamentoEmprestimos']?.[i] ?? 0));
 
   // Mesmas fórmulas acima, aplicadas só ao mês ANTES do período exibido
   // (pra AV% mês a mês da 1ª coluna dos subtotais).
