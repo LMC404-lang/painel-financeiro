@@ -3597,6 +3597,7 @@
     </div>
     <div class="grupo-dfc-cards">
       <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Clientes Ativos (Período)</div><div class="grupo-dfc-card-val" id="comClientesAtivos">0</div></div>
+      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Clientes Inativos (Histórico)</div><div class="grupo-dfc-card-val" id="comClientesInativos">0</div></div>
       <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Novos Clientes</div><div class="grupo-dfc-card-val" id="comClientesNovos">0</div></div>
       <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Clientes Recorrentes</div><div class="grupo-dfc-card-val" id="comClientesRecorrentes">0</div></div>
     </div>
@@ -10386,6 +10387,13 @@ async function renderComercial() {
     const churnPct = clientesPeriodoAnterior.size ? (churnCount / clientesPeriodoAnterior.size) * 100 : 0;
 
     document.getElementById('comClientesAtivos').textContent = clientesPeriodo.size.toLocaleString('pt-BR');
+    // Pedido 13/08/2026: contagem absoluta de clientes que NÃO compraram
+    // no período, de todo o histórico de clientes (não é churn em %,
+    // é "total histórico menos ativos no período"). totalClientesHistorico
+    // já é calculado abaixo (recompra) a partir de ordersAprovados (sem
+    // filtro de período) — clientesPeriodo é sempre subconjunto dele,
+    // já que ordersPeriodo é um filtro de ordersAprovados.
+    document.getElementById('comClientesInativos').textContent = Math.max(0, totalClientesHistorico - clientesPeriodo.size).toLocaleString('pt-BR');
     document.getElementById('comClientesNovos').textContent = novos.toLocaleString('pt-BR');
     document.getElementById('comClientesRecorrentes').textContent = recorrentes.toLocaleString('pt-BR');
     document.getElementById('comTaxaRecompra').textContent = taxaRecompra.toFixed(1).replace('.', ',') + '%';
