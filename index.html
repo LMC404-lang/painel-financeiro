@@ -8871,7 +8871,19 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
   // 1-2 segmentos (ex "2.06") são subtotal de grupo do Omie, contariam em
   // dobro se somados junto com os filhos.
   const chaveOficial = `${empresa}|${monthStart.format('YYYY-MM')}`;
-  const categoriaOficial = modo === 'caixa' ? orcamentoRealizadoCategoriaCache[chaveOficial] : null;
+  // Pedido 13/08/2026: Novah sai da tabela oficial (dash_orcamento_
+  // realizado_categoria) — ela não tem sync automático (populada uma
+  // vez só, manualmente, sem cron), e por isso pode ficar com dado
+  // errado/desatualizado (caso real: Gracie Barra R$143k vs R$132k do
+  // relatório nativo, causado por título fantasma — resolvido agora via
+  // reconcile-titulos.js no cron, que mantém dash_financial_movements
+  // limpo). Novah usa cálculo por lançamento sempre, mesmo em meses
+  // fechados. KMNO/RT continuam na tabela oficial: têm um bug diferente,
+  // ainda não resolvido, de rateio de categoria em título a receber
+  // (confirmado 13/08: KMNO "Clientes - Vendas Direta" dava R$883k por
+  // lançamento vs R$153k real — 5,7x inflado, não é duplicidade de
+  // linha).
+  const categoriaOficial = (modo === 'caixa' && empresa !== 'NOVAH') ? orcamentoRealizadoCategoriaCache[chaveOficial] : null;
   const totalPorLabel = {};
   // NOVO (11/08/2026): mesmo total, mas indexado pelo código da
   // categoria (não pelo nome) — usado por buildBlocoArvorePorPrefixo pra
@@ -16758,6 +16770,9 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // andamento (sem linha na tabela) continua usando o cálculo antigo
   // (receita_bruta + recebimentoEmprestimos).
   const receitaOficial = (m) => {
+    // Pedido 13/08/2026: Novah nunca usa o total oficial solto (não tem
+    // sync automático) — sempre cai no cálculo por lançamento abaixo.
+    if (empresaKey === 'NOVAH') return null;
     const row = orcamentoRealizadoCache[`${empresaKey}|${m.chave}`];
     return row ? Number(row.receitas_realizado) : null;
   };
@@ -18123,7 +18138,10 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     // realizado, só meses já FECHADOS), ele tem prioridade.
     const recebimentoEmprestimosPreReceita = somaBucket('recebimentoEmprestimos');
     const receitaOficialChave = `${empresaFiltro}|${monthStart.format('YYYY-MM')}`;
-    const receitaOficialRow = orcamentoRealizadoCache[receitaOficialChave];
+    // Pedido 13/08/2026: Novah nunca usa o total oficial — sempre cálculo
+    // por lançamento (mesma lógica de mês ao vivo, agora protegida pelo
+    // reconcile-titulos.js no cron).
+    const receitaOficialRow = empresaFiltro === 'NOVAH' ? null : orcamentoRealizadoCache[receitaOficialChave];
     const receita = receitaOficialRow
       ? Number(receitaOficialRow.receitas_realizado)
       : (receitaProdutos + receitaMercadorias + receitaServicos + recebimentoEmprestimosPreReceita);
@@ -18195,9 +18213,14 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   const recebimentoEmprestimosPreReceita = somaBucket('recebimentoEmprestimos');
   const mesChaveGrupo = monthStart.format('YYYY-MM');
   const kmnoOficialRow = orcamentoRealizadoCache[`KMNO|${mesChaveGrupo}`];
-  const novahOficialRow = orcamentoRealizadoCache[`NOVAH|${mesChaveGrupo}`];
-  const receita = (kmnoOficialRow && novahOficialRow)
-    ? (Number(kmnoOficialRow.receitas_realizado) + Number(novahOficialRow.receitas_realizado))
+  // Pedido 13/08/2026: Novah sai da tabela oficial (sem sync automático)
+  // — sempre soma por lançamento (receita + recebimentoEmprestimos dela),
+  // protegida pelo reconcile-titulos.js no cron. KMNO continua na tabela
+  // oficial quando existir pro mês (bug de rateio de recebível ainda não
+  // resolvido pra ela — ver buildTotalPorCategoriaEmpresa).
+  const novahReceitaLancamentos = somaMapa(novah.receita) + somaMapa(novah.recebimentoEmprestimos);
+  const receita = kmnoOficialRow
+    ? (Number(kmnoOficialRow.receitas_realizado) + novahReceitaLancamentos)
     : (receitaProdutos + receitaMercadorias + receitaServicos + recebimentoEmprestimosPreReceita);
   // Pedido 30/07: impostos/devolucoes expostos separados, mesmo padrão
   // do branch com empresaFiltro acima.
