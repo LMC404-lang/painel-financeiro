@@ -9026,12 +9026,16 @@ function buildBlocoArvore(blocoDef, totalPorLabel) {
 // DESPESAS ADMINISTRATIVAS" no Omie deles).
 // `excluirCodigos`: códigos exatos a pular (RT: "2.03.98" Pró-Labore
 // sócio já é bloco próprio — sem isso, contaria 2x).
-function buildBlocoArvorePorPrefixo(id, nome, natureza, prefixos, empresa, categories, totalPorCodigo, excluirCodigos) {
+function buildBlocoArvorePorPrefixo(id, nome, natureza, prefixos, empresa, categories, totalPorCodigo, excluirCodigos, excluirNomes) {
   const listaPrefixos = Array.isArray(prefixos) ? prefixos : [prefixos];
   const excluir = new Set(excluirCodigos || []);
+  // Exclusão por nome (case-insensitive) — usada quando não temos o código
+  // Omie confirmado, só a descrição da categoria como aparece na tela.
+  const excluirNomesSet = new Set((excluirNomes || []).map(n => String(n).trim().toLowerCase()));
   const itens = (categories || [])
     .filter(c => c._empresa === empresa && c.codigo && c.codigo.split('.').length >= 3
-      && listaPrefixos.some(p => c.codigo.startsWith(p)) && !excluir.has(c.codigo))
+      && listaPrefixos.some(p => c.codigo.startsWith(p)) && !excluir.has(c.codigo)
+      && !excluirNomesSet.has(String(c.descricao || '').trim().toLowerCase()))
     .sort((a, b) => a.codigo.localeCompare(b.codigo, undefined, { numeric: true }))
     .map(c => ({
       nome: decodeHtmlEntities(c.descricao || c.codigo),
@@ -9221,7 +9225,7 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     // empréstimo (recebimento fica em 1.02, pagamento em 2.05.03), que
     // ganham bloco PRÓPRIO abaixo, senão contariam 2x.
     B.despesas_financeiras = buildBlocoArvorePorPrefixo('despesas_financeiras', 'Despesas Financeiras', 'P', '2.05.', empresa, categories, totalPorCodigo, ['2.05.03']);
-    B.receitas_financeiras = buildBlocoArvorePorPrefixo('receitas_financeiras', 'Receitas Financeiras', 'R', '1.02.', empresa, categories, totalPorCodigo, ['1.02.98', '1.02.99', '1.02.97']);
+    B.receitas_financeiras = buildBlocoArvorePorPrefixo('receitas_financeiras', 'Receitas Financeiras', 'R', '1.02.', empresa, categories, totalPorCodigo, ['1.02.98', '1.02.99', '1.02.97'], ['Transferências entre contas', 'Transferencias entre contas']);
     B.emprestimos_recebidos = buildBlocoArvorePorPrefixo('emprestimos_recebidos', 'Recebimento Empréstimos', 'R', ['1.02.98', '1.02.99'], empresa, categories, totalPorCodigo);
     B.emprestimos_pagos    = buildBlocoArvorePorPrefixo('emprestimos_pagos', 'Pagamento de Empréstimos', 'P', ['2.05.03'], empresa, categories, totalPorCodigo);
   }
