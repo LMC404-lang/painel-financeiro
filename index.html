@@ -3597,7 +3597,6 @@
     </div>
     <div class="grupo-dfc-cards">
       <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Clientes Ativos (Período)</div><div class="grupo-dfc-card-val" id="comClientesAtivos">0</div></div>
-      <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Clientes Inativos (Histórico)</div><div class="grupo-dfc-card-val" id="comClientesInativos">0</div></div>
       <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Novos Clientes</div><div class="grupo-dfc-card-val" id="comClientesNovos">0</div></div>
       <div class="grupo-dfc-card"><div class="grupo-dfc-card-label">Clientes Recorrentes</div><div class="grupo-dfc-card-val" id="comClientesRecorrentes">0</div></div>
     </div>
@@ -5850,10 +5849,6 @@ const DRE_ARVORE_BLOCOS = {
         {
           "nome": "Clientes - Revenda de Mercadoria",
           "natureza": "R"
-        },
-        {
-          "nome": "Adiantamento de Clientes",
-          "natureza": "R"
         }
       ]
     },
@@ -5954,10 +5949,6 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "EMBALAGEM DE PRODUTOS",
-          "natureza": "P"
-        },
-        {
-          "nome": "Adiantamento Fornecedores",
           "natureza": "P"
         }
       ]
@@ -7316,10 +7307,6 @@ const DRE_ARVORE_BLOCOS = {
         },
         {
           "nome": "Faixas GRACIE BARRA",
-          "natureza": "R"
-        },
-        {
-          "nome": "Adiantamento de Clientes",
           "natureza": "R"
         }
       ]
@@ -8871,19 +8858,7 @@ function buildTotalPorCategoriaEmpresa(categories, movements, empresa, monthStar
   // 1-2 segmentos (ex "2.06") são subtotal de grupo do Omie, contariam em
   // dobro se somados junto com os filhos.
   const chaveOficial = `${empresa}|${monthStart.format('YYYY-MM')}`;
-  // Pedido 13/08/2026: Novah sai da tabela oficial (dash_orcamento_
-  // realizado_categoria) — ela não tem sync automático (populada uma
-  // vez só, manualmente, sem cron), e por isso pode ficar com dado
-  // errado/desatualizado (caso real: Gracie Barra R$143k vs R$132k do
-  // relatório nativo, causado por título fantasma — resolvido agora via
-  // reconcile-titulos.js no cron, que mantém dash_financial_movements
-  // limpo). Novah usa cálculo por lançamento sempre, mesmo em meses
-  // fechados. KMNO/RT continuam na tabela oficial: têm um bug diferente,
-  // ainda não resolvido, de rateio de categoria em título a receber
-  // (confirmado 13/08: KMNO "Clientes - Vendas Direta" dava R$883k por
-  // lançamento vs R$153k real — 5,7x inflado, não é duplicidade de
-  // linha).
-  const categoriaOficial = (modo === 'caixa' && empresa !== 'NOVAH') ? orcamentoRealizadoCategoriaCache[chaveOficial] : null;
+  const categoriaOficial = modo === 'caixa' ? orcamentoRealizadoCategoriaCache[chaveOficial] : null;
   const totalPorLabel = {};
   // NOVO (11/08/2026): mesmo total, mas indexado pelo código da
   // categoria (não pelo nome) — usado por buildBlocoArvorePorPrefixo pra
@@ -9195,7 +9170,13 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     // "Costura Externa Rash Bermuda" no Omie real — nunca bate, fica R$0
     // mesmo com dinheiro real lançado). Convertido TODO o resto da Novah
     // pra código/prefixo, mesmo padrão já usado em despesas_adm.
-    B.uso_consumo         = buildBlocoArvorePorPrefixo('uso_consumo', 'Uso e Consumo', 'P', '2.01.', empresa, categories, totalPorCodigo);
+    // Pedido Lucas 14/08/2026: "Impressão" (2.01.87) e "Serviço de
+    // Industrialização" (2.01.90) saem de "Uso e Consumo" e passam a
+    // compor "Custo de Serviços Terceiros" — só meses ao vivo (Jun/2026+,
+    // única coisa que este bloco cobre). Não afeta Jan-Mai/2026 (fonte
+    // congelada, NOVAH_RESUMO_CATEGORIAS, intocada).
+    B.uso_consumo         = buildBlocoArvorePorPrefixo('uso_consumo', 'Uso e Consumo', 'P', '2.01.', empresa, categories, totalPorCodigo, ['2.01.87', '2.01.90']);
+    B.custo_servicos_terceiros = buildBlocoArvorePorPrefixo('custo_servicos_terceiros', 'Custo de Serviços Terceiros', 'P', ['2.01.87', '2.01.90'], empresa, categories, totalPorCodigo);
     B.impostos            = buildBlocoArvorePorPrefixo('impostos', 'Impostos', 'P', '2.06.', empresa, categories, totalPorCodigo);
     B.acabamento          = buildBlocoArvorePorPrefixo('acabamento', 'Acabamento', 'P', '2.11.', empresa, categories, totalPorCodigo);
     B.corte               = buildBlocoArvorePorPrefixo('corte', 'Corte', 'P', '2.13.', empresa, categories, totalPorCodigo);
@@ -9205,16 +9186,19 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     B.sublimacao          = buildBlocoArvorePorPrefixo('sublimacao', 'Sublimação', 'P', '2.17.', empresa, categories, totalPorCodigo);
     B.desp_pessoal_industria = buildBlocoArvorePorPrefixo('desp_pessoal_industria', 'Desp. Pessoal Indústria', 'P', '2.18.', empresa, categories, totalPorCodigo);
     B.pro_labore          = buildBlocoArvorePorPrefixo('pro_labore', 'Pró-Labore', 'P', '2.20.', empresa, categories, totalPorCodigo);
-    // Pedido 12/08/2026: "Adiantamento de Clientes" (1.04.01) passa a
-    // compor Receita Bruta/Recebimento direto. Confirmado que não tinha
-    // risco de contar em dobro — o bloco emprestimos_recebidos só pega
-    // 1.02.98/1.02.99 (empréstimo bancário), nunca pegou 1.04.01. Antes
-    // dessa mudança, Adiantamento de Clientes não aparecia em NENHUM
-    // lugar do dash nos meses ao vivo (Jun/2026+).
-    // REVERTIDO (12/08/2026, mesmo dia, pedido Lucas): exclui de vez —
-    // não mostra a linha nem entra na conta. Volta a NÃO aparecer em
-    // lugar nenhum do dash (mesmo estado de antes da mudança acima).
+    // Pedido 12/08/2026: "Adiantamento de Clientes" (1.04.01) passou a
+    // compor Receita Bruta/Recebimento direto.
+    // REVERTIDO 14/08/2026 (pedido Lucas): "Adiantamento de Clientes"
+    // sai da conta de novo — a linha manual (dash_linhas_manuais) já
+    // cobre esse controle separadamente. Só NOVAH (KMNO/RT nunca tiveram
+    // esse código).
     B.receita_bruta       = buildBlocoArvorePorPrefixo('receita_bruta', 'Receita Bruta', 'R', ['1.01.', '1.02.97'], empresa, categories, totalPorCodigo);
+    // Bloco ISOLADO (não entra em nenhum cálculo de DRE/CMV/margem) — só
+    // guarda o valor do "Adiantamento de Clientes" (1.04.01) excluído
+    // acima, pra poder subtrair do total "Receitas Realizadas" oficial
+    // do Omie (dash_orcamento_realizado), que soma tudo junto e não
+    // sabe dessa exclusão (ver renderGrupoResumoPorEmpresa).
+    B.adiantamento_clientes_excluido = buildBlocoArvorePorPrefixo('adiantamento_clientes_excluido', 'Adiantamento de Clientes (excluído)', 'R', ['1.04.01'], empresa, categories, totalPorCodigo);
     B.devolucoes          = buildBlocoArvorePorPrefixo('devolucoes', 'Devoluções', 'P', '1.03.', empresa, categories, totalPorCodigo);
     // Capex/Investimentos (2.07) — confirmado com Lucas 11/08 que esse
     // bloco da Novah é tratado como Refis/Outros no card, não Capex de
@@ -9321,6 +9305,11 @@ function buildResumoNovah(B) {
   const devolucoes = B.devolucoes.total;
   const receitaLiquida = receitaBruta - impostos - devolucoes;
   const usoConsumo = B.uso_consumo.total;
+  // Pedido Lucas 14/08/2026: "Impressão"/"Serviço de Industrialização"
+  // saíram de uso_consumo e foram pra este bloco novo — soma aqui pra
+  // não sair da conta (só existe/roda em meses ao vivo, igual o resto
+  // desta função).
+  const custoServicosTerceiros = B.custo_servicos_terceiros.total;
   // FIX (11/08/2026, confirmado com Lucas): os custos de mão de obra de
   // produção (Acabamento/Corte/Rash/Costura Kimono/Bordado/Sublimação/
   // Desp.Pessoal Indústria) estavam sendo descontados DEPOIS da Margem
@@ -9330,7 +9319,7 @@ function buildResumoNovah(B) {
   // Serviço + Insumos). Corrigido pra entrar no CMV.
   const despIndustriais = B.acabamento.total + B.corte.total + B.rash_bermuda.total
     + B.costura_kimono.total + B.bordado.total + B.sublimacao.total + B.desp_pessoal_industria.total;
-  const margemContribuicao = receitaLiquida - usoConsumo - despIndustriais;
+  const margemContribuicao = receitaLiquida - usoConsumo - custoServicosTerceiros - despIndustriais;
   const despesasAdm = B.despesas_adm.total;
   const depPessoalAdm = B.dep_pessoal_adm.total + B.pj_terceiros_adm.total;
   const proLabore = B.pro_labore.total;
@@ -10399,13 +10388,6 @@ async function renderComercial() {
     const churnPct = clientesPeriodoAnterior.size ? (churnCount / clientesPeriodoAnterior.size) * 100 : 0;
 
     document.getElementById('comClientesAtivos').textContent = clientesPeriodo.size.toLocaleString('pt-BR');
-    // Pedido 13/08/2026: contagem absoluta de clientes que NÃO compraram
-    // no período, de todo o histórico de clientes (não é churn em %,
-    // é "total histórico menos ativos no período"). totalClientesHistorico
-    // já é calculado abaixo (recompra) a partir de ordersAprovados (sem
-    // filtro de período) — clientesPeriodo é sempre subconjunto dele,
-    // já que ordersPeriodo é um filtro de ordersAprovados.
-    document.getElementById('comClientesInativos').textContent = Math.max(0, totalClientesHistorico - clientesPeriodo.size).toLocaleString('pt-BR');
     document.getElementById('comClientesNovos').textContent = novos.toLocaleString('pt-BR');
     document.getElementById('comClientesRecorrentes').textContent = recorrentes.toLocaleString('pt-BR');
     document.getElementById('comTaxaRecompra').textContent = taxaRecompra.toFixed(1).replace('.', ',') + '%';
@@ -16237,11 +16219,21 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
     const despFin = B.despesas_financeiras.itens;
     return {
       receita: itensParaCategoria(B.receita_bruta.itens),
+      // Pedido Lucas 14/08/2026: valor do "Adiantamento de Clientes"
+      // (1.04.01) excluído da receita acima — exposto aqui só pra
+      // renderGrupoResumoPorEmpresa poder descontar do total "oficial"
+      // do Omie (dash_orcamento_realizado), que ainda soma esse valor
+      // junto (relatório nativo não sabe dessa exclusão).
+      adiantamentoClientesExcluido: itensParaCategoria(B.adiantamento_clientes_excluido.itens),
       deducoes: mergeCategoriaMaps(itensParaCategoria(B.impostos.itens), itensParaCategoria(B.devolucoes.itens)),
       impostos: itensParaCategoria(B.impostos.itens),
       devolucoes: itensParaCategoria(B.devolucoes.itens),
       custoInsumos: itensParaCategoria(B.uso_consumo.itens),
-      custoServicosTerceiros: {}, // Novah não separa "serviços terceiros" de mão de obra própria hoje
+      // Pedido Lucas 14/08/2026: agora vem do bloco custo_servicos_terceiros
+      // (Impressão + Serviço de Industrialização), só existe em meses ao
+      // vivo (Jun/2026+) — fallback {itens:[]} pra não quebrar se algum
+      // chamador ainda passar um B de mês congelado.
+      custoServicosTerceiros: itensParaCategoria((B.custo_servicos_terceiros || { itens: [] }).itens),
       acabamento: itensParaCategoria(B.acabamento.itens),
       corte: itensParaCategoria(B.corte.itens),
       rashBermuda: itensParaCategoria(B.rash_bermuda.itens),
@@ -16416,7 +16408,8 @@ const RESUMO_POR_EMPRESA_LINHAS_NOVAH = [
   { chave: 'depPessoalAdm', label: '(-) Dep. Pessoal ADM' },
   { chave: 'proLabore', label: '(-) Pró-Labore' },
   { chave: 'pjTerceirosAdm', label: '(-) PJ Terceiros ADM' },
-  { chave: 'pcpPjTerceiros', label: '(-) PCP (PJ Terceiros)' },
+  // Pedido Lucas 14/08/2026: linha "PCP (PJ Terceiros)" removida (pai e
+  // filho) — sempre R$0, sem uso.
   // NOVO (11/08/2026, pedido Lucas): "Despesas Diretoria" (2.21) — raiz
   // própria no Omie, linha pai/filhos separada de Despesas Administração.
   { chave: 'despesasDiretoria', label: '(-) Despesas Diretoria' },
@@ -16677,6 +16670,24 @@ function renderGrupoResumoTeste(monthStart, monthEnd) {
   // as 3 empresas) automaticamente por empresa única.
   renderGrupoResumoDetalhadoCopia(monthStart, monthEnd, 'grupoResumoTesteHeader', 'grupoResumoTesteBody');
 }
+// Pedido Lucas 14/08/2026: essas categorias (NOVAH, nomes antigos do
+// Excel congelado que só existiam até Mai/2026, ou nomes ao vivo do
+// Omie que nunca tiveram Lucas confirmando a leitura) somem do
+// drill-down de categorias do "Resumo (Grupo, R$)" — não aparecem mais
+// quando clica na linha pai, em nenhum mês/período.
+const CATEGORIAS_OCULTAS_RESUMO_EMPRESA = new Set([
+  'Antecipação de Boletos',
+  'Clientes - Antecipação Jeans',
+  'Clientes - Faturamento para Jeans',
+  'Clientes - Jeans Billie Mario',
+  'Clientes - Jeans Outros',
+  'Clientes - Mormaii',
+  'Clients - Bally Marcio',
+  'Facção para GRACIE BARRA',
+  'Facção para KMNO',
+  'Jeans',
+]);
+
 function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const header = document.getElementById('grupoResumoDetalhadoHeader');
   const body = document.getElementById('grupoResumoDetalhadoBody');
@@ -16769,27 +16780,17 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // de duplicidade conhecido do dash_financial_movements. Mês em
   // andamento (sem linha na tabela) continua usando o cálculo antigo
   // (receita_bruta + recebimentoEmprestimos).
-  const receitaOficial = (m) => {
-    // Pedido 13/08/2026: Novah nunca usa o total oficial solto (não tem
-    // sync automático) — sempre cai no cálculo por lançamento abaixo.
-    if (empresaKey === 'NOVAH') return null;
-    const row = orcamentoRealizadoCache[`${empresaKey}|${m.chave}`];
-    return row ? Number(row.receitas_realizado) : null;
-  };
-  // Pedido 10/08/2026: "Recebimento" (e a base do AV%) precisa incluir
-  // recebimentoEmprestimos (Adiantamento de Clientes + Recebimentos
-  // Empréstimos + Outras Entradas) nos meses ao vivo, pra bater com
-  // "Receitas Realizadas" do relatório nativo do Omie — mesmo ajuste já
-  // feito em buildResumoDetalhadoMesAoVivo (visão "Grupo"), replicado
-  // aqui pra visão "1 empresa só". A linha "(+) Recebimento Empréstimos/
-  // Adiantamentos" continua aparecendo separada também (fica redundante
-  // com uma parte do Recebimento, mas foi pedido assim).
+  // REVERTIDO 14/08/2026 (pedido Lucas): tirado o atalho "oficial"
+  // (dash_orcamento_realizado, total GERAL da empresa) — ele misturava
+  // adiantamentos/empréstimos/transferências que a gente já decidiu
+  // excluir, e não tinha como descontar cada exceção sem ficar frágil.
+  // "Recebimento" volta a ser 100% a soma das categorias reais (mesma
+  // fonte oficial por categoria — dash_orcamento_realizado_categoria —
+  // já usada em Custo de Insumos, Acabamento etc., já validada contra
+  // o relatório nativo do Omie).
   const receitaPorMes = mesesValidos.map(m => {
     if (m.live) {
-      const oficial = receitaOficial(m);
-      if (oficial !== null) return oficial;
-      return Object.values((liveByMes[m.chave]['receita']) || {}).reduce((s, x) => s + x, 0)
-        + Object.values((liveByMes[m.chave]['recebimentoEmprestimos']) || {}).reduce((s, x) => s + x, 0);
+      return Object.values((liveByMes[m.chave]['receita']) || {}).reduce((s, x) => s + x, 0);
     }
     return somaCategoriaMes(bucketReceitaCongelado, m.frozenIdx);
   });
@@ -16845,15 +16846,10 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     // Líquido final já somam/subtraem recebimentoEmprestimos/
     // pagamentoEmprestimos à parte (ver saldoLiquidoPorMes, mais abaixo)
     // — somar aqui TAMBÉM contaria em dobro.
-    const valoresMeses = (l.chave === 'receita')
-      ? valoresMesesBase.map((v, i) => {
-          const oficial = mesesValidos[i].live ? receitaOficial(mesesValidos[i]) : null;
-          if (oficial !== null) return oficial + somaManualNoBucket('receita', mesesValidos[i]); // oficial não sabe do manual, soma por fora
-          return v + (mesesValidos[i].live
-            ? Object.values((liveByMes[mesesValidos[i].chave]['recebimentoEmprestimos']) || {}).reduce((s, x) => s + x, 0)
-            : 0);
-        })
-      : valoresMesesBase;
+    // REVERTIDO 14/08/2026 (pedido Lucas): tirado o atalho "oficial" —
+    // valoresMesesBase já é a soma das categorias reais (com manual
+    // embutido), mesma fonte que já bate com o Omie nas outras linhas.
+    const valoresMeses = valoresMesesBase;
     const total = valoresMeses.reduce((a, b) => a + b, 0);
     // FIX 12/08/2026 (pedido Lucas): totalPorChave/valoresMesesPorChave
     // agora usam valoresMeses (o valor MOSTRADO na linha, com oficial/
@@ -16879,6 +16875,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     mesesValidos.filter(m => m.live).forEach(m => {
       Object.keys(liveByMes[m.chave][l.chave] || {}).forEach(c => categoriasSet.add(c));
     });
+    CATEGORIAS_OCULTAS_RESUMO_EMPRESA.forEach(c => categoriasSet.delete(c));
     const temCategorias = categoriasSet.size > 0;
     seq++;
     const rowId = `resumo-emp-${seq}`;
@@ -17026,36 +17023,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       </tr>`;
     if (!temCategorias) return linhaPai;
     const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
-    // FIX 12/08/2026 (pedido Lucas): categorias congeladas já vêm com
-    // "(+)"/"(-)" no próprio nome (herdado do Excel), mas as categorias
-    // AO VIVO (nome real do Omie: "Pagamento de Empréstimos",
-    // "Recebimentos Empréstimos", "Recebimentos Empréstimos Kiko") não
-    // tinham sinal nenhum. ehPositivo() decide o lado (aparece em
-    // qualquer fonte do bucket recebimento e NÃO aparece no de
-    // pagamento = positivo; vice-versa = negativo) e monta o rótulo com
-    // "( + )"/"( - )" quando o nome não já tiver sinal embutido.
-    // Também reordena: todas as "(-)" (pagamento) vão pro final da
-    // lista de filhas, positivas primeiro — pedido explícito.
-    const ehPositivo = (catLabel) => {
-      const apareceRec = !!(bucketCongRec && bucketCongRec[catLabel])
-        || mesesValidos.some(m => m.live && ((liveByMes[m.chave] || {})[chaveRec] || {})[catLabel]);
-      const apareceNeg = !!(bucketCongPag && bucketCongPag[catLabel])
-        || mesesValidos.some(m => m.live && ((liveByMes[m.chave] || {})[chavePag] || {})[catLabel]);
-      return apareceRec && !apareceNeg;
-    };
-    const rotuloComSinal = (catLabel) => {
-      // FIX 12/08/2026 (pedido Lucas, corrigido de vez): sinal sempre
-      // ANTES da palavra, sem exceção. Tira qualquer "(+)"/"(-)" que já
-      // exista na frente (congelado) e recoloca do jeito certo.
-      const semSinal = catLabel.replace(/^\(\+\)\s*|^\(-\)\s*/, '');
-      return `${ehPositivo(catLabel) ? '( + )' : '( - )'} ${semSinal}`;
-    };
-    const categoriasOrdenadas = [...categoriasSet].sort((a, b) => {
-      const posA = ehPositivo(a), posB = ehPositivo(b);
-      if (posA !== posB) return posA ? -1 : 1; // positivas primeiro, negativas no final
-      return a.localeCompare(b);
-    });
-    const linhasCategorias = categoriasOrdenadas.map(catLabel => {
+    const linhasCategorias = [...categoriasSet].sort().map(catLabel => {
       const chaveManual = (empresaKey === 'NOVAH') ? CATEGORIA_PARA_LINHA_MANUAL[catLabel] : null;
       const valoresCat = mesesValidos.map(m => {
         if (chaveManual && m.live) {
@@ -17076,7 +17044,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       const avPctCat = totalReceitaPeriodo ? (totalCat / totalReceitaPeriodo * 100) : null;
       return `
         <tr class="dre-tbl-row" style="display:none;color:#5a7268;font-size:12px;" data-grupo-conta="${rowId}">
-          <td class="dre-tbl-sticky">${rotuloComSinal(catLabel)}</td>
+          <td class="dre-tbl-sticky">${catLabel}</td>
           ${valoresCat.map((v, i) => {
             const baseRecebimentoMes = receitaPorMes[i];
             const avPctMes = baseRecebimentoMes ? (v / baseRecebimentoMes * 100) : null;
@@ -17117,9 +17085,11 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // linhasConfig (foram quebrados em linhas próprias) — soma a partir
   // dos componentes granulares. RT (fallback): mantém comportamento
   // original (chave única, embora nunca chegue aqui na prática).
-  const custoAdmTotalPorMes = (empresaKey === 'KMNO' || empresaKey === 'NOVAH')
-    ? somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'proLabore')
-    : (valoresMesesPorChave['custoAdm'] || mesesValidos.map(() => 0));
+  const custoAdmTotalPorMes = empresaKey === 'NOVAH'
+    ? somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'proLabore', 'pjTerceirosAdm')
+    : (empresaKey === 'KMNO'
+      ? somaArraysLinhas('despesasAdministracao', 'depPessoalAdm', 'proLabore')
+      : (valoresMesesPorChave['custoAdm'] || mesesValidos.map(() => 0)));
   const despesasComerciaisTotalPorMes = empresaKey === 'KMNO'
     ? somaArraysLinhas('despesasComerciaisPuro', 'fretePago', 'depComercial')
     : (valoresMesesPorChave['despesasComerciais'] || mesesValidos.map(() => 0));
@@ -17141,7 +17111,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // embutido em valoresMesesPorChave['receita'] (ver fix acima), somar
   // de novo aqui contaria em dobro. "- pagamentoEmprestimos" continua
   // (é saída/despesa, nunca fez parte de 'receita').
-  const saldoLiquidoPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao']?.[i] ?? 0) - (valoresMesesPorChave['capex']?.[i] ?? 0) - (valoresMesesPorChave['refis']?.[i] ?? 0) - (valoresMesesPorChave['pagamentoEmprestimos']?.[i] ?? 0));
+  const saldoLiquidoPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao']?.[i] ?? 0) - (valoresMesesPorChave['capex']?.[i] ?? 0) - (valoresMesesPorChave['refis']?.[i] ?? 0) + (valoresMesesPorChave['recebimentoEmprestimos']?.[i] ?? 0) - (valoresMesesPorChave['pagamentoEmprestimos']?.[i] ?? 0));
 
   // Mesmas fórmulas acima, aplicadas só ao mês ANTES do período exibido
   // (pra AV% mês a mês da 1ª coluna dos subtotais).
@@ -17195,7 +17165,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(-) Resultado Líquido (Lucro Líquido)', resultadoLiquidoPorMes, resultadoLiquidoAntes)
+      + linhaSubtotal('(=) Saldo líquido', resultadoLiquidoPorMes, resultadoLiquidoAntes)
       + htmlPorChave['distribuicao']
       + htmlPorChave['capex']
       + htmlPorChave['refis']
@@ -17203,7 +17173,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // Pagamento de Empréstimos, reposicionada aqui (antes só de exibição,
       // não afeta o valor do subtotal abaixo).
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaSubtotal('(=) Lucro Líquido', saldoLiquidoPorMes, saldoLiquidoAntes)
+      + linhaSubtotal('(=) Saldo CAIXA', saldoLiquidoPorMes, saldoLiquidoAntes)
     : empresaKey === 'NOVAH'
     // Reordenado 12/08/2026 (pedido Lucas): sem "(=) CMV" (Novah não
     // compra material, só presta serviço — diferente de KMNO/RT, que
@@ -17233,12 +17203,11 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + htmlPorChave['depPessoalAdm']
       + htmlPorChave['proLabore']
       + htmlPorChave['pjTerceirosAdm']
-      + htmlPorChave['pcpPjTerceiros']
       + htmlPorChave['despesasDiretoria']
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(-) Resultado Líquido (Lucro Líquido)', resultadoLiquidoPorMes, resultadoLiquidoAntes)
+      + linhaSubtotal('(=) Saldo líquido', resultadoLiquidoPorMes, resultadoLiquidoAntes)
       + htmlPorChave['distribuicao']
       + htmlPorChave['capex']
       + htmlPorChave['refis']
@@ -17247,7 +17216,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // antes do Resultado Líquido e entram AQUI, combinadas em 1 linha
       // só de exibição — não afeta o valor do subtotal abaixo.
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaSubtotal('(=) Lucro Líquido', saldoLiquidoPorMes, saldoLiquidoAntes)
+      + linhaSubtotal('(=) Saldo CAIXA', saldoLiquidoPorMes, saldoLiquidoAntes)
     : htmlPorChave['receita']
       + htmlPorChave['impostos']
       + htmlPorChave['devolucoes']
@@ -17262,7 +17231,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + linhaSubtotal('(-) EBITDA', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(-) Resultado Líquido (Lucro Líquido)', resultadoLiquidoPorMes, resultadoLiquidoAntes)
+      + linhaSubtotal('(=) Saldo líquido', resultadoLiquidoPorMes, resultadoLiquidoAntes)
       + htmlPorChave['distribuicao']
       + htmlPorChave['capex']
       + htmlPorChave['refis']
@@ -17271,7 +17240,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // implementada (pendência já catalogada), então aparece sempre
       // zerada até esse trabalho ser feito.
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaSubtotal('(=) Lucro Líquido', saldoLiquidoPorMes, saldoLiquidoAntes);
+      + linhaSubtotal('(=) Saldo CAIXA', saldoLiquidoPorMes, saldoLiquidoAntes);
 
   body.innerHTML = linhas;
 }
@@ -17280,7 +17249,7 @@ const RESUMO_DETALHADO_LINHAS = [
   { label: '(+) Receita Produtos',                                  chave: 'receitaProdutos' },
   { label: '(+) Receita de Mercadorias (Site)',                      chave: 'receitaMercadorias' },
   { label: '(+) Receita de Serviços',                                chave: 'receitaServicos' },
-  { label: '( + ) Recebimento',                                     chave: 'receita', destaque: true },
+  { label: '(=) Recebimento',                                       chave: 'receita', destaque: true },
   { label: '(-) Impostos',                                           chave: 'impostos' },
   { label: '(-) Devoluções',                                         chave: 'devolucoes' },
   { label: '(=) Receita Líquida',                                    chave: 'receitaLiquida', destaque: true },
@@ -18136,15 +18105,12 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     // dash_financial_movements (bug conhecido, não resolvido) — quando
     // existe o "Realizado" oficial do Omie pro mês (dash_orcamento_
     // realizado, só meses já FECHADOS), ele tem prioridade.
-    const recebimentoEmprestimosPreReceita = somaBucket('recebimentoEmprestimos');
-    const receitaOficialChave = `${empresaFiltro}|${monthStart.format('YYYY-MM')}`;
-    // Pedido 13/08/2026: Novah nunca usa o total oficial — sempre cálculo
-    // por lançamento (mesma lógica de mês ao vivo, agora protegida pelo
-    // reconcile-titulos.js no cron).
-    const receitaOficialRow = empresaFiltro === 'NOVAH' ? null : orcamentoRealizadoCache[receitaOficialChave];
-    const receita = receitaOficialRow
-      ? Number(receitaOficialRow.receitas_realizado)
-      : (receitaProdutos + receitaMercadorias + receitaServicos + recebimentoEmprestimosPreReceita);
+    // REVERTIDO 14/08/2026 (pedido Lucas): tirado o atalho "oficial"
+    // (dash_orcamento_realizado, total geral da empresa) — misturava
+    // adiantamento/empréstimo sem dar pra descontar de forma robusta.
+    // "Recebimento" volta a ser 100% soma de categorias reais (mesma
+    // fonte por categoria já usada em CMV/Margem, já validada).
+    const receita = receitaProdutos + receitaMercadorias + receitaServicos;
     // Pedido 30/07: impostos/devolucoes expostos separados (buckets já
     // existiam em buildResumoCategoriasMes, só "deducoes" combinado
     // era usado aqui antes).
@@ -18175,7 +18141,7 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     // senão o resultado final não bate com o "Resultado Realizado" do
     // Omie (que soma TODAS as entradas menos TODAS as saídas reais,
     // adiantamento/empréstimo incluso dos dois lados).
-    const saldoLiquido = lucroLiquido - distribuicao - capex - refis - pagamentoEmprestimos;
+    const saldoLiquido = lucroLiquido - distribuicao - capex - refis + recebimentoEmprestimos - pagamentoEmprestimos;
     const saldoCaixa = saldoLiquido; // mantido só por compatibilidade — saldoLiquido já é o "de caixa" agora
     const depreciacao = calcDepreciacao(empresaFiltro, receita); // mesma fórmula já usada no DRE por Bloco (1% do faturamento) — nunca tinha sido ligada aqui
 
@@ -18210,18 +18176,10 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   // Se faltar QUALQUER uma das 2 (mês em andamento, ainda sem linha na
   // tabela), cai pro cálculo antigo pras 2 (não mistura oficial+calculado
   // no mesmo total, pra não ficar inconsistente).
-  const recebimentoEmprestimosPreReceita = somaBucket('recebimentoEmprestimos');
-  const mesChaveGrupo = monthStart.format('YYYY-MM');
-  const kmnoOficialRow = orcamentoRealizadoCache[`KMNO|${mesChaveGrupo}`];
-  // Pedido 13/08/2026: Novah sai da tabela oficial (sem sync automático)
-  // — sempre soma por lançamento (receita + recebimentoEmprestimos dela),
-  // protegida pelo reconcile-titulos.js no cron. KMNO continua na tabela
-  // oficial quando existir pro mês (bug de rateio de recebível ainda não
-  // resolvido pra ela — ver buildTotalPorCategoriaEmpresa).
-  const novahReceitaLancamentos = somaMapa(novah.receita) + somaMapa(novah.recebimentoEmprestimos);
-  const receita = kmnoOficialRow
-    ? (Number(kmnoOficialRow.receitas_realizado) + novahReceitaLancamentos)
-    : (receitaProdutos + receitaMercadorias + receitaServicos + recebimentoEmprestimosPreReceita);
+  // REVERTIDO 14/08/2026 (pedido Lucas): tirado o atalho "oficial" —
+  // "Recebimento" do Grupo volta a ser 100% soma de categorias reais
+  // (KMNO + NOVAH), mesma fonte já validada nas outras linhas.
+  const receita = receitaProdutos + receitaMercadorias + receitaServicos;
   // Pedido 30/07: impostos/devolucoes expostos separados, mesmo padrão
   // do branch com empresaFiltro acima.
   const impostos = somaBucket('impostos');
@@ -18248,7 +18206,7 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   // Pedido 10/08/2026: mesmo ajuste do branch com empresaFiltro — Saldo
   // Líquido do Grupo desconta pagamentoEmprestimos, já que
   // recebimentoEmprestimos entrou no Recebimento acima.
-  const saldoLiquido = lucroLiquido - distribuicao - capex - refis - pagamentoEmprestimos;
+  const saldoLiquido = lucroLiquido - distribuicao - capex - refis + recebimentoEmprestimos - pagamentoEmprestimos;
   const saldoCaixa = saldoLiquido; // mantido só por compatibilidade — saldoLiquido já é o "de caixa" agora
   const depreciacao = calcDepreciacao('KMNO', receitaProdutos + receitaMercadorias) + calcDepreciacao('NOVAH', receitaServicos); // Grupo = soma das 2 fórmulas individuais
   const chavesComDetalhe = ['receita', 'impostos', 'devolucoes', 'custoInsumos', 'custoServicos', 'custoMaoObra', 'royalties', 'custoAdm', 'despesasComerciais', 'despesasFinanceiras', 'receitasFinanceiras', 'distribuicao', 'capex', 'refis', 'recebimentoEmprestimos', 'pagamentoEmprestimos'];
