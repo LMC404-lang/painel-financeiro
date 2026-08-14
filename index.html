@@ -5013,6 +5013,16 @@ function buildDfcDetalheCategoriaAgrupado(natureza, categories, movements, month
     const key = `${m._empresa}|${m.cod_categoria}`;
     const cat = catByKey[key];
     if (isExcludedFromDfc(cat)) return;
+    // Novah (jun/2026+): "Transferências entre contas" foi teste pontual do
+    // Léo no Omie (saída e entrada de 6k que se cancelam, não é receita
+    // real) e "Recebimentos Empréstimos Kiko" já é somado na linha-pai
+    // "Recebimento Empréstimos" (blocos emprestimos_recebidos, cód.
+    // 1.02.98) — mantê-lo aqui também duplicaria o valor. Nenhum dos dois
+    // deve entrar na soma do Recebimento/DFC (pedido 14/08/2026).
+    if (m._empresa === 'NOVAH' && cat) {
+      const descCat = String(cat.descricao || '').trim().toLowerCase();
+      if (descCat === 'transferências entre contas' || descCat === 'transferencias entre contas' || descCat === 'recebimentos empréstimos kiko' || descCat === 'recebimentos emprestimos kiko') return;
+    }
     const v = Number(m.val_pago || m.val_liquido || 0);
     if (!v) return;
     if (!porCategoria[key]) porCategoria[key] = { val: 0, cat, empresa: m._empresa, codigo: m.cod_categoria };
