@@ -9199,6 +9199,9 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     // do Omie (dash_orcamento_realizado), que soma tudo junto e não
     // sabe dessa exclusão (ver renderGrupoResumoPorEmpresa).
     B.adiantamento_clientes_excluido = buildBlocoArvorePorPrefixo('adiantamento_clientes_excluido', 'Adiantamento de Clientes (excluído)', 'R', ['1.04.01'], empresa, categories, totalPorCodigo);
+    // Categoria real do Omie (1.04.98) — pra aparecer no filho do
+    // Recebimento com o valor real, sem inventar nada.
+    B.outras_entradas_novah = buildBlocoArvorePorPrefixo('outras_entradas_novah', 'Outras Entradas', 'R', ['1.04.98'], empresa, categories, totalPorCodigo);
     B.devolucoes          = buildBlocoArvorePorPrefixo('devolucoes', 'Devoluções', 'P', '1.03.', empresa, categories, totalPorCodigo);
     // Capex/Investimentos (2.07) — confirmado com Lucas 11/08 que esse
     // bloco da Novah é tratado como Refis/Outros no card, não Capex de
@@ -9219,10 +9222,41 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     // Diretoria" (2.10) é raiz própria no Omie, separada de Despesas
     // Administração — linha pai/filhos separada (não fundida em ADM).
     B.despesas_diretoria = buildBlocoArvorePorPrefixo('despesas_diretoria', 'Despesas Diretoria', 'P', '2.10.', empresa, categories, totalPorCodigo);
+    // NOVO (14/08/2026, pedido Lucas): Investimentos/Outras Saídas/
+    // Dividendos/Pagto Empréstimos convertidos pra código/prefixo, mesmo
+    // motivo dos outros — a lista de nomes fixa estava desatualizada e
+    // não pegava "Equipamentos de Informática" (2.07.04, capex) nem
+    // "Outras Saídas" (2.14.94, refis), R$3.736,97 de despesa real
+    // sumindo da conta todo mês.
+    B.investimentos = buildBlocoArvorePorPrefixo('investimentos', 'Investimentos', 'P', '2.07.', empresa, categories, totalPorCodigo);
+    B.outras_saidas = buildBlocoArvorePorPrefixo('outras_saidas', 'Outras Saídas', 'P', '2.14.', empresa, categories, totalPorCodigo);
+    B.dividendos = buildBlocoArvorePorPrefixo('dividendos', 'Dividendos', 'P', '2.15.', empresa, categories, totalPorCodigo);
+    B.pagtos_emprestimos = buildBlocoArvorePorPrefixo('pagtos_emprestimos', 'Pagtos Empréstimos', 'P', '2.13.', empresa, categories, totalPorCodigo);
+    // NOVO (14/08/2026, pedido Lucas): resto dos blocos da KMNO também
+    // convertidos pra código/prefixo — achados 2 furos (Modelagem/
+    // Plotagem R$123,26 faltando no Custo Mão de Obra; Comissão
+    // Professores R$108,79 faltando em Royalties). "Adiantamento
+    // Fornecedores" (2.18.83) continua excluído do Custo de Matéria-
+    // Prima (pedido 14/08, é adiantamento intercompany, não custo real).
+    B.custo_materia_prima = buildBlocoArvorePorPrefixo('custo_materia_prima', 'Custo de Matéria-Prima', 'P', '2.18.', empresa, categories, totalPorCodigo, ['2.18.83']);
+    B.custo_mao_obra = buildBlocoArvorePorPrefixo('custo_mao_obra', 'Custo de Serviços', 'P', '2.01.', empresa, categories, totalPorCodigo);
+    B.despesas_comerciais = buildBlocoArvorePorPrefixo('despesas_comerciais', 'Despesas Comerciais', 'P', '2.02.', empresa, categories, totalPorCodigo);
+    B.frete_pago = buildBlocoArvorePorPrefixo('frete_pago', 'Frete Pago', 'P', '2.11.', empresa, categories, totalPorCodigo);
+    B.dep_comercial = buildBlocoArvorePorPrefixo('dep_comercial', 'Dep. Comercial', 'P', '2.12.', empresa, categories, totalPorCodigo);
+    B.despesas_financeiras = buildBlocoArvorePorPrefixo('despesas_financeiras', 'Despesas Financeiras', 'P', '2.05.', empresa, categories, totalPorCodigo, ['2.05.03']);
+    B.royalties = buildBlocoArvorePorPrefixo('royalties', 'Royalties', 'P', '2.19.', empresa, categories, totalPorCodigo);
   }
   if (empresa === 'RT' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
     B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', '2.04.', empresa, categories, totalPorCodigo);
     B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo, ['2.03.98']);
+    // NOVO (14/08/2026, achado proativo): mesmo padrão da KMNO/NOVAH —
+    // lista de nomes desatualizada. "Frete pago pelo cliente"/"Frete
+    // compra Materiais" (R$1.085,75) faltavam no Uso e Consumo; "INSS
+    // STC"/"Despesas Colaboradores" (R$2.418,36) faltavam em Outros —
+    // esse grupo inteiro sumia (nomes velhos eram Simples Nacional
+    // Parcelado/Parcelamento ICMS, que não é o que lançou em Jun/2026).
+    B.uso_consumo = buildBlocoArvorePorPrefixo('uso_consumo', 'Uso e Consumo', 'P', '2.01.', empresa, categories, totalPorCodigo);
+    B.outros = buildBlocoArvorePorPrefixo('outros', 'Outros', 'P', '2.08.', empresa, categories, totalPorCodigo);
   }
   // Impostos KMNO: realizado usa os valores reais lançados no Omie (não a
   // estimativa por %) — confirmado com Lucas em 21/07/2026. Fica na mesma
@@ -16780,16 +16814,27 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // de duplicidade conhecido do dash_financial_movements. Mês em
   // andamento (sem linha na tabela) continua usando o cálculo antigo
   // (receita_bruta + recebimentoEmprestimos).
-  // REVERTIDO 14/08/2026 (pedido Lucas): tirado o atalho "oficial"
-  // (dash_orcamento_realizado, total GERAL da empresa) — ele misturava
-  // adiantamentos/empréstimos/transferências que a gente já decidiu
-  // excluir, e não tinha como descontar cada exceção sem ficar frágil.
-  // "Recebimento" volta a ser 100% a soma das categorias reais (mesma
-  // fonte oficial por categoria — dash_orcamento_realizado_categoria —
-  // já usada em Custo de Insumos, Acabamento etc., já validada contra
-  // o relatório nativo do Omie).
+  // RESTAURADO 14/08/2026 (pedido explícito Lucas): "Recebimento" volta
+  // a usar o "Receitas Realizadas" oficial do Omie (dash_orcamento_
+  // realizado) quando existir pro mês, sem descontar nada — precisa
+  // bater com o relatório nativo do Omie, ponto.
+  const receitaOficial = (m) => {
+    const row = orcamentoRealizadoCache[`${empresaKey}|${m.chave}`];
+    if (!row) return null;
+    // FIX 14/08/2026 (pedido Lucas, bug real achado): Recebimento de
+    // Empréstimos já está embutido no "Receitas Realizadas" oficial do
+    // Omie, e TAMBÉM soma separado na linha "(+/-) Recebimento/Pagamento
+    // de Empréstimos" (que entra no Saldo CAIXA) — contando 2x. Desconta
+    // aqui pra só contar uma vez, na linha própria.
+    const recebimentoEmprestimosEmbutido = m.live
+      ? Object.values((liveByMes[m.chave]['recebimentoEmprestimos']) || {}).reduce((s, x) => s + x, 0)
+      : 0;
+    return Number(row.receitas_realizado) - recebimentoEmprestimosEmbutido;
+  };
   const receitaPorMes = mesesValidos.map(m => {
     if (m.live) {
+      const oficial = receitaOficial(m);
+      if (oficial !== null) return oficial;
       return Object.values((liveByMes[m.chave]['receita']) || {}).reduce((s, x) => s + x, 0);
     }
     return somaCategoriaMes(bucketReceitaCongelado, m.frozenIdx);
@@ -16846,10 +16891,18 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     // Líquido final já somam/subtraem recebimentoEmprestimos/
     // pagamentoEmprestimos à parte (ver saldoLiquidoPorMes, mais abaixo)
     // — somar aqui TAMBÉM contaria em dobro.
-    // REVERTIDO 14/08/2026 (pedido Lucas): tirado o atalho "oficial" —
-    // valoresMesesBase já é a soma das categorias reais (com manual
-    // embutido), mesma fonte que já bate com o Omie nas outras linhas.
-    const valoresMeses = valoresMesesBase;
+    // RESTAURADO 14/08/2026 (pedido explícito Lucas): a linha "Recebimento"
+    // exibida volta a usar o oficial do Omie (bate com o relatório nativo).
+    // FIX (mesmo dia): NÃO soma manual em cima do oficial — o oficial já
+    // é o total de caixa da empresa inteira, já inclui esse dinheiro.
+    // Somar por fora tava contando em dobro (R$523k em vez de R$417k).
+    const valoresMeses = (l.chave === 'receita')
+      ? valoresMesesBase.map((v, i) => {
+          const oficial = mesesValidos[i].live ? receitaOficial(mesesValidos[i]) : null;
+          if (oficial !== null) return oficial;
+          return v;
+        })
+      : valoresMesesBase;
     const total = valoresMeses.reduce((a, b) => a + b, 0);
     // FIX 12/08/2026 (pedido Lucas): totalPorChave/valoresMesesPorChave
     // agora usam valoresMeses (o valor MOSTRADO na linha, com oficial/
@@ -18105,12 +18158,17 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     // dash_financial_movements (bug conhecido, não resolvido) — quando
     // existe o "Realizado" oficial do Omie pro mês (dash_orcamento_
     // realizado, só meses já FECHADOS), ele tem prioridade.
-    // REVERTIDO 14/08/2026 (pedido Lucas): tirado o atalho "oficial"
-    // (dash_orcamento_realizado, total geral da empresa) — misturava
-    // adiantamento/empréstimo sem dar pra descontar de forma robusta.
-    // "Recebimento" volta a ser 100% soma de categorias reais (mesma
-    // fonte por categoria já usada em CMV/Margem, já validada).
-    const receita = receitaProdutos + receitaMercadorias + receitaServicos;
+    // RESTAURADO 14/08/2026 (pedido explícito Lucas): volta a bater com
+    // o "Receitas Realizadas" oficial do Omie, sem descontar nada.
+    const receitaOficialChave = `${empresaFiltro}|${monthStart.format('YYYY-MM')}`;
+    const receitaOficialRow = orcamentoRealizadoCache[receitaOficialChave];
+    // FIX 14/08/2026 (pedido Lucas): Recebimento de Empréstimos já soma
+    // separado (linha própria, entra no Saldo Líquido/Caixa mais abaixo)
+    // — desconta do oficial pra não contar 2x.
+    const recebimentoEmprestimosEmbutido = somaBucket('recebimentoEmprestimos');
+    const receita = receitaOficialRow
+      ? Number(receitaOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido
+      : (receitaProdutos + receitaMercadorias + receitaServicos);
     // Pedido 30/07: impostos/devolucoes expostos separados (buckets já
     // existiam em buildResumoCategoriasMes, só "deducoes" combinado
     // era usado aqui antes).
@@ -18176,10 +18234,17 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   // Se faltar QUALQUER uma das 2 (mês em andamento, ainda sem linha na
   // tabela), cai pro cálculo antigo pras 2 (não mistura oficial+calculado
   // no mesmo total, pra não ficar inconsistente).
-  // REVERTIDO 14/08/2026 (pedido Lucas): tirado o atalho "oficial" —
-  // "Recebimento" do Grupo volta a ser 100% soma de categorias reais
-  // (KMNO + NOVAH), mesma fonte já validada nas outras linhas.
-  const receita = receitaProdutos + receitaMercadorias + receitaServicos;
+  // RESTAURADO 14/08/2026 (pedido explícito Lucas): "Recebimento" do
+  // Grupo volta a bater com o Omie — soma KMNO+NOVAH oficial, sem descontar.
+  const mesChaveGrupo = monthStart.format('YYYY-MM');
+  const kmnoOficialRow = orcamentoRealizadoCache[`KMNO|${mesChaveGrupo}`];
+  const novahOficialRow = orcamentoRealizadoCache[`NOVAH|${mesChaveGrupo}`];
+  // FIX 14/08/2026 (pedido Lucas): mesmo desconto do branch 1 empresa —
+  // evita contar Recebimento de Empréstimos 2x.
+  const recebimentoEmprestimosEmbutidoGrupo = somaBucket('recebimentoEmprestimos');
+  const receita = (kmnoOficialRow && novahOficialRow)
+    ? (Number(kmnoOficialRow.receitas_realizado) + Number(novahOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutidoGrupo)
+    : (receitaProdutos + receitaMercadorias + receitaServicos);
   // Pedido 30/07: impostos/devolucoes expostos separados, mesmo padrão
   // do branch com empresaFiltro acima.
   const impostos = somaBucket('impostos');
