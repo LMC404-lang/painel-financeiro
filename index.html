@@ -17295,6 +17295,18 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // e a nossa cascata. Bate por construção com o "Resultado Realizado"
   // nativo: testado e confirmado em 17/08/2026 (KMNO Jun: R$323.304,70;
   // Jul: R$193.267,49 — exatos).
+  //
+  // ATUALIZAÇÃO 17/08/2026 (mesmo dia, pedido Lucas): a linha "(+/-)
+  // Transferências e Ajustes de Saldo" foi ESCONDIDA da tela nas 3
+  // empresas (não tem mais linhaItemCombinado pra ela em nenhum branch
+  // abaixo). ISSO NÃO DESATIVA A FUNÇÃO — ajustePorMes/saldoCaixaRealPorMes
+  // continuam calculando normalmente e são o que alimenta "(=) Saldo
+  // CAIXA" em todo lugar (KMNO/NOVAH/RT), que continua batendo com o
+  // saldo bancário real. Só a linha de DETALHE (mostrar o valor do
+  // ajuste em si) foi tirada da tela. Se precisar reexibir no futuro, é
+  // só voltar a chamar linhaItemCombinado('(+/-) Transferências e
+  // Ajustes de Saldo', ajustePorMes) nos 3 branches (procurar por
+  // "ESCONDIDA nas 3 empresas" mais abaixo nesta função).
   const bancoTotalPorMes = (chave) => {
     const mapa = saldoBancarioMensalCache[`${empresaKey}|${chave}`];
     if (!mapa) return null;
@@ -17360,7 +17372,12 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // Pagamento de Empréstimos, reposicionada aqui (antes só de exibição,
       // não afeta o valor do subtotal abaixo).
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaItemCombinado('(+/-) Transferências e Ajustes de Saldo', ajustePorMes)
+      // FIX 17/08/2026 (pedido Lucas): linha "(+/-) Transferências e
+      // Ajustes de Saldo" ESCONDIDA nas 3 empresas (não exibe mais) --
+      // mas a função que calcula ela (ajustePorMes/saldoCaixaRealPorMes,
+      // ver acima) continua ATIVA e é o que alimenta o "(=) Saldo CAIXA"
+      // abaixo, que continua batendo com o saldo bancário real. Só
+      // removeu a linha de detalhe da tela, não o cálculo.
       + linhaSubtotal('(=) Saldo CAIXA', saldoCaixaRealPorMes, saldoCaixaRealAntes)
     : empresaKey === 'NOVAH'
     // Reordenado 12/08/2026 (pedido Lucas): sem "(=) CMV" (Novah não
@@ -17404,7 +17421,12 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // antes do Resultado Líquido e entram AQUI, combinadas em 1 linha
       // só de exibição — não afeta o valor do subtotal abaixo.
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaItemCombinado('(+/-) Transferências e Ajustes de Saldo', ajustePorMes)
+      // FIX 17/08/2026 (pedido Lucas): linha "(+/-) Transferências e
+      // Ajustes de Saldo" ESCONDIDA nas 3 empresas (não exibe mais) --
+      // mas a função que calcula ela (ajustePorMes/saldoCaixaRealPorMes,
+      // ver acima) continua ATIVA e é o que alimenta o "(=) Saldo CAIXA"
+      // abaixo, que continua batendo com o saldo bancário real. Só
+      // removeu a linha de detalhe da tela, não o cálculo.
       + linhaSubtotal('(=) Saldo CAIXA', saldoCaixaRealPorMes, saldoCaixaRealAntes)
     : htmlPorChave['receita']
       + htmlPorChave['impostos']
@@ -17428,11 +17450,11 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // implementada (pendência já catalogada), então aparece sempre
       // zerada até esse trabalho ser feito.
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      // FIX 17/08/2026 (pedido Lucas): RT reverte pro cálculo antigo do
-      // Saldo CAIXA (sem a linha de Transferências e Ajustes de Saldo
-      // criada hoje de manhã) -- pedido explícito, só pra RT. KMNO e
-      // Novah continuam com o cálculo novo (bate com o banco real).
-      + linhaSubtotal('(=) Saldo CAIXA', saldoLiquidoPorMes, saldoLiquidoAntes);
+      // FIX 17/08/2026 (pedido Lucas): RT usa o cálculo do banco real
+      // (saldoCaixaRealPorMes) igual KMNO/Novah -- só a linha de
+      // detalhe "Transferências e Ajustes de Saldo" fica escondida nas
+      // 3 empresas, a fórmula do Saldo CAIXA em si é a mesma nas 3.
+      + linhaSubtotal('(=) Saldo CAIXA', saldoCaixaRealPorMes, saldoCaixaRealAntes);
 
   body.innerHTML = linhas;
 }
