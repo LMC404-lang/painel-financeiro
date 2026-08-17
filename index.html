@@ -16820,6 +16820,14 @@ const CATEGORIAS_OCULTAS_RESUMO_EMPRESA = new Set([
   'Facção para GRACIE BARRA',
   'Facção para KMNO',
   'Jeans',
+  // Pedido Lucas 17/08/2026 (doc "Revisão DRE Caixa"): categorias sempre
+  // zeradas em todos os meses/períodos -- só ESCONDIDAS da tela, não
+  // excluídas do cálculo (não afeta nenhum total, já são R$0 sempre).
+  'Frete Comercial',
+  'Papelaria',
+  'Retorno de Remessa',
+  'Serviço Industrialização (Impressão/Costura/Corte)',
+  'Comunicação',
 ]);
 
 function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
