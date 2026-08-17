@@ -9077,11 +9077,15 @@ function buildBlocoImpostosKMNOFormula(totalRecebimentos) {
 // da estimativa por % — confirmado em 21/07/2026 que os 4 nomes batem
 // 1:1 com categorias reais do KMNO (sem necessidade de combinar códigos).
 function buildBlocoImpostosKMNOReal(totalPorLabel) {
-  // FIX 17/08/2026 (Lucas, validação do Resumo Grupo): "Fundo Social" e
-  // "Fundo Social FUMDES" (2.06.04/2.06.06) são tributos reais que
-  // ficavam de fora da conta de Impostos -- ~R$1,9-2,1k/mês
-  // desaparecendo do resumo. Pedido: somar junto com os outros 4.
-  const nomes = ['IRPJ / CSLL', 'PIS / COFINS', 'DIFAL', 'ICMS', 'Fundo Social', 'Fundo Social FUMDES'];
+  // FIX 17/08/2026 (Lucas, validação do Resumo Grupo, ATUALIZADO no
+  // mesmo dia após achado no DRE Nativo): "Fundo Social FUMDES"
+  // (2.06.04) é tributo real que ficava de fora da conta de Impostos --
+  // somado junto com os outros 4. "Fundo Social" (2.06.06, SEM o
+  // FUMDES) foi REMOVIDO daqui -- o codigo_dre nativo da Omie (2.11.05,
+  // "Outros Tributos") mostra que é despesa operacional, não dedução de
+  // receita como ICMS/DIFAL/PIS-COFINS/FUMDES. Ganhou linha própria
+  // (ver buildBlocoOutrosTributosKMNO, abaixo).
+  const nomes = ['IRPJ / CSLL', 'PIS / COFINS', 'DIFAL', 'ICMS', 'Fundo Social FUMDES'];
   const itens = nomes.map(nome => ({
     nome,
     natureza: 'P',
@@ -9089,6 +9093,14 @@ function buildBlocoImpostosKMNOReal(totalPorLabel) {
   }));
   const total = itens.reduce((acc, it) => acc + it.val, 0);
   return { id: 'impostos', nome: 'Impostos', natureza: 'P', itens, total };
+}
+
+// NOVO 17/08/2026 (pedido Lucas): "Fundo Social" (2.06.06, sem FUMDES) --
+// codigo_dre nativo da Omie = 2.11.05 "Outros Tributos", despesa
+// operacional separada de Impostos.
+function buildBlocoOutrosTributosKMNO(totalPorLabel) {
+  const val = totalPorLabel[normalizarLabelCategoria('Fundo Social')] || 0;
+  return { id: 'outros_tributos', nome: 'Outros Tributos', natureza: 'P', itens: [{ nome: 'Fundo Social', natureza: 'P', val }], total: val };
 }
 
 function calcDepreciacao(empresa, receitaBase) {
@@ -9314,6 +9326,9 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
   // posição de antes (logo após os blocos de DRE_ARVORE_BLOCOS, antes dos
   // blocos operacionais abaixo).
   if (empresa === 'KMNO') B.impostos = buildBlocoImpostosKMNOReal(totalPorLabel);
+  // NOVO 17/08/2026 (pedido Lucas): "Outros Tributos" (Fundo Social,
+  // separado de Impostos -- ver comentário em buildBlocoOutrosTributosKMNO).
+  if (empresa === 'KMNO') B.outros_tributos = buildBlocoOutrosTributosKMNO(totalPorLabel);
   // Blocos operacionais (não vêm de categoria Omie) — CMV por produto e
   // faturamento por unidades vendidas, alimentados manualmente no
   // dashboard, substituindo a antiga planilha DRE_2026_KMNO_e_NOVAH.
@@ -16260,6 +16275,9 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       // função (buildResumoDetalhadoMesAoVivo, buildMetricasGrupoDfcPeriodo)
       // que ainda usam soma('deducoes') como um bloco só.
       impostos: itensParaCategoria(B.impostos.itens),
+      // NOVO 17/08/2026 (pedido Lucas): "Outros Tributos" (Fundo Social,
+      // sem FUMDES) separado de Impostos -- codigo_dre nativo é 2.11.05.
+      outrosTributos: itensParaCategoria(B.outros_tributos.itens),
       devolucoes: itensParaCategoria(B.devolucoes.itens),
       custoInsumos: itensParaCategoria(B.custo_materia_prima.itens),
       // FIX (31/07/2026): o bloco "custo_mao_obra" (id) da KMNO tem
@@ -16467,6 +16485,12 @@ const RESUMO_POR_EMPRESA_LINHAS = [
 const RESUMO_POR_EMPRESA_LINHAS_KMNO = [
   { chave: 'receita', label: '(+) Recebimento' },
   { chave: 'impostos', label: '(-) Impostos' },
+  // NOVO 17/08/2026 (pedido Lucas, achado no DRE Nativo): "Fundo Social"
+  // (2.06.06) tem codigo_dre 2.11.05 ("Outros Tributos") na classificação
+  // oficial da Omie -- diferente de "Fundo Social FUMDES" (2.06.04, que
+  // tem codigo_dre 1.01.02, junto com ICMS/DIFAL/PIS-COFINS). Por isso
+  // ganhou linha própria, separada de Impostos.
+  { chave: 'outrosTributos', label: '(-) Outros Tributos' },
   { chave: 'devolucoes', label: '(-) Devoluções' },
   { chave: 'custoInsumos', label: '(-) Custo de Insumos e Matéria-Prima' },
   { chave: 'custoServicos', label: '(-) Custo de Serviços' },
@@ -17248,7 +17272,14 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const despesasDiretoriaPorMes = (empresaKey === 'KMNO' || empresaKey === 'NOVAH')
     ? (valoresMesesPorChave['despesasDiretoria'] || mesesValidos.map(() => 0))
     : mesesValidos.map(() => 0);
-  const ebitdaPorMes = mesesValidos.map((_, i) => margemPorMes[i] - custoAdmTotalPorMes[i] - despesasComerciaisTotalPorMes[i] - despesasDiretoriaPorMes[i]);
+  // NOVO 17/08/2026 (pedido Lucas): "Outros Tributos" (Fundo Social, sem
+  // FUMDES) entra como termo próprio no EBITDA -- codigo_dre nativo da
+  // Omie classifica como despesa operacional (2.11.05), não dedução de
+  // Receita Líquida como Impostos. Só KMNO tem essa linha hoje.
+  const outrosTributosPorMes = empresaKey === 'KMNO'
+    ? (valoresMesesPorChave['outrosTributos'] || mesesValidos.map(() => 0))
+    : mesesValidos.map(() => 0);
+  const ebitdaPorMes = mesesValidos.map((_, i) => margemPorMes[i] - custoAdmTotalPorMes[i] - despesasComerciaisTotalPorMes[i] - despesasDiretoriaPorMes[i] - outrosTributosPorMes[i]);
   const resultadoLiquidoPorMes = mesesValidos.map((_, i) => ebitdaPorMes[i] - (valoresMesesPorChave['despesasFinanceiras'] || [])[i] + (valoresMesesPorChave['receitasFinanceiras'] || [])[i]);
   // FIX 10/08/2026: quando a empresa não tem "recebimentoEmprestimos"/
   // "pagamentoEmprestimos" na linhasConfig (KMNO — "Empréstimos ficam
@@ -17277,7 +17308,10 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     : valorMesAntes('despesasComerciais')) : null;
   const despesasDiretoriaAntes = temFonteMesAntes ? ((empresaKey === 'KMNO' || empresaKey === 'NOVAH')
     ? valorMesAntes('despesasDiretoria') : 0) : null;
-  const ebitdaAntes = temFonteMesAntes ? (margemAntes - custoAdmAntes - despesasComerciaisAntes - despesasDiretoriaAntes) : null;
+  // NOVO 17/08/2026 (pedido Lucas): mesma lógica de outrosTributosPorMes,
+  // aplicada ao mês "antes" (AV% da 1ª coluna).
+  const outrosTributosAntes = temFonteMesAntes ? (empresaKey === 'KMNO' ? valorMesAntes('outrosTributos') : 0) : null;
+  const ebitdaAntes = temFonteMesAntes ? (margemAntes - custoAdmAntes - despesasComerciaisAntes - despesasDiretoriaAntes - outrosTributosAntes) : null;
   const resultadoLiquidoAntes = temFonteMesAntes ? (ebitdaAntes - valorMesAntes('despesasFinanceiras') + valorMesAntes('receitasFinanceiras')) : null;
   const saldoLiquidoAntes = temFonteMesAntes ? (resultadoLiquidoAntes - valorMesAntes('distribuicao') - valorMesAntes('capex') - valorMesAntes('refis')) : null;
 
@@ -17361,6 +17395,11 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + htmlPorChave['fretePago']
       + htmlPorChave['depComercial']
       + htmlPorChave['despesasDiretoria']
+      // NOVO 17/08/2026 (pedido Lucas): "Outros Tributos" (Fundo Social)
+      // entra aqui, junto do Resultado Operacional -- é onde a fórmula
+      // (ebitdaPorMes) realmente desconta ela, batendo com o codigo_dre
+      // nativo da Omie (2.11.05, despesa operacional).
+      + htmlPorChave['outrosTributos']
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
