@@ -9279,15 +9279,35 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
   }
   if (empresa === 'RT' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
     B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', '2.04.', empresa, categories, totalPorCodigo);
-    B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo, ['2.03.98']);
+    // FIX 17/08/2026 (pedido Lucas): INSS (2.03.06) sai daqui — vira
+    // linha própria "Dep. ADM" (não fica mais fundido em "Custo ADM/
+    // Indústria"). Exclusão adicionada junto com a que já existia
+    // (2.03.98).
+    B.dep_pessoal_adm = buildBlocoArvorePorPrefixo('dep_pessoal_adm', 'Dep. Pessoal ADM', 'P', '2.03.', empresa, categories, totalPorCodigo, ['2.03.98', '2.03.06']);
+    B.dep_adm = buildBlocoArvorePorPrefixo('dep_adm', 'Dep. ADM', 'P', ['2.03.06'], empresa, categories, totalPorCodigo);
     // NOVO (14/08/2026, achado proativo): mesmo padrão da KMNO/NOVAH —
     // lista de nomes desatualizada. "Frete pago pelo cliente"/"Frete
     // compra Materiais" (R$1.085,75) faltavam no Uso e Consumo; "INSS
     // STC"/"Despesas Colaboradores" (R$2.418,36) faltavam em Outros —
     // esse grupo inteiro sumia (nomes velhos eram Simples Nacional
     // Parcelado/Parcelamento ICMS, que não é o que lançou em Jun/2026).
-    B.uso_consumo = buildBlocoArvorePorPrefixo('uso_consumo', 'Uso e Consumo', 'P', '2.01.', empresa, categories, totalPorCodigo);
-    B.outros = buildBlocoArvorePorPrefixo('outros', 'Outros', 'P', '2.08.', empresa, categories, totalPorCodigo);
+    // FIX 17/08/2026 (pedido Lucas): "Mão de Obra - Facções" (2.01.03)
+    // sai daqui — vira "Custo de Serviços" (linha própria, ver abaixo).
+    B.uso_consumo = buildBlocoArvorePorPrefixo('uso_consumo', 'Uso e Consumo', 'P', '2.01.', empresa, categories, totalPorCodigo, ['2.01.03']);
+    B.custo_servicos = buildBlocoArvorePorPrefixo('custo_servicos', 'Custo de Serviços', 'P', ['2.01.03'], empresa, categories, totalPorCodigo);
+    // FIX 17/08/2026 (pedido Lucas): "Outros (Refis)" ganha Simples
+    // Nacional Parcelado (2.06.06) e Parcelamento ICMS (2.06.07) —
+    // antes não caíam em nenhum bucket (nomes velhos não bateram com o
+    // que o financeiro lançou em Jun/2026, ficavam invisíveis).
+    B.outros = buildBlocoArvorePorPrefixo('outros', 'Outros', 'P', ['2.08.', '2.06.06', '2.06.07'], empresa, categories, totalPorCodigo);
+    // FIX 17/08/2026 (pedido Lucas): "Despesas Financeiras" convertida
+    // de lista de nomes fixa pra código (2.05.) — "Tarifas Boletos"/
+    // "Juros Pagos" tinham nome diferente do que a lista antiga
+    // esperava ("Tarifas Bancárias"/"Juros sobre Empréstimos"), ficavam
+    // invisíveis. Exclui Pagamento de Empréstimos (2.05.03, não é
+    // despesa financeira) e Transferência entre contas (2.05.98, mesmo
+    // motivo do fix de hoje na Novah — não é despesa de verdade).
+    B.despesas_financeiras = buildBlocoArvorePorPrefixo('despesas_financeiras', 'Despesas Financeiras', 'P', '2.05.', empresa, categories, totalPorCodigo, ['2.05.03', '2.05.98']);
   }
   // Impostos KMNO: realizado usa os valores reais lançados no Omie (não a
   // estimativa por %) — confirmado com Lucas em 21/07/2026. Fica na mesma
@@ -16348,13 +16368,28 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       impostos: itensParaCategoria(B.impostos.itens),
       devolucoes: itensParaCategoria(B.devolucoes.itens),
       custoInsumos: itensParaCategoria(B.uso_consumo.itens),
-      custoServicos: {},
-      custoMaoObra: itensParaCategoria(B.despesas_industriais.itens),
+      // FIX 17/08/2026 (pedido Lucas): "Mão de Obra - Facções" (2.01.03)
+      // agora tem linha própria aqui, em vez de ficar dentro de "Custo
+      // de Insumos" (Uso e Consumo).
+      custoServicos: itensParaCategoria(B.custo_servicos.itens),
+      // FIX 17/08/2026 (pedido Lucas): "Custo Mão de Obra" (FGTS/INSS/
+      // Multas por nome fixo) excluído -- INSS já tem lugar próprio
+      // (Dep. ADM, abaixo), o resto não representava nada de real.
+      custoMaoObra: {},
+      // FIX 17/08/2026 (pedido Lucas): Royalties excluído -- RT não tem
+      // nenhuma categoria Royalties, linha sempre vazia.
       royalties: {},
-      custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens), itensParaCategoria(B.pro_labore.itens)),
+      // FIX 17/08/2026 (pedido Lucas): "Pró-Labore" sai do merge de
+      // Custo ADM/Indústria -- ganha linha própria (proLabore, abaixo).
+      custoAdm: mergeCategoriaMaps(itensParaCategoria(B.despesas_adm.itens), itensParaCategoria(B.dep_pessoal_adm.itens)),
       despesasAdministracao: itensParaCategoria(B.despesas_adm.itens),
       depPessoalAdm: itensParaCategoria(B.dep_pessoal_adm.itens),
+      // NOVO 17/08/2026 (pedido Lucas): INSS (2.03.06) sai de "Custo ADM/
+      // Indústria" -- vira linha própria "Dep. ADM".
+      depAdm: itensParaCategoria(B.dep_adm.itens),
       proLabore: itensParaCategoria(B.pro_labore.itens),
+      // FIX 17/08/2026 (pedido Lucas): Despesas Comerciais excluído --
+      // RT não tem categoria nenhuma aqui, linha sempre vazia.
       despesasComerciais: {},
       despesasFinanceiras: itensParaCategoria(despFin, 'P'),
       // FIX (11/08/2026): idem KMNO/NOVAH — usa o bloco receitas_financeiras
@@ -16402,10 +16437,16 @@ const RESUMO_POR_EMPRESA_LINHAS = [
   { chave: 'devolucoes', label: '(-) Devoluções' },
   { chave: 'custoInsumos', label: '(-) Custo de Insumos e Matéria-Prima' },
   { chave: 'custoServicos', label: '(-) Custo de Serviços' },
-  { chave: 'custoMaoObra', label: '(-) Custo Mão de Obra' },
-  { chave: 'royalties', label: '(-) Royalties' },
+  // FIX 17/08/2026 (pedido Lucas): "Custo Mão de Obra" e "Royalties"
+  // removidos da RT -- sempre vazios/sem categoria real, e INSS (que
+  // estava misturado aqui por nome) já tem linha própria (Dep. ADM).
   { chave: 'custoAdm', label: '(-) Custo ADM / Indústria' },
-  { chave: 'despesasComerciais', label: '(-) Despesas Comerciais' },
+  // NOVO 17/08/2026 (pedido Lucas): INSS (2.03.06) e Pró-Labore saem do
+  // merge de "Custo ADM / Indústria" -- ganham linha própria cada um.
+  { chave: 'depAdm', label: '(-) Dep. ADM' },
+  { chave: 'proLabore', label: '(-) Pró-Labore' },
+  // FIX 17/08/2026 (pedido Lucas): "Despesas Comerciais" removida da RT
+  // -- sempre vazia, sem categoria real.
   { chave: 'despesasFinanceiras', label: '(-) Despesas Financeiras' },
   { chave: 'receitasFinanceiras', label: '(+) Receitas Financeiras' },
   { chave: 'distribuicao', label: '(-) Distribuição de Lucros' },
@@ -17371,11 +17412,10 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + linhaSubtotal('(=) Receita Líquida', receitaLiquidaPorMes, receitaLiquidaAntes)
       + htmlPorChave['custoInsumos']
       + htmlPorChave['custoServicos']
-      + htmlPorChave['custoMaoObra']
-      + htmlPorChave['royalties']
       + linhaSubtotal('(=) Margem de Contribuição', margemPorMes, margemAntes)
       + htmlPorChave['custoAdm']
-      + htmlPorChave['despesasComerciais']
+      + htmlPorChave['depAdm']
+      + htmlPorChave['proLabore']
       + linhaSubtotal('(-) EBITDA', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
@@ -17388,8 +17428,11 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // implementada (pendência já catalogada), então aparece sempre
       // zerada até esse trabalho ser feito.
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaItemCombinado('(+/-) Transferências e Ajustes de Saldo', ajustePorMes)
-      + linhaSubtotal('(=) Saldo CAIXA', saldoCaixaRealPorMes, saldoCaixaRealAntes);
+      // FIX 17/08/2026 (pedido Lucas): RT reverte pro cálculo antigo do
+      // Saldo CAIXA (sem a linha de Transferências e Ajustes de Saldo
+      // criada hoje de manhã) -- pedido explícito, só pra RT. KMNO e
+      // Novah continuam com o cálculo novo (bate com o banco real).
+      + linhaSubtotal('(=) Saldo CAIXA', saldoLiquidoPorMes, saldoLiquidoAntes);
 
   body.innerHTML = linhas;
 }
