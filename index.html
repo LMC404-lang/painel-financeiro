@@ -18967,8 +18967,14 @@ function renderGrupoDreCompetenciaCopia(monthStart, monthEnd) {
   const congeladoAntesEvolucao = empresaUnicaTopo
     ? buildFrozenMetricasCompetenciaPorEmpresa(empresaUnicaTopo, chaveAntesEvolucao)
     : EXCEL_HISTORICO_GRUPO_DRE[chaveAntesEvolucao];
+  // FIX 17/08/2026 (Lucas: "Evolução Mensal" quebrando com erro "Cannot
+  // read properties of undefined (reading 'total')"): faltava proteção
+  // contra mês ANTES do início dos dados ao vivo (ex: Dezembro do ano
+  // anterior, sem congelado nem ao vivo) -- sem ela cai direto no
+  // cálculo ao vivo e quebra (buildTodosBlocosRealizado não popula os
+  // blocos da empresa fora do intervalo -- .total vem undefined).
   const metricasAntesEvolucao = congeladoAntesEvolucao
-    || (categoriesCache && movementsCache
+    || (categoriesCache && movementsCache && !mesAntesEvolucao.isBefore(EXCEL_CONGELADO_ATE)
       ? (empresaUnicaTopo
           ? buildMetricasGrupoDfc(empresaUnicaTopo, categoriesCache, movementsCache, mesAntesEvolucao, mesAntesEvolucao.add(1, 'month'))
           : buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, mesAntesEvolucao, mesAntesEvolucao.add(1, 'month')).grupo)
@@ -19192,8 +19198,15 @@ function renderGrupoDfc(monthStart, monthEnd) {
   const congeladoAntesEvolucao = empresaUnicaTopo
     ? buildFrozenMetricasCaixaPorEmpresa(empresaUnicaTopo, chaveAntesEvolucao)
     : EXCEL_HISTORICO_GRUPO_DFC[chaveAntesEvolucao];
+  // FIX 17/08/2026 (Lucas: "Evolução Mensal — Grupo" quebrando com erro
+  // "Cannot read properties of undefined (reading 'total')"): faltava a
+  // mesma proteção que já existe lá em cima (linha ~19121) -- sem ela, um
+  // mês ANTES do início dos dados ao vivo (ex: Dezembro do ano anterior,
+  // que não tem nem congelado nem ao vivo) caía direto no cálculo ao vivo
+  // e quebrava (buildTodosBlocosRealizado não popula os blocos da
+  // empresa pra mês fora do intervalo -- .total vem undefined).
   const metricasAntesEvolucao = congeladoAntesEvolucao
-    || (categoriesCache && movementsCache
+    || (categoriesCache && movementsCache && !mesAntesEvolucao.isBefore(EXCEL_CONGELADO_ATE)
       ? (empresaUnicaTopo
           ? buildMetricasGrupoDfc(empresaUnicaTopo, categoriesCache, movementsCache, mesAntesEvolucao, mesAntesEvolucao.add(1, 'month'))
           : buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, mesAntesEvolucao, mesAntesEvolucao.add(1, 'month')).grupo)
