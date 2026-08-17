@@ -9077,7 +9077,11 @@ function buildBlocoImpostosKMNOFormula(totalRecebimentos) {
 // da estimativa por % — confirmado em 21/07/2026 que os 4 nomes batem
 // 1:1 com categorias reais do KMNO (sem necessidade de combinar códigos).
 function buildBlocoImpostosKMNOReal(totalPorLabel) {
-  const nomes = ['IRPJ / CSLL', 'PIS / COFINS', 'DIFAL', 'ICMS'];
+  // FIX 17/08/2026 (Lucas, validação do Resumo Grupo): "Fundo Social" e
+  // "Fundo Social FUMDES" (2.06.04/2.06.06) são tributos reais que
+  // ficavam de fora da conta de Impostos -- ~R$1,9-2,1k/mês
+  // desaparecendo do resumo. Pedido: somar junto com os outros 4.
+  const nomes = ['IRPJ / CSLL', 'PIS / COFINS', 'DIFAL', 'ICMS', 'Fundo Social', 'Fundo Social FUMDES'];
   const itens = nomes.map(nome => ({
     nome,
     natureza: 'P',
@@ -9265,6 +9269,13 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     B.dep_comercial = buildBlocoArvorePorPrefixo('dep_comercial', 'Dep. Comercial', 'P', '2.12.', empresa, categories, totalPorCodigo);
     B.despesas_financeiras = buildBlocoArvorePorPrefixo('despesas_financeiras', 'Despesas Financeiras', 'P', '2.05.', empresa, categories, totalPorCodigo, ['2.05.03']);
     B.royalties = buildBlocoArvorePorPrefixo('royalties', 'Royalties', 'P', '2.19.', empresa, categories, totalPorCodigo);
+    // FIX 17/08/2026 (Lucas, validação do Resumo Grupo): "Receitas
+    // Financeiras" usava lista de nomes fixa antiga -- o valor batia
+    // por COINCIDÊNCIA (pegava "Outras Entradas" 1.04.97 por ter nome
+    // parecido com um item da lista, não por ser receita financeira de
+    // verdade). Convertido pra código (1.02.), mesmo padrão já usado na
+    // Novah -- exclui empréstimos/transferências, que não são receita.
+    B.receitas_financeiras = buildBlocoArvorePorPrefixo('receitas_financeiras', 'Receitas Financeiras', 'R', '1.02.', empresa, categories, totalPorCodigo, ['1.02.98', '1.02.99', '1.02.97'], ['Transferências entre contas', 'Transferencias entre contas']);
   }
   if (empresa === 'RT' && !monthStart.isBefore(EXCEL_CONGELADO_ATE)) {
     B.despesas_adm = buildBlocoArvorePorPrefixo('despesas_adm', 'Despesas Administração', 'P', '2.04.', empresa, categories, totalPorCodigo);
