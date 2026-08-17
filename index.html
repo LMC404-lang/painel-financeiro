@@ -17240,6 +17240,44 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   const resultadoLiquidoAntes = temFonteMesAntes ? (ebitdaAntes - valorMesAntes('despesasFinanceiras') + valorMesAntes('receitasFinanceiras')) : null;
   const saldoLiquidoAntes = temFonteMesAntes ? (resultadoLiquidoAntes - valorMesAntes('distribuicao') - valorMesAntes('capex') - valorMesAntes('refis')) : null;
 
+  // NOVO 17/08/2026 (pedido Lucas, achado real: "Saldo CAIXA" da cascata
+  // nunca batia com o saldo bancário de verdade — testado contra a tela
+  // nativa do Omie "5. RESULTADO REALIZADO" da KMNO em Jun/Jul/2026,
+  // diferença de ~R$58 mil em Jun). O Omie tem uma linha própria
+  // "2. TRANSFERÊNCIAS E AJUSTES DE SALDO" que absorve exatamente esse
+  // efeito (ex: despesa de cartão de crédito é "realizada" na categoria
+  // na hora da compra, mas o dinheiro só sai do banco quando a fatura é
+  // paga — fica represado no limite do cartão até lá). Em vez de tentar
+  // reclassificar transação por transação (frágil, nunca ia bater 100%),
+  // calcula o ajuste como a diferença entre o saldo bancário real
+  // (dash_saldo_bancario_mensal, já corrigido hoje — ver fix do "dia 1")
+  // e a nossa cascata. Bate por construção com o "Resultado Realizado"
+  // nativo: testado e confirmado em 17/08/2026 (KMNO Jun: R$323.304,70;
+  // Jul: R$193.267,49 — exatos).
+  const bancoTotalPorMes = (chave) => {
+    const mapa = saldoBancarioMensalCache[`${empresaKey}|${chave}`];
+    if (!mapa) return null;
+    return Object.values(mapa).reduce((s, v) => s + v, 0);
+  };
+  const ajustePorMes = mesesValidos.map((m, i) => {
+    const bancoAtual = bancoTotalPorMes(m.chave);
+    const bancoSeguinte = bancoTotalPorMes(m.mesDayjs.add(1, 'month').format('YYYY-MM'));
+    if (bancoAtual === null || bancoSeguinte === null) return 0; // sem saldo bancário sincronizado pra esse mês -- sem ajuste, cai no fallback abaixo
+    return (bancoSeguinte - bancoAtual) - saldoLiquidoPorMes[i];
+  });
+  const saldoCaixaRealPorMes = mesesValidos.map((m, i) => {
+    const bancoAtual = bancoTotalPorMes(m.chave);
+    const bancoSeguinte = bancoTotalPorMes(m.mesDayjs.add(1, 'month').format('YYYY-MM'));
+    if (bancoAtual === null || bancoSeguinte === null) return saldoLiquidoPorMes[i]; // fallback: mantém cascata antiga se não tiver saldo bancário pra esse mês
+    return bancoSeguinte - bancoAtual;
+  });
+  const bancoAtualAntes = bancoTotalPorMes(mesAntes.format('YYYY-MM'));
+  const bancoSeguinteAntes = bancoTotalPorMes(mesesValidos[0].chave);
+  const ajusteAntes = (temFonteMesAntes && bancoAtualAntes !== null && bancoSeguinteAntes !== null)
+    ? (bancoSeguinteAntes - bancoAtualAntes) - saldoLiquidoAntes : (temFonteMesAntes ? 0 : null);
+  const saldoCaixaRealAntes = (temFonteMesAntes && bancoAtualAntes !== null && bancoSeguinteAntes !== null)
+    ? (bancoSeguinteAntes - bancoAtualAntes) : saldoLiquidoAntes;
+
   // NOVO (31/07/2026) — KMNO e NOVAH replicam a ordem exata dos seus
   // respectivos Excel (abas "KMNO DFC caixa" / "NOVAH DFC caixa"): CMV
   // como linha própria (sem Royalties), Custo ADM quebrado em 3
@@ -17281,7 +17319,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // Pagamento de Empréstimos, reposicionada aqui (antes só de exibição,
       // não afeta o valor do subtotal abaixo).
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaSubtotal('(=) Saldo CAIXA', saldoLiquidoPorMes, saldoLiquidoAntes)
+      + linhaItemCombinado('(+/-) Transferências e Ajustes de Saldo', ajustePorMes)
+      + linhaSubtotal('(=) Saldo CAIXA', saldoCaixaRealPorMes, saldoCaixaRealAntes)
     : empresaKey === 'NOVAH'
     // Reordenado 12/08/2026 (pedido Lucas): sem "(=) CMV" (Novah não
     // compra material, só presta serviço — diferente de KMNO/RT, que
@@ -17324,7 +17363,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // antes do Resultado Líquido e entram AQUI, combinadas em 1 linha
       // só de exibição — não afeta o valor do subtotal abaixo.
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaSubtotal('(=) Saldo CAIXA', saldoLiquidoPorMes, saldoLiquidoAntes)
+      + linhaItemCombinado('(+/-) Transferências e Ajustes de Saldo', ajustePorMes)
+      + linhaSubtotal('(=) Saldo CAIXA', saldoCaixaRealPorMes, saldoCaixaRealAntes)
     : htmlPorChave['receita']
       + htmlPorChave['impostos']
       + htmlPorChave['devolucoes']
@@ -17348,7 +17388,8 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       // implementada (pendência já catalogada), então aparece sempre
       // zerada até esse trabalho ser feito.
       + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
-      + linhaSubtotal('(=) Saldo CAIXA', saldoLiquidoPorMes, saldoLiquidoAntes);
+      + linhaItemCombinado('(+/-) Transferências e Ajustes de Saldo', ajustePorMes)
+      + linhaSubtotal('(=) Saldo CAIXA', saldoCaixaRealPorMes, saldoCaixaRealAntes);
 
   body.innerHTML = linhas;
 }
