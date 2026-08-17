@@ -9213,6 +9213,12 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     // do Omie (dash_orcamento_realizado), que soma tudo junto e não
     // sabe dessa exclusão (ver renderGrupoResumoPorEmpresa).
     B.adiantamento_clientes_excluido = buildBlocoArvorePorPrefixo('adiantamento_clientes_excluido', 'Adiantamento de Clientes (excluído)', 'R', ['1.04.01'], empresa, categories, totalPorCodigo);
+    // Bloco ISOLADO (17/08/2026, pedido Lucas): "Transferências entre
+    // contas" (1.02.96) — dinheiro só mudando de banco, não é venda.
+    // Catalogado aqui só pra existir no código (caso precise no
+    // futuro) e pra poder ser descontado do "Recebimento" oficial em
+    // renderGrupoResumoPorEmpresa. Não aparece em nenhuma tela.
+    B.transferencia_entre_contas_excluida = buildBlocoArvorePorPrefixo('transferencia_entre_contas_excluida', 'Transferência entre Contas (excluído)', 'R', ['1.02.96'], empresa, categories, totalPorCodigo);
     // Categoria real do Omie (1.04.98) — pra aparecer no filho do
     // Recebimento com o valor real, sem inventar nada.
     B.outras_entradas_novah = buildBlocoArvorePorPrefixo('outras_entradas_novah', 'Outras Entradas', 'R', ['1.04.98'], empresa, categories, totalPorCodigo);
@@ -16273,6 +16279,10 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
       // do Omie (dash_orcamento_realizado), que ainda soma esse valor
       // junto (relatório nativo não sabe dessa exclusão).
       adiantamentoClientesExcluido: itensParaCategoria(B.adiantamento_clientes_excluido.itens),
+      // 17/08/2026 (pedido Lucas): exposto só pra receitaOficial() poder
+      // descontar do total "Recebimento" — Transferência entre contas
+      // não é venda, não deve contar como receita em lugar nenhum.
+      transferenciaEntreContas: itensParaCategoria(B.transferencia_entre_contas_excluida.itens),
       deducoes: mergeCategoriaMaps(itensParaCategoria(B.impostos.itens), itensParaCategoria(B.devolucoes.itens)),
       impostos: itensParaCategoria(B.impostos.itens),
       devolucoes: itensParaCategoria(B.devolucoes.itens),
@@ -16843,7 +16853,27 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     const recebimentoEmprestimosEmbutido = m.live
       ? Object.values((liveByMes[m.chave]['recebimentoEmprestimos']) || {}).reduce((s, x) => s + x, 0)
       : 0;
-    return Number(row.receitas_realizado) - recebimentoEmprestimosEmbutido;
+    // FIX 17/08/2026 (pedido Lucas, print do dia): "Adiantamento de
+    // Clientes" (1.04.01) e "Transferência entre contas" (1.02.96)
+    // também estão embutidos no total oficial do Omie — não são venda
+    // (adiantamento já tem controle manual próprio via dash_linhas_manuais;
+    // transferência é só dinheiro mudando de banco). Desconta os dois —
+    // só existe/só importa pra Novah (KMNO/RT não têm essas categorias).
+    const adiantamentoClientesEmbutido = (m.live && empresaKey === 'NOVAH')
+      ? Object.values((liveByMes[m.chave]['adiantamentoClientesExcluido']) || {}).reduce((s, x) => s + x, 0)
+      : 0;
+    const transferenciaEmbutida = (m.live && empresaKey === 'NOVAH')
+      ? Object.values((liveByMes[m.chave]['transferenciaEntreContas']) || {}).reduce((s, x) => s + x, 0)
+      : 0;
+    // FIX 17/08/2026 (pedido Lucas): soma por cima o valor manual
+    // "Faturamento para KMNO" (dash_linhas_manuais) — dinheiro real que
+    // a Omie ainda não sabe, então somar aqui não conta em dobro.
+    let faturamentoKmnoManual = 0;
+    if (m.live && empresaKey === 'NOVAH') {
+      const [anoM, mesM] = m.chave.split('-').map(Number);
+      faturamentoKmnoManual = valorLinhaManual('faturamento_kmno', empresaKey, anoM, mesM);
+    }
+    return Number(row.receitas_realizado) - recebimentoEmprestimosEmbutido - adiantamentoClientesEmbutido - transferenciaEmbutida + faturamentoKmnoManual;
   };
   const receitaPorMes = mesesValidos.map(m => {
     if (m.live) {
@@ -18180,8 +18210,18 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     // separado (linha própria, entra no Saldo Líquido/Caixa mais abaixo)
     // — desconta do oficial pra não contar 2x.
     const recebimentoEmprestimosEmbutido = somaBucket('recebimentoEmprestimos');
+    // FIX 17/08/2026 (pedido Lucas): mesmo ajuste aplicado em
+    // renderGrupoResumoPorEmpresa — "Adiantamento de Clientes" (1.04.01)
+    // e "Transferência entre contas" (1.02.96) não são venda, desconta
+    // os dois do oficial (só existem pra Novah — somaBucket retorna 0
+    // naturalmente pra KMNO/RT). Soma por cima o manual "Faturamento
+    // para KMNO" (dash_linhas_manuais), que a Omie ainda não sabe.
+    const adiantamentoClientesEmbutido = somaBucket('adiantamentoClientesExcluido');
+    const transferenciaEmbutida = somaBucket('transferenciaEntreContas');
+    const [anoRecFiltro, mesRecFiltro] = monthStart.format('YYYY-MM').split('-').map(Number);
+    const faturamentoKmnoManualFiltro = valorLinhaManual('faturamento_kmno', empresaFiltro, anoRecFiltro, mesRecFiltro);
     const receita = receitaOficialRow
-      ? Number(receitaOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido
+      ? Number(receitaOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - adiantamentoClientesEmbutido - transferenciaEmbutida + faturamentoKmnoManualFiltro
       : (receitaProdutos + receitaMercadorias + receitaServicos);
     // Pedido 30/07: impostos/devolucoes expostos separados (buckets já
     // existiam em buildResumoCategoriasMes, só "deducoes" combinado
@@ -18256,8 +18296,16 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   // FIX 14/08/2026 (pedido Lucas): mesmo desconto do branch 1 empresa —
   // evita contar Recebimento de Empréstimos 2x.
   const recebimentoEmprestimosEmbutidoGrupo = somaBucket('recebimentoEmprestimos');
+  // FIX 17/08/2026 (pedido Lucas): mesmo ajuste do branch 1 empresa —
+  // desconta Adiantamento de Clientes/Transferência entre contas (só
+  // existem na Novah, somaBucket soma KMNO+NOVAH e KMNO sempre dá 0
+  // nessas 2 chaves) e soma o manual "Faturamento para KMNO" da Novah.
+  const adiantamentoClientesEmbutidoGrupo = somaBucket('adiantamentoClientesExcluido');
+  const transferenciaEmbutidaGrupo = somaBucket('transferenciaEntreContas');
+  const [anoRecGrupo, mesRecGrupo] = mesChaveGrupo.split('-').map(Number);
+  const faturamentoKmnoManualGrupo = valorLinhaManual('faturamento_kmno', 'NOVAH', anoRecGrupo, mesRecGrupo);
   const receita = (kmnoOficialRow && novahOficialRow)
-    ? (Number(kmnoOficialRow.receitas_realizado) + Number(novahOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutidoGrupo)
+    ? (Number(kmnoOficialRow.receitas_realizado) + Number(novahOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutidoGrupo - adiantamentoClientesEmbutidoGrupo - transferenciaEmbutidaGrupo + faturamentoKmnoManualGrupo)
     : (receitaProdutos + receitaMercadorias + receitaServicos);
   // Pedido 30/07: impostos/devolucoes expostos separados, mesmo padrão
   // do branch com empresaFiltro acima.
