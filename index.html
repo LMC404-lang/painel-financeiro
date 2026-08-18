@@ -19378,8 +19378,26 @@ function renderGrupoDfc(monthStart, monthEnd) {
       metricasMes = buildFrozenMetricasCaixaPorEmpresa(empresaUnicaTopo, chave)
         || (!m.isBefore(EXCEL_CONGELADO_ATE) ? buildMetricasGrupoDfc(empresaUnicaTopo, categoriesCache, movementsCache, m, fimMes) : null);
     } else {
-      const congelado = EXCEL_HISTORICO_GRUPO_DFC[chave];
-      metricasMes = congelado || buildMetricasGrupoDfcPeriodo(categoriesCache, movementsCache, m, fimMes).grupo;
+      // FIX 18/08/2026 (pedido Lucas: "esse card precisa ser preenchido
+      // com as informações do card Resumo (Grupo, R$)"): "Evolução
+      // Mensal — Grupo" usava uma fonte DIFERENTE (EXCEL_HISTORICO_
+      // GRUPO_DFC/buildMetricasGrupoDfcPeriodo) do "Resumo (Grupo, R$)"
+      // (RESUMO_DETALHADO_MESES/buildResumoDetalhadoMesAoVivo) -- os 2
+      // cards mostravam números DIFERENTES pro mesmo período/Grupo.
+      // Agora usa a MESMA fonte do Resumo (Grupo, R$), garantindo que
+      // os 2 cards batem sempre. Saldo Líquido aqui usa a mesma fórmula
+      // "pré-Empréstimos" já aplicada no Resumo (Grupo, R$) em 18/08.
+      const dadoResumo = RESUMO_DETALHADO_MESES[chave]
+        || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && movementsCache
+          ? buildResumoDetalhadoMesAoVivo(categoriesCache, movementsCache, m, fimMes)
+          : null);
+      metricasMes = dadoResumo ? {
+        receitaBruta: dadoResumo.receita,
+        cmv: dadoResumo.cmv,
+        margemContribuicao: dadoResumo.margemContribuicao,
+        ebitda: dadoResumo.ebitda,
+        saldoLiquido: dadoResumo.lucroLiquido - dadoResumo.distribuicao - dadoResumo.capex - dadoResumo.refis,
+      } : null;
     }
     if (!metricasMes) return { mes: m, receitaBruta: null, cmv: null, margemContribuicao: null, ebitda: null, saldoLiquido: null, semDado: true };
     return {
