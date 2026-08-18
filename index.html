@@ -17300,6 +17300,12 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
   // de novo aqui contaria em dobro. "- pagamentoEmprestimos" continua
   // (é saída/despesa, nunca fez parte de 'receita').
   const saldoLiquidoPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao']?.[i] ?? 0) - (valoresMesesPorChave['capex']?.[i] ?? 0) - (valoresMesesPorChave['refis']?.[i] ?? 0) + (valoresMesesPorChave['recebimentoEmprestimos']?.[i] ?? 0) - (valoresMesesPorChave['pagamentoEmprestimos']?.[i] ?? 0));
+  // NOVO 18/08/2026 (pedido Lucas): valor do "(=) Saldo Líquido" ANTES
+  // de somar/subtrair Empréstimos -- mesma fórmula de saldoLiquidoPorMes
+  // só sem os 2 últimos termos. Usado pra reposicionar a linha "Saldo
+  // Líquido" pra depois de Refis/antes dos Empréstimos (pedido "bota
+  // esse saldo líquido mais pra baixo em vez de criar outra linha").
+  const saldoLiquidoPreEmprestimosPorMes = mesesValidos.map((_, i) => resultadoLiquidoPorMes[i] - (valoresMesesPorChave['distribuicao']?.[i] ?? 0) - (valoresMesesPorChave['capex']?.[i] ?? 0) - (valoresMesesPorChave['refis']?.[i] ?? 0));
 
   // Mesmas fórmulas acima, aplicadas só ao mês ANTES do período exibido
   // (pra AV% mês a mês da 1ª coluna dos subtotais).
@@ -17411,14 +17417,21 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(=) Saldo líquido', resultadoLiquidoPorMes, resultadoLiquidoAntes)
       + htmlPorChave['distribuicao']
       + htmlPorChave['capex']
       + htmlPorChave['refis']
-      // NOVO (12/08/2026, pedido Lucas): linha combinada Recebimento/
-      // Pagamento de Empréstimos, reposicionada aqui (antes só de exibição,
-      // não afeta o valor do subtotal abaixo).
-      + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
+      // MOVIDO 18/08/2026 (pedido Lucas): "(=) Saldo Líquido" saiu de
+      // antes de Distribuição/Capex/Refis e passou pra AQUI (depois
+      // deles, antes dos Empréstimos) -- "total de tudo até aqui".
+      + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPreEmprestimosPorMes, saldoLiquidoAntes)
+      // SEPARADO 18/08/2026 (pedido Lucas): a linha combinada "(+/-)
+      // Recebimento/Pagamento de Empréstimos" virou 2 linhas pai/filho
+      // (Pagamento = débito, Recebimento = crédito), cada uma com as
+      // categorias reais -- reaproveita htmlPorChave['pagamentoEmprestimos']/
+      // ['recebimentoEmprestimos'], já calculados (linhasConfig já tinha
+      // os 2 buckets, só não estavam sendo exibidos).
+      + htmlPorChave['pagamentoEmprestimos']
+      + htmlPorChave['recebimentoEmprestimos']
       // FIX 17/08/2026 (pedido Lucas): linha "(+/-) Transferências e
       // Ajustes de Saldo" ESCONDIDA nas 3 empresas (não exibe mais) --
       // mas a função que calcula ela (ajustePorMes/saldoCaixaRealPorMes,
@@ -17459,15 +17472,21 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + linhaSubtotal('(=) Resultado Operacional [Lucro Bruto]', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(=) Saldo líquido', resultadoLiquidoPorMes, resultadoLiquidoAntes)
       + htmlPorChave['distribuicao']
       + htmlPorChave['capex']
       + htmlPorChave['refis']
-      // Reordenado 12/08/2026 (pedido Lucas): as 2 linhas separadas
-      // (Recebimento Empréstimos / Pagamento de Empréstimos) saem de
-      // antes do Resultado Líquido e entram AQUI, combinadas em 1 linha
-      // só de exibição — não afeta o valor do subtotal abaixo.
-      + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
+      // MOVIDO 18/08/2026 (pedido Lucas): "(=) Saldo Líquido" saiu de
+      // antes de Distribuição/Capex/Refis e passou pra AQUI (depois
+      // deles, antes dos Empréstimos) -- "total de tudo até aqui".
+      + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPreEmprestimosPorMes, saldoLiquidoAntes)
+      // SEPARADO 18/08/2026 (pedido Lucas, substitui o "Reordenado
+      // 12/08" acima): a linha combinada "(+/-) Recebimento/Pagamento de
+      // Empréstimos" virou 2 linhas pai/filho (Pagamento = débito,
+      // Recebimento = crédito), cada uma com as categorias reais --
+      // reaproveita htmlPorChave['pagamentoEmprestimos']/
+      // ['recebimentoEmprestimos'], já calculados.
+      + htmlPorChave['pagamentoEmprestimos']
+      + htmlPorChave['recebimentoEmprestimos']
       // FIX 17/08/2026 (pedido Lucas): linha "(+/-) Transferências e
       // Ajustes de Saldo" ESCONDIDA nas 3 empresas (não exibe mais) --
       // mas a função que calcula ela (ajustePorMes/saldoCaixaRealPorMes,
@@ -17488,15 +17507,20 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       + linhaSubtotal('(-) EBITDA', ebitdaPorMes, ebitdaAntes)
       + htmlPorChave['despesasFinanceiras']
       + htmlPorChave['receitasFinanceiras']
-      + linhaSubtotal('(=) Saldo líquido', resultadoLiquidoPorMes, resultadoLiquidoAntes)
       + htmlPorChave['distribuicao']
       + htmlPorChave['capex']
       + htmlPorChave['refis']
-      // NOVO (12/08/2026, pedido Lucas): linha combinada — RT ainda não
-      // tem a estrutura de recebimentoEmprestimos/pagamentoEmprestimos
-      // implementada (pendência já catalogada), então aparece sempre
-      // zerada até esse trabalho ser feito.
-      + linhaItemCombinado('(+/-) Recebimento/Pagamento de Empréstimos', recebPagEmprestimosPorMes)
+      // MOVIDO 18/08/2026 (pedido Lucas): "(=) Saldo Líquido" saiu de
+      // antes de Distribuição/Capex/Refis e passou pra AQUI (depois
+      // deles, antes dos Empréstimos) -- "total de tudo até aqui".
+      + linhaSubtotal('(=) Saldo Líquido', saldoLiquidoPreEmprestimosPorMes, saldoLiquidoAntes)
+      // SEPARADO 18/08/2026 (pedido Lucas, substitui o "NOVO 12/08"
+      // acima): virou 2 linhas pai/filho (Pagamento/Recebimento de
+      // Empréstimos) -- RT tem categoria cadastrada no Omie (1.04.03
+      // recebimento; 2.05.03 pagamento) mas sem movimento real ainda,
+      // então aparece R$0 até ter lançamento de verdade.
+      + htmlPorChave['pagamentoEmprestimos']
+      + htmlPorChave['recebimentoEmprestimos']
       // FIX 17/08/2026 (pedido Lucas): RT usa o cálculo do banco real
       // (saldoCaixaRealPorMes) igual KMNO/Novah -- só a linha de
       // detalhe "Transferências e Ajustes de Saldo" fica escondida nas
