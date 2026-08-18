@@ -18370,9 +18370,9 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
 // essa quebra por "tipo" (que na prática é um proxy KMNO-produtos vs
 // KMNO-mercadorias vs NOVAH-serviços) só faz sentido pra KMNO ou NOVAH
 // isoladas — pra RT (sem essas categorias) ficam 0 naturalmente.
-function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthEnd, empresaFiltro) {
+function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthEnd, empresaFiltro, modo, contasCache) {
   if (empresaFiltro) {
-    const dados = buildResumoCategoriasMes(empresaFiltro, categories, movements, monthStart, monthEnd);
+    const dados = buildResumoCategoriasMes(empresaFiltro, categories, movements, monthStart, monthEnd, modo, contasCache);
     const somaMapa = (m) => Object.values(m || {}).reduce((s, v) => s + v, 0);
     const somaBucket = (chave) => somaMapa(dados[chave]);
 
@@ -18461,8 +18461,8 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     };
   }
 
-  const kmno = buildResumoCategoriasMes('KMNO', categories, movements, monthStart, monthEnd);
-  const novah = buildResumoCategoriasMes('NOVAH', categories, movements, monthStart, monthEnd);
+  const kmno = buildResumoCategoriasMes('KMNO', categories, movements, monthStart, monthEnd, modo, contasCache);
+  const novah = buildResumoCategoriasMes('NOVAH', categories, movements, monthStart, monthEnd, modo, contasCache);
   const somaMapa = (m) => Object.values(m || {}).reduce((s, v) => s + v, 0);
   const somaBucket = (chave) => somaMapa(kmno[chave]) + somaMapa(novah[chave]);
 
@@ -18661,8 +18661,14 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
     const chave = m.format('YYYY-MM');
     if (indiceMes(m) > mesAtualIdxResumo) { dadoPorMes[chave] = null; return; }
     dadoPorMes[chave] = RESUMO_DETALHADO_MESES[chave]
-      || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && movementsCache
-        ? buildResumoDetalhadoMesAoVivo(categoriesCache, movementsCache, m, m.add(1, 'month'))
+      // FIX 18/08/2026 (pedido Lucas: card "Resumo (Grupo, R$)" com Jun/
+      // Jul zerados pra "Todas as Empresas"): estava passando
+      // movementsCache (fonte de COMPETÊNCIA, dt_registro) sem modo
+      // 'caixa' pra um card de Caixa -- trocado por financialMovementsCache
+      // + modo 'caixa' + contasCorrentesCache, mesma fonte que já
+      // funciona certo no "Resumo por Empresa" (renderGrupoResumoPorEmpresa).
+      || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && financialMovementsCache
+        ? buildResumoDetalhadoMesAoVivo(categoriesCache, financialMovementsCache, m, m.add(1, 'month'), null, 'caixa', contasCorrentesCache)
         : null);
   });
 
@@ -19388,8 +19394,12 @@ function renderGrupoDfc(monthStart, monthEnd) {
       // os 2 cards batem sempre. Saldo Líquido aqui usa a mesma fórmula
       // "pré-Empréstimos" já aplicada no Resumo (Grupo, R$) em 18/08.
       const dadoResumo = RESUMO_DETALHADO_MESES[chave]
-        || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && movementsCache
-          ? buildResumoDetalhadoMesAoVivo(categoriesCache, movementsCache, m, fimMes)
+        // FIX 18/08/2026 (pedido Lucas, achado no mesmo bug do "Resumo
+        // Grupo R$"): trocado movementsCache (competência) por
+        // financialMovementsCache + modo 'caixa' -- Jun/Jul apareciam
+        // zerados nesse card.
+        || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && financialMovementsCache
+          ? buildResumoDetalhadoMesAoVivo(categoriesCache, financialMovementsCache, m, fimMes, null, 'caixa', contasCorrentesCache)
           : null);
       metricasMes = dadoResumo ? {
         receitaBruta: dadoResumo.receita,
