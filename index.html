@@ -18625,6 +18625,24 @@ function buildProvaRealMesAoVivo(categories, movements, contasCorrentes, financi
   };
 }
 
+// ===================================================================
+// FONTE ÚNICA — dado do Grupo (Todas as Empresas) de UM mês, Caixa
+// (RECONSTRUÍDO 18/08/2026, pedido Lucas: "Evolução Mensal — Grupo" e
+// "Resumo (Grupo, R$)" desincronizavam porque cada um calculava o
+// próprio jeito, sem compartilhar nada. Agora os 2 chamam ESTA função
+// — impossível divergir de novo, porque não existe 2º cálculo pra
+// desviar). Congelado (Jan-Mai) = RESUMO_DETALHADO_MESES. Ao vivo
+// (Jun+) = financialMovementsCache + modo 'caixa' + contasCorrentesCache
+// (mesma fonte que já funciona certo no "Resumo por Empresa" com 1
+// empresa selecionada — FIX 18/08/2026 do bug movementsCache/competência).
+function getDadoGrupoCaixaMes(m, fimMes) {
+  const chave = m.format('YYYY-MM');
+  return RESUMO_DETALHADO_MESES[chave]
+    || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && financialMovementsCache
+      ? buildResumoDetalhadoMesAoVivo(categoriesCache, financialMovementsCache, m, fimMes, null, 'caixa', contasCorrentesCache)
+      : null);
+}
+
 function renderGrupoResumoDetalhado(monthStart, monthEnd) {
   const header = document.getElementById('grupoResumoDetalhadoHeader');
   const body = document.getElementById('grupoResumoDetalhadoBody');
@@ -18648,7 +18666,6 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
   header.innerHTML = '<th class="dre-tbl-sticky">Descrição</th>' + meses.map(m => `<th>${DRE_ARVORE_NOMES_MES[m.month()]}${m.isBefore(EXCEL_CONGELADO_ATE) ? '' : ' •'}</th><th class="total-pct">AV%</th>`).join('') + '<th class="total">Total</th><th class="media">Média</th><th class="total-pct">AV%</th>';
 
   // Pré-calcula o dado de cada mês UMA vez (congelado ou ao vivo),
-  // reaproveitado pelas 25 linhas abaixo — calcular ao vivo dentro do
   // .map de linhas recalcularia buildTodosBlocosRealizado 25x por mês.
   // Meses futuros (posteriores ao mês atual) ficam zerados, mesmo que já
   // existam lançamentos futuros no Omie (pedido reunião 27/07, confirmado
@@ -18660,16 +18677,7 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
   meses.forEach(m => {
     const chave = m.format('YYYY-MM');
     if (indiceMes(m) > mesAtualIdxResumo) { dadoPorMes[chave] = null; return; }
-    dadoPorMes[chave] = RESUMO_DETALHADO_MESES[chave]
-      // FIX 18/08/2026 (pedido Lucas: card "Resumo (Grupo, R$)" com Jun/
-      // Jul zerados pra "Todas as Empresas"): estava passando
-      // movementsCache (fonte de COMPETÊNCIA, dt_registro) sem modo
-      // 'caixa' pra um card de Caixa -- trocado por financialMovementsCache
-      // + modo 'caixa' + contasCorrentesCache, mesma fonte que já
-      // funciona certo no "Resumo por Empresa" (renderGrupoResumoPorEmpresa).
-      || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && financialMovementsCache
-        ? buildResumoDetalhadoMesAoVivo(categoriesCache, financialMovementsCache, m, m.add(1, 'month'), null, 'caixa', contasCorrentesCache)
-        : null);
+    dadoPorMes[chave] = getDadoGrupoCaixaMes(m, m.add(1, 'month'));
   });
 
   // AV% — conferido linha a linha contra a planilha original (aba
@@ -19384,23 +19392,14 @@ function renderGrupoDfc(monthStart, monthEnd) {
       metricasMes = buildFrozenMetricasCaixaPorEmpresa(empresaUnicaTopo, chave)
         || (!m.isBefore(EXCEL_CONGELADO_ATE) ? buildMetricasGrupoDfc(empresaUnicaTopo, categoriesCache, movementsCache, m, fimMes) : null);
     } else {
-      // FIX 18/08/2026 (pedido Lucas: "esse card precisa ser preenchido
-      // com as informações do card Resumo (Grupo, R$)"): "Evolução
-      // Mensal — Grupo" usava uma fonte DIFERENTE (EXCEL_HISTORICO_
-      // GRUPO_DFC/buildMetricasGrupoDfcPeriodo) do "Resumo (Grupo, R$)"
-      // (RESUMO_DETALHADO_MESES/buildResumoDetalhadoMesAoVivo) -- os 2
-      // cards mostravam números DIFERENTES pro mesmo período/Grupo.
-      // Agora usa a MESMA fonte do Resumo (Grupo, R$), garantindo que
-      // os 2 cards batem sempre. Saldo Líquido aqui usa a mesma fórmula
-      // "pré-Empréstimos" já aplicada no Resumo (Grupo, R$) em 18/08.
-      const dadoResumo = RESUMO_DETALHADO_MESES[chave]
-        // FIX 18/08/2026 (pedido Lucas, achado no mesmo bug do "Resumo
-        // Grupo R$"): trocado movementsCache (competência) por
-        // financialMovementsCache + modo 'caixa' -- Jun/Jul apareciam
-        // zerados nesse card.
-        || (!m.isBefore(EXCEL_CONGELADO_ATE) && categoriesCache && financialMovementsCache
-          ? buildResumoDetalhadoMesAoVivo(categoriesCache, financialMovementsCache, m, fimMes, null, 'caixa', contasCorrentesCache)
-          : null);
+      // RECONSTRUÍDO 18/08/2026 (pedido Lucas: "apaga e faz do zero" —
+      // este card e o "Resumo (Grupo, R$)" desincronizavam porque cada
+      // um tinha seu próprio cálculo). Agora chama getDadoGrupoCaixaMes,
+      // a MESMA função usada pelo "Resumo (Grupo, R$)" — os 2 cards
+      // NUNCA mais podem mostrar números diferentes pro Grupo, porque é
+      // literalmente o mesmo cálculo, chamado 1 vez cada, sem duplicar
+      // lógica.
+      const dadoResumo = getDadoGrupoCaixaMes(m, fimMes);
       metricasMes = dadoResumo ? {
         receitaBruta: dadoResumo.receita,
         cmv: dadoResumo.cmv,
