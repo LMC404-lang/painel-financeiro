@@ -18643,6 +18643,42 @@ function getDadoGrupoCaixaMes(m, fimMes) {
       : null);
 }
 
+// ===================================================================
+// FIX 18/08/2026 (pedido Lucas, achado real: "Evolução Mensal" com 1
+// empresa selecionada mostrava número DIFERENTE do "Resumo por
+// Empresa" pra mesma empresa/mês — mesmo bug do Grupo, só que no
+// branch de empresa única, que eu não tinha corrigido ainda). Usada
+// pelas 5 métricas do card "Evolução Mensal" (Faturamento/CMV/Margem/
+// EBITDA/Saldo Líquido), com OU sem empresa selecionada — sempre a
+// mesma fonte Caixa correta (financialMovementsCache + modo 'caixa'),
+// nunca mais movementsCache/buildMetricasGrupoDfc (competência).
+function getEvolucaoMensalMetricasCaixa(m, fimMes, empresaFiltro) {
+  if (empresaFiltro) {
+    const chave = m.format('YYYY-MM');
+    const frozen = buildFrozenMetricasCaixaPorEmpresa(empresaFiltro, chave);
+    if (frozen) return frozen; // já vem com receitaBruta/cmv/margemContribuicao/ebitda/saldoLiquido
+    if (m.isBefore(EXCEL_CONGELADO_ATE) || !categoriesCache || !financialMovementsCache) return null;
+    const dado = buildResumoDetalhadoMesAoVivo(categoriesCache, financialMovementsCache, m, fimMes, empresaFiltro, 'caixa', contasCorrentesCache);
+    if (!dado) return null;
+    return {
+      receitaBruta: dado.receita,
+      cmv: dado.cmv,
+      margemContribuicao: dado.margemContribuicao,
+      ebitda: dado.ebitda,
+      saldoLiquido: dado.lucroLiquido - dado.distribuicao - dado.capex - dado.refis,
+    };
+  }
+  const grupo = getDadoGrupoCaixaMes(m, fimMes);
+  if (!grupo) return null;
+  return {
+    receitaBruta: grupo.receita,
+    cmv: grupo.cmv,
+    margemContribuicao: grupo.margemContribuicao,
+    ebitda: grupo.ebitda,
+    saldoLiquido: grupo.lucroLiquido - grupo.distribuicao - grupo.capex - grupo.refis,
+  };
+}
+
 function renderGrupoResumoDetalhado(monthStart, monthEnd) {
   const header = document.getElementById('grupoResumoDetalhadoHeader');
   const body = document.getElementById('grupoResumoDetalhadoBody');
@@ -19387,27 +19423,11 @@ function renderGrupoDfc(monthStart, monthEnd) {
       return { mes: m, receitaBruta: 0, cmv: 0, margemContribuicao: 0, ebitda: 0, saldoLiquido: 0, semDado: false };
     }
     const fimMes = m.add(1, 'month');
-    let metricasMes;
-    if (empresaUnicaTopo) {
-      metricasMes = buildFrozenMetricasCaixaPorEmpresa(empresaUnicaTopo, chave)
-        || (!m.isBefore(EXCEL_CONGELADO_ATE) ? buildMetricasGrupoDfc(empresaUnicaTopo, categoriesCache, movementsCache, m, fimMes) : null);
-    } else {
-      // RECONSTRUÍDO 18/08/2026 (pedido Lucas: "apaga e faz do zero" —
-      // este card e o "Resumo (Grupo, R$)" desincronizavam porque cada
-      // um tinha seu próprio cálculo). Agora chama getDadoGrupoCaixaMes,
-      // a MESMA função usada pelo "Resumo (Grupo, R$)" — os 2 cards
-      // NUNCA mais podem mostrar números diferentes pro Grupo, porque é
-      // literalmente o mesmo cálculo, chamado 1 vez cada, sem duplicar
-      // lógica.
-      const dadoResumo = getDadoGrupoCaixaMes(m, fimMes);
-      metricasMes = dadoResumo ? {
-        receitaBruta: dadoResumo.receita,
-        cmv: dadoResumo.cmv,
-        margemContribuicao: dadoResumo.margemContribuicao,
-        ebitda: dadoResumo.ebitda,
-        saldoLiquido: dadoResumo.lucroLiquido - dadoResumo.distribuicao - dadoResumo.capex - dadoResumo.refis,
-      } : null;
-    }
+    // FIX 18/08/2026 (pedido Lucas): 1 única chamada cobre os 2 casos
+    // (empresa selecionada OU Todas as Empresas) -- getEvolucaoMensalMetricasCaixa
+    // sempre usa a fonte Caixa correta, nunca mais movementsCache/
+    // buildMetricasGrupoDfc (que estava com o mesmo bug de competência).
+    const metricasMes = getEvolucaoMensalMetricasCaixa(m, fimMes, empresaUnicaTopo || null);
     if (!metricasMes) return { mes: m, receitaBruta: null, cmv: null, margemContribuicao: null, ebitda: null, saldoLiquido: null, semDado: true };
     return {
       mes: m,
