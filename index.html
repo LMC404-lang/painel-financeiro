@@ -17553,10 +17553,17 @@ const RESUMO_DETALHADO_LINHAS = [
   { label: '(-) Distribuição de Lucros',                             chave: 'distribuicao' },
   { label: '(-) Capex',                                              chave: 'capex' },
   { label: '(-) Outros (Refis)',                                     chave: 'refis' },
-  { label: '(=) Saldo Líquido',                                      chave: 'saldoLiquido', destaque: true },
-  // Removidas 28/07 (pedido, marcação em vermelho no print): "(+)
-  // Recebimento Empréstimos", "(-) Pagamento de Empréstimos", "(=)
-  // Saldo de Caixa" — ficaram fora do card "Resumo (Grupo, R$)".
+  // REINSERIDAS 18/08/2026 (pedido Lucas, versão "simples" -- sem
+  // clique/categoria, só linha reta com o total, igual as outras linhas
+  // deste card): "(=) Saldo Líquido" agora usa 'saldoLiquidoPreEmprestimos'
+  // (calculado à parte no render, ver renderGrupoResumoDetalhado) --
+  // é o valor ANTES de somar/subtrair Empréstimos (mesmo princípio já
+  // aplicado no Resumo por Empresa/KMNO/Novah/RT em 18/08). Removidas em
+  // 28/07, voltam agora nessa nova posição/estrutura.
+  { label: '(=) Saldo Líquido',                                      chave: 'saldoLiquidoPreEmprestimos', destaque: true },
+  { label: '(-) Pagamento de Empréstimos',                           chave: 'pagamentoEmprestimos' },
+  { label: '(+) Recebimento Empréstimos',                            chave: 'recebimentoEmprestimos' },
+  { label: '(=) Saldo CAIXA',                                        chave: 'saldoCaixa', destaque: true },
 ];
 
 // ===================================================================
@@ -18686,7 +18693,16 @@ function renderGrupoResumoDetalhado(monthStart, monthEnd) {
     const valoresMeses = meses.map(m => {
       if (indiceMes(m) > mesAtualIdxResumo) return { v: 0, futuro: true };
       const dado = dadoPorMes[m.format('YYYY-MM')];
-      return { v: dado ? dado[linha.chave] : null, futuro: false }; // null = sem fonte (congelado não cobre e Omie ainda não carregou)
+      if (!dado) return { v: null, futuro: false }; // sem fonte (congelado não cobre e Omie ainda não carregou)
+      // NOVO 18/08/2026 (pedido Lucas): 'saldoLiquidoPreEmprestimos' não
+      // existe como campo pronto na fonte (congelada nem ao vivo) --
+      // calculado aqui na hora, mesma fórmula de sempre (Lucro Líquido
+      // - Distribuição - Capex - Refis), só SEM somar/subtrair
+      // Empréstimos ainda (isso entra só depois, nas 2 linhas novas).
+      const v = linha.chave === 'saldoLiquidoPreEmprestimos'
+        ? (dado.lucroLiquido - dado.distribuicao - dado.capex - dado.refis)
+        : dado[linha.chave];
+      return { v, futuro: false };
     });
     const valoresValidos = valoresMeses.filter(x => !x.futuro && x.v !== null).map(x => x.v);
     const total = valoresValidos.reduce((a, b) => a + b, 0);
