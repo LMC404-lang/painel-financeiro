@@ -18644,6 +18644,64 @@ function getDadoGrupoCaixaMes(m, fimMes) {
 }
 
 // ===================================================================
+// RECONSTRUÍDO 18/08/2026 (pedido Lucas: "já temos as informações no
+// card Resumo (Grupo, R$), pega as fórmulas de lá"): esta função
+// replica EXATAMENTE a cascata Caixa por empresa/mês que já existe
+// dentro de renderGrupoResumoPorEmpresa (Receita ajustada c/ oficial
+// do Omie, CMV/Margem/EBITDA por empresa, Saldo Líquido pré-
+// Empréstimos) — mesmas fórmulas, mesmos buckets, extraídas pra uma
+// função separada e reaproveitável, em vez de recalcular diferente em
+// cada card. NÃO cobre o "Saldo CAIXA" com reconciliação bancária
+// (isso fica só no card por empresa, não é usado aqui).
+function getResumoEmpresaCaixaMes(empresaKey, m, fimMes) {
+  const dados = buildResumoCategoriasMes(empresaKey, categoriesCache, financialMovementsCache, m, fimMes, 'caixa', contasCorrentesCache);
+  if (!dados) return null;
+  const soma = (chave) => Object.values(dados[chave] || {}).reduce((s, v) => s + v, 0);
+  const chaveMes = m.format('YYYY-MM');
+  const oficialRow = orcamentoRealizadoCache[`${empresaKey}|${chaveMes}`];
+  let receita;
+  if (oficialRow) {
+    const recebimentoEmprestimosEmbutido = soma('recebimentoEmprestimos');
+    const adiantamentoClientesEmbutido = empresaKey === 'NOVAH' ? soma('adiantamentoClientesExcluido') : 0;
+    const transferenciaEmbutida = empresaKey === 'NOVAH' ? soma('transferenciaEntreContas') : 0;
+    let faturamentoKmnoManual = 0;
+    if (empresaKey === 'NOVAH') {
+      const [anoM, mesM] = chaveMes.split('-').map(Number);
+      faturamentoKmnoManual = valorLinhaManual('faturamento_kmno', empresaKey, anoM, mesM);
+    }
+    receita = Number(oficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - adiantamentoClientesEmbutido - transferenciaEmbutida + faturamentoKmnoManual;
+  } else {
+    receita = soma('receita');
+  }
+  const impostos = soma('impostos');
+  const devolucoes = soma('devolucoes');
+  const receitaLiquida = receita - impostos - devolucoes;
+  const cmv = empresaKey === 'NOVAH'
+    ? soma('custoInsumos') + soma('custoServicosTerceiros') + soma('acabamento') + soma('corte') + soma('rashBermuda') + soma('costuraKimono') + soma('bordado') + soma('sublimacao') + soma('despPessoalIndustria')
+    : soma('custoInsumos') + soma('custoServicos') + soma('custoMaoObra');
+  const royalties = soma('royalties');
+  const margem = receitaLiquida - cmv - royalties;
+  const custoAdmTotal = empresaKey === 'NOVAH'
+    ? soma('despesasAdministracao') + soma('depPessoalAdm') + soma('proLabore') + soma('pjTerceirosAdm')
+    : (empresaKey === 'KMNO'
+      ? soma('despesasAdministracao') + soma('depPessoalAdm') + soma('proLabore')
+      : soma('custoAdm'));
+  const despesasComerciaisTotal = empresaKey === 'KMNO'
+    ? soma('despesasComerciaisPuro') + soma('fretePago') + soma('depComercial')
+    : soma('despesasComerciais');
+  const despesasDiretoria = (empresaKey === 'KMNO' || empresaKey === 'NOVAH') ? soma('despesasDiretoria') : 0;
+  const outrosTributos = empresaKey === 'KMNO' ? soma('outrosTributos') : 0;
+  const ebitda = margem - custoAdmTotal - despesasComerciaisTotal - despesasDiretoria - outrosTributos;
+  const despesasFinanceiras = soma('despesasFinanceiras');
+  const receitasFinanceiras = soma('receitasFinanceiras');
+  const resultadoLiquido = ebitda - despesasFinanceiras + receitasFinanceiras;
+  const distribuicao = soma('distribuicao');
+  const capex = soma('capex');
+  const refis = soma('refis');
+  const saldoLiquido = resultadoLiquido - distribuicao - capex - refis;
+  return { receita, cmv, margem, ebitda, saldoLiquido };
+}
+
 // FIX 18/08/2026 (pedido Lucas, achado real: "Evolução Mensal" com 1
 // empresa selecionada mostrava número DIFERENTE do "Resumo por
 // Empresa" pra mesma empresa/mês — mesmo bug do Grupo, só que no
@@ -18653,29 +18711,27 @@ function getDadoGrupoCaixaMes(m, fimMes) {
 // mesma fonte Caixa correta (financialMovementsCache + modo 'caixa'),
 // nunca mais movementsCache/buildMetricasGrupoDfc (competência).
 function getEvolucaoMensalMetricasCaixa(m, fimMes, empresaFiltro) {
+  const chave = m.format('YYYY-MM');
   if (empresaFiltro) {
-    const chave = m.format('YYYY-MM');
     const frozen = buildFrozenMetricasCaixaPorEmpresa(empresaFiltro, chave);
     if (frozen) return frozen; // já vem com receitaBruta/cmv/margemContribuicao/ebitda/saldoLiquido
     if (m.isBefore(EXCEL_CONGELADO_ATE) || !categoriesCache || !financialMovementsCache) return null;
-    const dado = buildResumoDetalhadoMesAoVivo(categoriesCache, financialMovementsCache, m, fimMes, empresaFiltro, 'caixa', contasCorrentesCache);
-    if (!dado) return null;
-    return {
-      receitaBruta: dado.receita,
-      cmv: dado.cmv,
-      margemContribuicao: dado.margemContribuicao,
-      ebitda: dado.ebitda,
-      saldoLiquido: dado.lucroLiquido - dado.distribuicao - dado.capex - dado.refis,
-    };
+    const r = getResumoEmpresaCaixaMes(empresaFiltro, m, fimMes);
+    if (!r) return null;
+    return { receitaBruta: r.receita, cmv: r.cmv, margemContribuicao: r.margem, ebitda: r.ebitda, saldoLiquido: r.saldoLiquido };
   }
-  const grupo = getDadoGrupoCaixaMes(m, fimMes);
-  if (!grupo) return null;
+  const frozenGrupo = RESUMO_DETALHADO_MESES[chave];
+  if (frozenGrupo) return { receitaBruta: frozenGrupo.receita, cmv: frozenGrupo.cmv, margemContribuicao: frozenGrupo.margemContribuicao, ebitda: frozenGrupo.ebitda, saldoLiquido: frozenGrupo.saldoLiquido };
+  if (m.isBefore(EXCEL_CONGELADO_ATE) || !categoriesCache || !financialMovementsCache) return null;
+  const kmno = getResumoEmpresaCaixaMes('KMNO', m, fimMes);
+  const novah = getResumoEmpresaCaixaMes('NOVAH', m, fimMes);
+  if (!kmno || !novah) return null;
   return {
-    receitaBruta: grupo.receita,
-    cmv: grupo.cmv,
-    margemContribuicao: grupo.margemContribuicao,
-    ebitda: grupo.ebitda,
-    saldoLiquido: grupo.lucroLiquido - grupo.distribuicao - grupo.capex - grupo.refis,
+    receitaBruta: kmno.receita + novah.receita,
+    cmv: kmno.cmv + novah.cmv,
+    margemContribuicao: kmno.margem + novah.margem,
+    ebitda: kmno.ebitda + novah.ebitda,
+    saldoLiquido: kmno.saldoLiquido + novah.saldoLiquido,
   };
 }
 
