@@ -688,9 +688,17 @@
   /* NOVO (19/08/2026, pedido Lucas): coluna Novah com tom levemente
      diferente no card "Indicadores" — reaproveita a mesma cor de
      .company-tag-NOVAH (#006E51), só mais suave pra não pesar numa
-     coluna inteira. */
-  .indic-col-novah { background: rgba(0, 110, 81, 0.07); }
-  .indic-col-novah-head { background: rgba(0, 110, 81, 0.14); color: #006E51; }
+     coluna inteira. FIX (mesmo dia, "as colunas verdes não se
+     encontram"): header e corpo usavam opacidades diferentes (0.14 vs
+     0.07) e a borda cinza padrão da tabela cortava por cima, dando
+     impressão de blocos separados — unificado numa só cor (0.10) e a
+     borda entre linhas dentro do bloco Novah agora usa um verde mais
+     claro em vez do cinza padrão, pra ficar tudo uma mancha só. */
+  .indic-col-novah, .indic-col-novah-head {
+    background: rgba(0, 110, 81, 0.10);
+    border-bottom-color: rgba(0, 110, 81, 0.20) !important;
+  }
+  .indic-col-novah-head { color: #006E51; }
 
   .bloco-head {
     display: flex;
@@ -4750,7 +4758,7 @@ const INDICADORES_SECOES = [
     ],
   },
   {
-    titulo: '💰 Liquidez',
+    titulo: '5. Liquidez',
     itens: [
       { chave: 'liquidez_corrente', label: 'Liquidez Corrente' },
       { chave: 'liquidez_seca', label: 'Liquidez Seca' },
@@ -4759,7 +4767,7 @@ const INDICADORES_SECOES = [
     ],
   },
   {
-    titulo: '🏦 Estrutura de Capital e Endividamento',
+    titulo: '6. Estrutura de Capital e Endividamento',
     itens: [
       { chave: 'cap_endividamento_geral', label: 'Endividamento Geral' },
       { chave: 'cap_endividamento_financeiro', label: 'Endividamento Financeiro' },
@@ -4776,7 +4784,7 @@ const INDICADORES_SECOES = [
     ],
   },
   {
-    titulo: '📦 Estoques e Capital de Giro',
+    titulo: '7. Estoques e Capital de Giro',
     itens: [
       { chave: 'est_giro_estoque', label: 'Giro de Estoque' },
       { chave: 'est_prazo_medio_estocagem', label: 'Prazo Médio de Estocagem' },
@@ -4793,7 +4801,7 @@ const INDICADORES_SECOES = [
     ],
   },
   {
-    titulo: '📈 Rentabilidade e Retorno',
+    titulo: '8. Rentabilidade e Retorno',
     itens: [
       { chave: 'rent_margem_bruta', label: 'Margem Bruta' },
       { chave: 'rent_margem_ebitda', label: 'Margem EBITDA' },
@@ -4811,7 +4819,7 @@ const INDICADORES_SECOES = [
     ],
   },
   {
-    titulo: '💸 Fluxo de Caixa',
+    titulo: '9. Fluxo de Caixa',
     itens: [
       { chave: 'fc_operacional', label: 'Fluxo de Caixa Operacional' },
       { chave: 'fc_livre', label: 'Fluxo de Caixa Livre' },
@@ -4826,7 +4834,7 @@ const INDICADORES_SECOES = [
     ],
   },
   {
-    titulo: '🧾 Eficiência Operacional',
+    titulo: '10. Eficiência Operacional',
     itens: [
       { chave: 'efi_sga_receita_liquida', label: 'SG&A / Receita Líquida' },
       { chave: 'efi_desp_operacionais_receita', label: 'Despesas Operacionais / Receita Líquida' },
