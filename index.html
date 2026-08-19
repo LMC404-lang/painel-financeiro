@@ -12788,6 +12788,26 @@ function renderSaidasEntradasPecasTudo() {
   }
   const pecasRealAcum = [5745, 6522, 6576, 8506, 9327, 14371, 16474].reduce((s, v) => s + v, 0);
 
+  // Pedido 19/08/2026 ("por que essas colunas não têm %/dados?"): a
+  // linha "Variação %" nunca teve "extra" próprio (é derivada de outras
+  // 2 linhas, não tem meta anual cadastrada à parte) — calcula aqui a
+  // versão Meta/Tendência da variação a partir das metas JÁ calculadas
+  // de Entrada (ou Faturamento) e Saída, com a mesma fórmula da linha:
+  // (numerador - denominador) / denominador.
+  function calcExtraVariacao(extraNum, extraDen) {
+    const divSafe = (a, b) => (b ? a / b : null);
+    const metaAcum = divSafe(extraNum.metaAcum - extraDen.metaAcum, extraDen.metaAcum);
+    const meta2026 = divSafe(extraNum.meta2026 - extraDen.meta2026, extraDen.meta2026);
+    const tend2026 = divSafe(extraNum.tend2026 - extraDen.tend2026, extraDen.tend2026);
+    const realAcum = divSafe(extraNum._realAcum - extraDen._realAcum, extraDen._realAcum);
+    const difAcumQtd = (realAcum != null && metaAcum != null) ? realAcum - metaAcum : null;
+    const difAnoQtd = (tend2026 != null && meta2026 != null) ? tend2026 - meta2026 : null;
+    return {
+      metaAcum, difAcumQtd, difAcumPct: divSafe(difAcumQtd, metaAcum),
+      meta2026, tend2026, difAnoQtd, difAnoPct: divSafe(difAnoQtd, meta2026),
+    };
+  }
+
   const extraSaidas = calcExtraRS(D.saidasCaixa, META_ANUAL_SAIDAS_GRUPO);
   const extraEntrada = calcExtraRS(D.entradaCaixa, META_ANUAL_RECEITA_GRUPO);
   const extraFaturamento = calcExtraRS(F.faturamento, META_ANUAL_RECEITA_GRUPO);
@@ -12798,7 +12818,7 @@ function renderSaidasEntradasPecasTudo() {
       { label: 'Saída R$ por Peça', dados: D.saidaPorPeca, moeda: true, extra: calcExtraPorPeca(extraSaidas) },
       { label: 'Entrada R$ Caixa', dados: D.entradaCaixa, moeda: true, amarelo: true, extra: extraEntrada },
       { label: 'Entradas R$ Caixa por Peças', dados: D.entradaPorPeca, moeda: true, extra: calcExtraPorPeca(extraEntrada) },
-      { label: 'Variação %', dados: variacaoDfc, pct: true, amarelo: true },
+      { label: 'Variação %', dados: variacaoDfc, pct: true, amarelo: true, extra: calcExtraVariacao(extraEntrada, extraSaidas) },
     ]);
   }
 
@@ -12808,7 +12828,7 @@ function renderSaidasEntradasPecasTudo() {
       { label: 'Saída R$ por Peça', dados: F.saidaPorPeca, moeda: true, extra: calcExtraPorPeca(extraSaidas) },
       { label: 'Faturamento', dados: F.faturamento, moeda: true, amarelo: true, extra: extraFaturamento },
       { label: 'Faturamento por Peças', dados: F.faturamentoPorPeca, moeda: true, extra: calcExtraPorPeca(extraFaturamento) },
-      { label: 'Variação %', dados: variacaoFat, pct: true, amarelo: true },
+      { label: 'Variação %', dados: variacaoFat, pct: true, amarelo: true, extra: calcExtraVariacao(extraFaturamento, extraSaidas) },
     ]);
   }
 
