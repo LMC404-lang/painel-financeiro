@@ -4627,68 +4627,13 @@ let contasCorrentesCache = null; // dash_contas_correntes — saldo_inicial/sald
 // sem depender do dedup de dash_financial_movements (que tem bug de
 // duplicidade conhecido, não resolvido). Mapa "empresa|ano-mes" -> row.
 let orcamentoRealizadoCache = {};
-// NOVO (12/08/2026): valores manuais mês a mês de "Clientes -
-// Faturamento para KMNO" e "(+) Adiantamento KMNO" (Novah, Jun/2026+).
-let linhasManuaisCache = {};
-
-// Rótulos das 2 linhas manuais — usados no prompt de edição e no histórico.
-const LINHAS_MANUAIS_LABELS = {
-  faturamento_kmno: 'Clientes - Faturamento para KMNO',
-  adiantamento_kmno: '(+) Adiantamento KMNO',
-};
-
-function valorLinhaManual(chave, empresaId, ano, mes) {
-  return linhasManuaisCache[`${chave}|${empresaId}|${ano}-${String(mes).padStart(2, '0')}`] || 0;
-}
-
-// Admin edita o valor manual de UM mês — grava em dash_linhas_manuais e
-// loga a alteração em dash_linhas_manuais_log (mesmo padrão já usado em
-// editarCartoesReceber/dash_cartoes_receber_log). RLS do Supabase já
-// bloqueia a escrita pra quem não é admin — o check aqui é só UX.
-async function editarLinhaManual(chave, empresaId, ano, mes) {
-  if (!currentProfile || currentProfile.role !== 'admin') { alert('Somente admin pode editar essa linha.'); return; }
-  const label = LINHAS_MANUAIS_LABELS[chave] || chave;
-  const atual = valorLinhaManual(chave, empresaId, ano, mes);
-  const mesLabel = dayjs(`${ano}-${String(mes).padStart(2, '0')}-01`).format('MM/YYYY');
-  const novoStr = prompt(`Novo valor — ${label} (${mesLabel}). Use ponto pra decimal, ex: 15000.00:`, atual.toFixed(2));
-  if (novoStr === null) return; // cancelou
-  const novo = parseValorBR(novoStr);
-  if (isNaN(novo)) { alert('Valor inválido.'); return; }
-  try {
-    const { error: errUpdate } = await supabaseClient.from('dash_linhas_manuais').upsert({
-      chave, empresa_id: empresaId, ano, mes, valor: novo, updated_at: new Date().toISOString(),
-      updated_by: currentSession?.user?.id || null, updated_by_email: currentSession?.user?.email || null,
-    });
-    if (errUpdate) throw errUpdate;
-    const { error: errLog } = await supabaseClient.from('dash_linhas_manuais_log').insert({
-      chave, empresa_id: empresaId, ano, mes, valor_antigo: atual, valor_novo: novo,
-      editado_por: currentSession?.user?.id || null, editado_por_email: currentSession?.user?.email || null,
-    });
-    if (errLog) throw errLog;
-    linhasManuaisCache[`${chave}|${empresaId}|${ano}-${String(mes).padStart(2, '0')}`] = novo;
-    if (typeof renderForSelectedMonth === 'function') renderForSelectedMonth(); // recalcula tudo do período atual, mesmo padrão usado no resto do dash
-  } catch (err) {
-    console.error('Erro ao salvar linha manual:', err);
-    alert('Não foi possível salvar. Tente novamente.');
-  }
-}
-
-async function verHistoricoLinhaManual(chave, empresaId, ano, mes) {
-  try {
-    const { data, error } = await supabaseClient.from('dash_linhas_manuais_log')
-      .select('*').eq('chave', chave).eq('empresa_id', empresaId).eq('ano', ano).eq('mes', mes)
-      .order('editado_em', { ascending: false }).limit(20);
-    if (error) throw error;
-    if (!data || !data.length) { alert('Nenhuma edição registrada ainda pra esse mês.'); return; }
-    const linhas = data.map(l =>
-      `${dayjs(l.editado_em).format('DD/MM/YYYY HH:mm')} — ${l.editado_por_email || 'desconhecido'}: ${fmtBRL(l.valor_antigo)} → ${fmtBRL(l.valor_novo)}`
-    );
-    alert(`Histórico de edições:\n\n${linhas.join('\n')}`);
-  } catch (err) {
-    console.error('Erro ao buscar histórico:', err);
-    alert('Não foi possível carregar o histórico.');
-  }
-}
+// REVERTIDO 19/08/2026 (pedido Lucas): a função manual criada em 12/08
+// (dash_linhas_manuais/dash_linhas_manuais_log, ícones ✏️🕒 nas linhas
+// "Clientes - Faturamento para KMNO" e "(+) Adiantamento KMNO") foi
+// removida do código. Essas 2 linhas voltam a ser 100% automáticas,
+// vindas da classificação real do Omie, igual qualquer outra categoria.
+// As tabelas no Supabase NÃO foram apagadas (dado permanente), só
+// ficaram sem uso.
 // Pedido 10/08/2026 (2ª rodada): versão POR CATEGORIA do mesmo relatório
 // oficial (dash_orcamento_realizado_categoria) — usada em
 // buildTotalPorCategoriaEmpresa pra substituir o cálculo inteiro (não só
@@ -9218,17 +9163,12 @@ function buildTodosBlocosRealizado(empresa, categories, movements, monthStart, m
     B.pro_labore          = buildBlocoArvorePorPrefixo('pro_labore', 'Pró-Labore', 'P', '2.20.', empresa, categories, totalPorCodigo);
     // Pedido 12/08/2026: "Adiantamento de Clientes" (1.04.01) passou a
     // compor Receita Bruta/Recebimento direto.
-    // REVERTIDO 14/08/2026 (pedido Lucas): "Adiantamento de Clientes"
-    // sai da conta de novo — a linha manual (dash_linhas_manuais) já
-    // cobre esse controle separadamente. Só NOVAH (KMNO/RT nunca tiveram
-    // esse código).
-    B.receita_bruta       = buildBlocoArvorePorPrefixo('receita_bruta', 'Receita Bruta', 'R', ['1.01.', '1.02.97'], empresa, categories, totalPorCodigo);
-    // Bloco ISOLADO (não entra em nenhum cálculo de DRE/CMV/margem) — só
-    // guarda o valor do "Adiantamento de Clientes" (1.04.01) excluído
-    // acima, pra poder subtrair do total "Receitas Realizadas" oficial
-    // do Omie (dash_orcamento_realizado), que soma tudo junto e não
-    // sabe dessa exclusão (ver renderGrupoResumoPorEmpresa).
-    B.adiantamento_clientes_excluido = buildBlocoArvorePorPrefixo('adiantamento_clientes_excluido', 'Adiantamento de Clientes (excluído)', 'R', ['1.04.01'], empresa, categories, totalPorCodigo);
+    // REVERTIDO 14/08/2026: saiu da conta (a linha manual cobria isso
+    // separado). RE-REVERTIDO 19/08/2026 (pedido Lucas, ao remover a
+    // função manual): "Adiantamento de Clientes" volta a compor Receita
+    // Bruta/Recebimento direto, como era antes de 14/08. Só NOVAH
+    // (KMNO/RT nunca tiveram esse código).
+    B.receita_bruta       = buildBlocoArvorePorPrefixo('receita_bruta', 'Receita Bruta', 'R', ['1.01.', '1.02.97', '1.04.01'], empresa, categories, totalPorCodigo);
     // Bloco ISOLADO (17/08/2026, pedido Lucas): "Transferências entre
     // contas" (1.02.96) — dinheiro só mudando de banco, não é venda.
     // Catalogado aqui só pra existir no código (caso precise no
@@ -12002,23 +11942,6 @@ try {
   ]);
   clientsCache = clients;
   contasCorrentesCache = contasCorrentes;
-
-  // NOVO (12/08/2026, pedido Lucas): "Clientes - Faturamento para KMNO"
-  // e "(+) Adiantamento KMNO" (Novah) passam a ser 100% manuais a partir
-  // de Jun/2026 — carrega os valores já digitados (dash_linhas_manuais).
-  // Jan-Mai/2026 continua vindo do congelado (intocado), não usa isso.
-  try {
-    const { data: linhasManuaisRows, error: linhasManuaisErr } = await supabaseClient
-      .from('dash_linhas_manuais').select('chave,empresa_id,ano,mes,valor');
-    if (linhasManuaisErr) throw linhasManuaisErr;
-    linhasManuaisCache = {};
-    (linhasManuaisRows || []).forEach(r => {
-      linhasManuaisCache[`${r.chave}|${r.empresa_id}|${r.ano}-${String(r.mes).padStart(2, '0')}`] = Number(r.valor) || 0;
-    });
-  } catch (e) {
-    console.error('Erro ao carregar dash_linhas_manuais:', e);
-    linhasManuaisCache = {};
-  }
 
   // Pedido 10/08/2026: dash_orcamento_realizado é tabela pequena e SEM
   // filtro por empresa na query (já vem com empresa_id em cada linha) —
@@ -16322,12 +16245,10 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
     const despFin = B.despesas_financeiras.itens;
     return {
       receita: itensParaCategoria(B.receita_bruta.itens),
-      // Pedido Lucas 14/08/2026: valor do "Adiantamento de Clientes"
-      // (1.04.01) excluído da receita acima — exposto aqui só pra
-      // renderGrupoResumoPorEmpresa poder descontar do total "oficial"
-      // do Omie (dash_orcamento_realizado), que ainda soma esse valor
-      // junto (relatório nativo não sabe dessa exclusão).
-      adiantamentoClientesExcluido: itensParaCategoria(B.adiantamento_clientes_excluido.itens),
+      // REVERTIDO 19/08/2026 (pedido Lucas): "Adiantamento de Clientes"
+      // (1.04.01) voltou pra dentro de B.receita_bruta — chave
+      // "adiantamentoClientesExcluido" removida (bloco isolado não
+      // existe mais, ver buildTodosBlocosRealizado).
       // 17/08/2026 (pedido Lucas): exposto só pra receitaOficial() poder
       // descontar do total "Recebimento" — Transferência entre contas
       // não é venda, não deve contar como receita em lugar nenhum.
@@ -16427,22 +16348,9 @@ function buildResumoCategoriasMes(empresa, categories, movements, monthStart, mo
 // a MESMA ordem/cascata do Resumo do Grupo, só que com 1 linha de
 // receita/CMV (sem a quebra Produtos/Mercadorias/Serviços que só
 // existe na aba consolidada "Grupo DFC").
-// NOVO (12/08/2026, pedido Lucas): mapeia o nome da categoria (linha
-// filho, drill-down) pra chave de dash_linhas_manuais — usado só na
-// Novah, só em meses ao vivo (Jun/2026+). Congelado (Jan-Mai) continua
-// vindo de dadosCongelado normalmente, sem passar por aqui.
-const CATEGORIA_PARA_LINHA_MANUAL = {
-  'Clientes - Faturamento para KMNO': 'faturamento_kmno',
-  '(+) Adiantamento KMNO': 'adiantamento_kmno',
-};
-// Mapa reverso: pra qual bucket (l.chave) o valor manual precisa ser
-// somado no TOTAL da linha pai (bug reportado 12/08: valor manual só
-// aparecia na linha filho, nunca entrava na conta de Recebimento/
-// cascata). Só Novah, só meses ao vivo — ver somaManualNoBucket().
-const LINHA_MANUAL_PARA_BUCKET = {
-  faturamento_kmno: 'receita',
-  adiantamento_kmno: 'recebimentoEmprestimos',
-};
+// REVERTIDO 19/08/2026 (pedido Lucas): mapas da função manual removidos.
+// "Clientes - Faturamento para KMNO" e "(+) Adiantamento KMNO" voltam a
+// vir 100% da classificação real do Omie, igual qualquer outra categoria.
 
 const RESUMO_POR_EMPRESA_LINHAS = [
   { chave: 'receita', label: '(+) Recebimento' },
@@ -16937,27 +16845,16 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     const recebimentoEmprestimosEmbutido = m.live
       ? Object.values((liveByMes[m.chave]['recebimentoEmprestimos']) || {}).reduce((s, x) => s + x, 0)
       : 0;
-    // FIX 17/08/2026 (pedido Lucas, print do dia): "Adiantamento de
-    // Clientes" (1.04.01) e "Transferência entre contas" (1.02.96)
-    // também estão embutidos no total oficial do Omie — não são venda
-    // (adiantamento já tem controle manual próprio via dash_linhas_manuais;
-    // transferência é só dinheiro mudando de banco). Desconta os dois —
-    // só existe/só importa pra Novah (KMNO/RT não têm essas categorias).
-    const adiantamentoClientesEmbutido = (m.live && empresaKey === 'NOVAH')
-      ? Object.values((liveByMes[m.chave]['adiantamentoClientesExcluido']) || {}).reduce((s, x) => s + x, 0)
-      : 0;
+    // REVERTIDO 19/08/2026 (pedido Lucas): "Adiantamento de Clientes"
+    // (1.04.01) voltou a compor Receita Bruta direto (junto com a
+    // remoção da linha manual) — o oficial do Omie e o cálculo próprio
+    // agora já concordam nesse valor, então não desconta/reinclui mais.
+    // "Transferência entre contas" (1.02.96) continua descontada —
+    // decisão separada de 17/08, não muda aqui.
     const transferenciaEmbutida = (m.live && empresaKey === 'NOVAH')
       ? Object.values((liveByMes[m.chave]['transferenciaEntreContas']) || {}).reduce((s, x) => s + x, 0)
       : 0;
-    // FIX 17/08/2026 (pedido Lucas): soma por cima o valor manual
-    // "Faturamento para KMNO" (dash_linhas_manuais) — dinheiro real que
-    // a Omie ainda não sabe, então somar aqui não conta em dobro.
-    let faturamentoKmnoManual = 0;
-    if (m.live && empresaKey === 'NOVAH') {
-      const [anoM, mesM] = m.chave.split('-').map(Number);
-      faturamentoKmnoManual = valorLinhaManual('faturamento_kmno', empresaKey, anoM, mesM);
-    }
-    return Number(row.receitas_realizado) - recebimentoEmprestimosEmbutido - adiantamentoClientesEmbutido - transferenciaEmbutida + faturamentoKmnoManual;
+    return Number(row.receitas_realizado) - recebimentoEmprestimosEmbutido - transferenciaEmbutida;
   };
   const receitaPorMes = mesesValidos.map(m => {
     if (m.live) {
@@ -16990,23 +16887,11 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       ? splitDeducoesCongelado(dadosCongelado['deducoes'], l.chave)
       : dadosCongelado[l.chave];
 
-    // FIX 12/08/2026 (pedido Lucas, bug reportado): o valor manual das
-    // 2 linhas filho (Clientes-Faturamento p/ KMNO -> bucket 'receita';
-    // Adiantamento KMNO -> bucket 'recebimentoEmprestimos') antes só
-    // aparecia na linha filho, nunca somava no TOTAL da linha pai (e por
-    // tabela, na cascata Receita Líquida -> ... -> Lucro Líquido). Só
-    // Novah, só meses ao vivo — pra KMNO/RT isso soma 0 sempre.
-    const somaManualNoBucket = (chave, m) => {
-      if (empresaKey !== 'NOVAH' || !m.live) return 0;
-      const [anoM, mesM] = m.chave.split('-').map(Number);
-      return Object.entries(LINHA_MANUAL_PARA_BUCKET)
-        .filter(([, bucketDaChave]) => bucketDaChave === chave)
-        .reduce((s, [chaveManual]) => s + valorLinhaManual(chaveManual, empresaKey, anoM, mesM), 0);
-    };
-
+    // REVERTIDO 19/08/2026 (pedido Lucas): somaManualNoBucket removida —
+    // as 2 linhas voltam a compor o bucket só com o valor real do Omie.
     // Valor do bucket em cada mês (congelado ou ao vivo).
     const valoresMesesBase = mesesValidos.map(m => (m.live
-      ? Object.values((liveByMes[m.chave][l.chave]) || {}).reduce((s, v) => s + v, 0) + somaManualNoBucket(l.chave, m)
+      ? Object.values((liveByMes[m.chave][l.chave]) || {}).reduce((s, v) => s + v, 0)
       : somaCategoriaMes(bucketCongelado, m.frozenIdx)));
     // Pedido 10/08/2026: linha "Recebimento" EXIBIDA usa o "Realizado"
     // oficial do Omie quando existir pro mês (mesma fonte de
@@ -17084,18 +16969,9 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
     if (!temCategorias) { htmlPorChave[l.chave] = linhaPai; return; }
 
     const linhasCategorias = [...categoriasSet].sort().map(catLabel => {
-      // NOVO (12/08/2026, pedido Lucas): "Clientes - Faturamento para
-      // KMNO" e "(+) Adiantamento KMNO" (Novah) passam a ser 100%
-      // manuais a partir de Jun/2026 — meses ao vivo usam
-      // dash_linhas_manuais (default R$0 até alguém preencher) em vez
-      // do valor calculado do Omie. Congelado (Jan-Mai) fica intocado,
-      // continua vindo de dadosCongelado normalmente.
-      const chaveManual = (empresaKey === 'NOVAH') ? CATEGORIA_PARA_LINHA_MANUAL[catLabel] : null;
+      // REVERTIDO 19/08/2026 (pedido Lucas): sem chaveManual/ícones —
+      // valor vem sempre da classificação real do Omie/congelado.
       const valoresCat = mesesValidos.map(m => {
-        if (chaveManual && m.live) {
-          const [anoM, mesM] = m.chave.split('-').map(Number);
-          return valorLinhaManual(chaveManual, empresaKey, anoM, mesM);
-        }
         return m.live
           ? Number((liveByMes[m.chave][l.chave] || {})[catLabel] || 0)
           : Number((bucketCongelado && bucketCongelado[catLabel] && bucketCongelado[catLabel][m.frozenIdx]) || 0);
@@ -17103,23 +16979,13 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
       const totalCat = valoresCat.reduce((a, b) => a + b, 0);
       const mediaCat = valoresCat.length ? totalCat / valoresCat.length : 0;
       const avPctCat = totalReceitaPeriodo ? (totalCat / totalReceitaPeriodo * 100) : null;
-      const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
       return `
         <tr class="dre-tbl-row" style="display:none;color:#5a7268;font-size:12px;" data-grupo-conta="${rowId}">
           <td class="dre-tbl-sticky">${catLabel}</td>
           ${valoresCat.map((v, i) => {
             const baseRecebimentoMes = receitaPorMes[i];
             const avPctMes = baseRecebimentoMes ? (v / baseRecebimentoMes * 100) : null;
-            const m = mesesValidos[i];
-            // Lápis (editar) + histórico só na linha manual, só em mês
-            // ao vivo, só admin — congelado (Jan-Mai) não tem esse botão.
-            let icones = '';
-            if (chaveManual && m.live && ehAdmin) {
-              const [anoM, mesM] = m.chave.split('-').map(Number);
-              icones = ` <span style="cursor:pointer;" title="Editar valor" onclick="event.stopPropagation();editarLinhaManual('${chaveManual}','${empresaKey}',${anoM},${mesM})">✏️</span>`
-                + ` <span style="cursor:pointer;" title="Histórico de edições" onclick="event.stopPropagation();verHistoricoLinhaManual('${chaveManual}','${empresaKey}',${anoM},${mesM})">🕒</span>`;
-            }
-            return `<td class="num">${fmtBRL(v)}${icones}</td><td class="num total-pct">${avPctMes === null ? '—' : avPctMes.toFixed(1).replace('.', ',') + '%'}</td>`;
+            return `<td class="num">${fmtBRL(v)}</td><td class="num total-pct">${avPctMes === null ? '—' : avPctMes.toFixed(1).replace('.', ',') + '%'}</td>`;
           }).join('')}
           <td class="num">${fmtBRL(totalCat)}</td>
           <td class="num">${fmtBRL(mediaCat)}</td>
@@ -17203,14 +17069,10 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
         <td class="num total-pct">${avPct === null ? '—' : avPct.toFixed(1).replace('.', ',') + '%'}</td>
       </tr>`;
     if (!temCategorias) return linhaPai;
-    const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
     const linhasCategorias = [...categoriasSet].sort().map(catLabel => {
-      const chaveManual = (empresaKey === 'NOVAH') ? CATEGORIA_PARA_LINHA_MANUAL[catLabel] : null;
+      // REVERTIDO 19/08/2026 (pedido Lucas): sem chaveManual/ícones —
+      // valor vem sempre da classificação real do Omie/congelado.
       const valoresCat = mesesValidos.map(m => {
-        if (chaveManual && m.live) {
-          const [anoM, mesM] = m.chave.split('-').map(Number);
-          return valorLinhaManual(chaveManual, empresaKey, anoM, mesM);
-        }
         if (m.live) {
           const vRec = Number(((liveByMes[m.chave] || {})[chaveRec] || {})[catLabel] || 0);
           const vPag = Number(((liveByMes[m.chave] || {})[chavePag] || {})[catLabel] || 0);
@@ -17229,14 +17091,7 @@ function renderGrupoResumoPorEmpresa(empresaKey, monthStart, monthEnd) {
           ${valoresCat.map((v, i) => {
             const baseRecebimentoMes = receitaPorMes[i];
             const avPctMes = baseRecebimentoMes ? (v / baseRecebimentoMes * 100) : null;
-            const m = mesesValidos[i];
-            let icones = '';
-            if (chaveManual && m.live && ehAdmin) {
-              const [anoM, mesM] = m.chave.split('-').map(Number);
-              icones = ` <span style="cursor:pointer;" title="Editar valor" onclick="event.stopPropagation();editarLinhaManual('${chaveManual}','${empresaKey}',${anoM},${mesM})">✏️</span>`
-                + ` <span style="cursor:pointer;" title="Histórico de edições" onclick="event.stopPropagation();verHistoricoLinhaManual('${chaveManual}','${empresaKey}',${anoM},${mesM})">🕒</span>`;
-            }
-            return `<td class="num">${fmtBRL(v)}${icones}</td><td class="num total-pct">${avPctMes === null ? '—' : avPctMes.toFixed(1).replace('.', ',') + '%'}</td>`;
+            return `<td class="num">${fmtBRL(v)}</td><td class="num total-pct">${avPctMes === null ? '—' : avPctMes.toFixed(1).replace('.', ',') + '%'}</td>`;
           }).join('')}
           <td class="num">${fmtBRL(totalCat)}</td>
           <td class="num">${fmtBRL(mediaCat)}</td>
@@ -18405,18 +18260,13 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     // separado (linha própria, entra no Saldo Líquido/Caixa mais abaixo)
     // — desconta do oficial pra não contar 2x.
     const recebimentoEmprestimosEmbutido = somaBucket('recebimentoEmprestimos');
-    // FIX 17/08/2026 (pedido Lucas): mesmo ajuste aplicado em
-    // renderGrupoResumoPorEmpresa — "Adiantamento de Clientes" (1.04.01)
-    // e "Transferência entre contas" (1.02.96) não são venda, desconta
-    // os dois do oficial (só existem pra Novah — somaBucket retorna 0
-    // naturalmente pra KMNO/RT). Soma por cima o manual "Faturamento
-    // para KMNO" (dash_linhas_manuais), que a Omie ainda não sabe.
-    const adiantamentoClientesEmbutido = somaBucket('adiantamentoClientesExcluido');
+    // REVERTIDO 19/08/2026 (pedido Lucas): "Adiantamento de Clientes"
+    // (1.04.01) voltou a compor Receita Bruta direto — oficial e
+    // cálculo próprio já concordam, não desconta/reinclui mais.
+    // "Transferência entre contas" (1.02.96) continua descontada.
     const transferenciaEmbutida = somaBucket('transferenciaEntreContas');
-    const [anoRecFiltro, mesRecFiltro] = monthStart.format('YYYY-MM').split('-').map(Number);
-    const faturamentoKmnoManualFiltro = valorLinhaManual('faturamento_kmno', empresaFiltro, anoRecFiltro, mesRecFiltro);
     const receita = receitaOficialRow
-      ? Number(receitaOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - adiantamentoClientesEmbutido - transferenciaEmbutida + faturamentoKmnoManualFiltro
+      ? Number(receitaOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - transferenciaEmbutida
       : (receitaProdutos + receitaMercadorias + receitaServicos);
     // Pedido 30/07: impostos/devolucoes expostos separados (buckets já
     // existiam em buildResumoCategoriasMes, só "deducoes" combinado
@@ -18491,16 +18341,13 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   // FIX 14/08/2026 (pedido Lucas): mesmo desconto do branch 1 empresa —
   // evita contar Recebimento de Empréstimos 2x.
   const recebimentoEmprestimosEmbutidoGrupo = somaBucket('recebimentoEmprestimos');
-  // FIX 17/08/2026 (pedido Lucas): mesmo ajuste do branch 1 empresa —
-  // desconta Adiantamento de Clientes/Transferência entre contas (só
-  // existem na Novah, somaBucket soma KMNO+NOVAH e KMNO sempre dá 0
-  // nessas 2 chaves) e soma o manual "Faturamento para KMNO" da Novah.
-  const adiantamentoClientesEmbutidoGrupo = somaBucket('adiantamentoClientesExcluido');
+  // REVERTIDO 19/08/2026 (pedido Lucas): "Adiantamento de Clientes"
+  // (1.04.01) voltou a compor Receita Bruta direto — oficial e cálculo
+  // próprio já concordam, não desconta/reinclui mais. "Transferência
+  // entre contas" (1.02.96) continua descontada.
   const transferenciaEmbutidaGrupo = somaBucket('transferenciaEntreContas');
-  const [anoRecGrupo, mesRecGrupo] = mesChaveGrupo.split('-').map(Number);
-  const faturamentoKmnoManualGrupo = valorLinhaManual('faturamento_kmno', 'NOVAH', anoRecGrupo, mesRecGrupo);
   const receita = (kmnoOficialRow && novahOficialRow)
-    ? (Number(kmnoOficialRow.receitas_realizado) + Number(novahOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutidoGrupo - adiantamentoClientesEmbutidoGrupo - transferenciaEmbutidaGrupo + faturamentoKmnoManualGrupo)
+    ? (Number(kmnoOficialRow.receitas_realizado) + Number(novahOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutidoGrupo - transferenciaEmbutidaGrupo)
     : (receitaProdutos + receitaMercadorias + receitaServicos);
   // Pedido 30/07: impostos/devolucoes expostos separados, mesmo padrão
   // do branch com empresaFiltro acima.
@@ -18662,14 +18509,11 @@ function getResumoEmpresaCaixaMes(empresaKey, m, fimMes) {
   let receita;
   if (oficialRow) {
     const recebimentoEmprestimosEmbutido = soma('recebimentoEmprestimos');
-    const adiantamentoClientesEmbutido = empresaKey === 'NOVAH' ? soma('adiantamentoClientesExcluido') : 0;
+    // REVERTIDO 19/08/2026 (pedido Lucas): "Adiantamento de Clientes"
+    // (1.04.01) voltou a compor Receita Bruta direto — oficial e
+    // cálculo próprio já concordam, não desconta/reinclui mais.
     const transferenciaEmbutida = empresaKey === 'NOVAH' ? soma('transferenciaEntreContas') : 0;
-    let faturamentoKmnoManual = 0;
-    if (empresaKey === 'NOVAH') {
-      const [anoM, mesM] = chaveMes.split('-').map(Number);
-      faturamentoKmnoManual = valorLinhaManual('faturamento_kmno', empresaKey, anoM, mesM);
-    }
-    receita = Number(oficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - adiantamentoClientesEmbutido - transferenciaEmbutida + faturamentoKmnoManual;
+    receita = Number(oficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - transferenciaEmbutida;
   } else {
     receita = soma('receita');
   }
