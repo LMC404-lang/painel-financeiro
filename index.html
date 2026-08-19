@@ -4737,6 +4737,9 @@ async function carregarIndicadoresManuais() {
 // exibir histórico na tela, só o registro fica salvo).
 async function editarIndicadorManual(chave, empresaId, campo, label) {
   if (!currentProfile || currentProfile.role !== 'admin') { alert('Somente admin pode editar essa linha.'); return; }
+  // Pedido 19/08/2026: só "Meta" é editável — "Real" ainda não tem fonte
+  // definida, fica bloqueado mesmo se chamado direto.
+  if (campo !== 'meta') { alert('"Real" ainda não é editável — fonte de dado a definir.'); return; }
   const atual = valorIndicadorManual(chave, empresaId, campo);
   const campoLabel = campo === 'real' ? 'Real' : 'Meta';
   const novoStr = prompt(`Novo valor — ${label} (${empresaId} · ${campoLabel}). Use ponto pra decimal, ex: 1.5:`, atual.toFixed(2));
@@ -4774,9 +4777,12 @@ async function renderIndicadores() {
   const html = INDICADORES_SECOES.map(secao => {
     const linhas = secao.itens.map(item => {
       const celulas = INDICADORES_EMPRESAS.map(emp => {
+        // Pedido 19/08/2026 (correção): só "Meta" é editável — "Real"
+        // ainda não tem fonte definida (vem de algum lugar a decidir
+        // depois), fica só exibindo zerado, sem lápis.
         return ['real', 'meta'].map(campo => {
           const v = valorIndicadorManual(item.chave, emp, campo);
-          const lapis = ehAdmin
+          const lapis = (ehAdmin && campo === 'meta')
             ? ` <span style="cursor:pointer;" title="Editar valor" onclick="editarIndicadorManual('${item.chave}','${emp}','${campo}','${item.label.replace(/'/g, "\\'")}')">✏️</span>`
             : '';
           return `<td class="num">${v}${lapis}</td>`;
