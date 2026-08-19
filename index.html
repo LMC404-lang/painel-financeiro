@@ -2871,7 +2871,7 @@
 
       <div class="proj-mode-tabs">
         <button type="button" class="proj-mode-tab active" data-mode="estimada" onclick="switchProjMode('estimada')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" style="stroke:var(--blue-belt-light);vertical-align:-2px;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg> Meta Estimada</button>
-        <button type="button" class="proj-mode-tab" data-mode="manual" onclick="switchProjMode('manual')">✏️ Meta Manual</button>
+        <button type="button" class="proj-mode-tab" data-mode="manual" onclick="switchProjMode('manual')"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" style="stroke:var(--green);vertical-align:-2px;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg> Meta Manual</button>
       </div>
 
       <div class="proj-grid" id="projGrid">
@@ -4723,6 +4723,12 @@ const INDICADORES_SECOES = [
 
 const INDICADORES_EMPRESAS = ['KMNO', 'NOVAH', 'RT'];
 
+// Ícone de edição (pedido 19/08/2026: "o lápis emoji tá feio, troca
+// pra combinar com a vibe do dash") — SVG inline com var(--green),
+// mesmo padrão já usado nos outros ícones do dashboard (proj-mode-tabs
+// etc.), em vez de emoji com cor fixa.
+const ICONE_LAPIS = '<svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" style="stroke:var(--green);vertical-align:-2px;" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="M15 5l4 4"/></svg>';
+
 async function carregarIndicadoresManuais() {
   try {
     const { data, error } = await supabaseClient
@@ -4797,7 +4803,7 @@ async function renderIndicadores() {
         return ['real', 'meta'].map(campo => {
           const v = valorIndicadorManual(item.chave, emp, campo);
           const lapis = (ehAdmin && campo === 'meta')
-            ? ` <span style="cursor:pointer;" title="Editar valor" onclick="event.stopPropagation();editarIndicadorManual('${item.chave}','${emp}','${campo}','${item.label.replace(/'/g, "\\'")}')">✏️</span>`
+            ? ` <span style="cursor:pointer;" title="Editar valor" onclick="event.stopPropagation();editarIndicadorManual('${item.chave}','${emp}','${campo}','${item.label.replace(/'/g, "\\'")}')">${ICONE_LAPIS}</span>`
             : '';
           return `<td${classeCol}>${v}${lapis}</td>`;
         }).join('');
