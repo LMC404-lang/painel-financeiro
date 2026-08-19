@@ -12716,6 +12716,38 @@ function renderSaidasEntradasPecasTudo() {
 
   const D = SAIDAS_ENTRADAS_PECAS_DFC_DADOS;
   const F = SAIDAS_FATURAMENTO_PECAS_DADOS;
+
+  // NOVO (19/08/2026, pedido Lucas): meses ao vivo (Jun/2026+, dentro
+  // do range fixo Jan-Jul deste card) recalculam Saídas/Entrada de
+  // Caixa direto do Omie (getSaidasEntradaCaixaMes, soma KMNO+Novah+RT)
+  // em vez de usar o número digitado à mão em 06/08 (achado ao
+  // investigar o pedido "esses números tão certos?"). Jan-Mai
+  // (congelado, já validado 100% contra o Excel) fica intocado. Peças
+  // por mês: mesmo total já usado no card (linha "Total" da aba Fat e
+  // Vendas), só o R$ é recalculado — contagem de peças continua manual.
+  const PECAS_POR_MES_DFC = [5745, 6522, 6576, 8506, 9327, 14371, 16474];
+  if (categoriesCache && financialMovementsCache) {
+    const MESES_CARD_SAIDAS_ENTRADAS = ['2026-01', '2026-02', '2026-03', '2026-04', '2026-05', '2026-06', '2026-07'];
+    MESES_CARD_SAIDAS_ENTRADAS.forEach((chaveMes, idx) => {
+      const m = dayjs(chaveMes + '-01');
+      if (m.isBefore(EXCEL_CONGELADO_ATE)) return; // congelado, não recalcula
+      const fimMes = m.add(1, 'month');
+      let entradaTotal = 0, saidasTotal = 0, temDado = false;
+      ['KMNO', 'NOVAH', 'RT'].forEach(emp => {
+        const r = getSaidasEntradaCaixaMes(emp, m, fimMes);
+        if (r) { entradaTotal += r.entrada; saidasTotal += r.saidas; temDado = true; }
+      });
+      if (!temDado) return;
+      const pecas = PECAS_POR_MES_DFC[idx];
+      D.saidasCaixa[idx] = saidasTotal;
+      D.entradaCaixa[idx] = entradaTotal;
+      D.saidaPorPeca[idx] = pecas ? saidasTotal / pecas : D.saidaPorPeca[idx];
+      D.entradaPorPeca[idx] = pecas ? entradaTotal / pecas : D.entradaPorPeca[idx];
+      F.saidasCaixa[idx] = saidasTotal;
+      F.saidaPorPeca[idx] = pecas ? saidasTotal / pecas : F.saidaPorPeca[idx];
+    });
+  }
+
   const variacaoDfc = D.entradaPorPeca.map((v, i) => (v == null || D.saidaPorPeca[i] == null) ? null : (v - D.saidaPorPeca[i]) / D.saidaPorPeca[i]);
   const variacaoFat = F.faturamentoPorPeca.map((v, i) => (v == null || F.saidaPorPeca[i] == null) ? null : (v - F.saidaPorPeca[i]) / F.saidaPorPeca[i]);
 
@@ -18954,6 +18986,61 @@ function getResumoEmpresaCaixaMes(empresaKey, m, fimMes) {
   const refis = soma('refis');
   const saldoLiquido = resultadoLiquido - distribuicao - capex - refis;
   return { receita, cmv, margem, ebitda, saldoLiquido };
+}
+
+// NOVO (19/08/2026, pedido Lucas): "Saída R$ Caixa"/"Entrada R$ Caixa"
+// ao vivo pro card "Saídas e Entradas x Peças Faturadas" — antes eram
+// números digitados à mão em 06/08 (achado ao investigar o pedido).
+// Fórmula igual ao Excel/aba "Fat e Vendas" (validada em Jan-Mai):
+// Saídas = Impostos + Devoluções + CMV + Royalties + Custo ADM/
+// Indústria + Despesas Comerciais + Despesas Financeiras — tudo que
+// sai de caixa até o Resultado Líquido, SEM Distribuição/Capex/Refis/
+// Empréstimos. Essa foi a opção "mais fácil" escolhida por pedido
+// explícito (19/08: "não sei, faz o mais fácil").
+// ALTERNATIVA CATALOGADA (não implementada — considerar se pedirem
+// "saída de caixa TOTAL"): somar aqui também soma('distribuicao') +
+// soma('capex') + soma('refis') + soma('pagamentoEmprestimos').
+// RT agora entra nessa conta (pedido 19/08: "inclui RT também, bate
+// com o nome do card") — antes (dado estático) só KMNO+Novah.
+// NÃO reaproveita getResumoEmpresaCaixaMes acima porque essa função
+// tem um gap pra RT: soma('custoAdm') sozinho, pra RT, NÃO inclui
+// Pró-Labore nem Dep.ADM/INSS (que pra RT são buckets separados desde
+// o fix 17/08 — pra KMNO/NOVAH já vêm dentro de 'custoAdm'). Corrigido
+// aqui; getResumoEmpresaCaixaMes não foi tocada (usada só em Evolução
+// Mensal, fora do escopo deste pedido — mas é um gap real, catalogar
+// se afetar RT em algum card que a use).
+function getSaidasEntradaCaixaMes(empresaKey, m, fimMes) {
+  const dados = buildResumoCategoriasMes(empresaKey, categoriesCache, financialMovementsCache, m, fimMes, 'caixa', contasCorrentesCache);
+  if (!dados) return null;
+  const soma = (chave) => Object.values(dados[chave] || {}).reduce((s, v) => s + v, 0);
+  const chaveMes = m.format('YYYY-MM');
+  const oficialRow = orcamentoRealizadoCache[`${empresaKey}|${chaveMes}`];
+  let entrada;
+  if (oficialRow) {
+    const recebimentoEmprestimosEmbutido = soma('recebimentoEmprestimos');
+    const transferenciaEmbutida = empresaKey === 'NOVAH' ? soma('transferenciaEntreContas') : 0;
+    entrada = Number(oficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - transferenciaEmbutida;
+  } else {
+    entrada = soma('receita');
+  }
+  const impostos = soma('impostos');
+  const devolucoes = soma('devolucoes');
+  const cmv = empresaKey === 'NOVAH'
+    ? soma('custoInsumos') + soma('custoServicosTerceiros') + soma('acabamento') + soma('corte') + soma('rashBermuda') + soma('costuraKimono') + soma('bordado') + soma('sublimacao') + soma('despPessoalIndustria')
+    : soma('custoInsumos') + soma('custoServicos') + soma('custoMaoObra');
+  const royalties = soma('royalties');
+  // KMNO/NOVAH: 'custoAdm' já vem com Pró-Labore mesclado (ver
+  // buildResumoCategoriasMes) — somar soma('proLabore') de novo
+  // dobraria a conta. RT: 'custoAdm' EXCLUI Pró-Labore e Dep.ADM/INSS
+  // (fix 17/08), por isso soma aqui separado, só pra RT.
+  const custoAdmCompleto = soma('custoAdm') + soma('despesasDiretoria') + soma('outrosTributos')
+    + (empresaKey === 'RT' ? soma('proLabore') + soma('depAdm') : 0);
+  const despesasComerciaisCompleto = empresaKey === 'KMNO'
+    ? soma('despesasComerciaisPuro') + soma('fretePago') + soma('depComercial')
+    : soma('despesasComerciais');
+  const despesasFinanceiras = soma('despesasFinanceiras');
+  const saidas = impostos + devolucoes + cmv + royalties + custoAdmCompleto + despesasComerciaisCompleto + despesasFinanceiras;
+  return { entrada, saidas };
 }
 
 // FIX 18/08/2026 (pedido Lucas, achado real: "Evolução Mensal" com 1
