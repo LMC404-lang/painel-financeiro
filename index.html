@@ -4706,6 +4706,50 @@ function valorIndicadorManual(chave, empresaId, campo) {
 
 const INDICADORES_SECOES = [
   {
+    titulo: '1. Indicadores de Resultado',
+    itens: [
+      { chave: 'res_margem_contribuicao', label: 'Margem de Contribuição (%)' },
+      { chave: 'res_margem_ebitda', label: 'Margem EBITDA (%)' },
+      { chave: 'res_margem_liquida', label: 'Margem Líquida (%)' },
+      { chave: 'res_cmv_pct_receita', label: 'CMV (% da receita)' },
+      { chave: 'res_ponto_equilibrio', label: 'Ponto de Equilíbrio - Break-even (R$)' },
+      { chave: 'res_margem_seguranca', label: 'Margem de Segurança (%)' },
+    ],
+  },
+  {
+    // Pedido original (Lucas): "preencher células amarelas" — indica
+    // que esses indicadores vêm de dado operacional que não existe no
+    // Omie (produção, tecido). Mesmo mecanismo manual dos outros.
+    titulo: '2. Produção e Custos Industriais',
+    itens: [
+      { chave: 'prod_pecas_produzidas', label: 'Peças produzidas no período (un)' },
+      { chave: 'prod_funcionarios', label: 'Nº de funcionários da produção' },
+      { chave: 'prod_capacidade_instalada', label: 'Capacidade instalada no período (un)' },
+      { chave: 'prod_tecido_comprado', label: 'Tecido comprado no período (metros)' },
+      { chave: 'prod_tecido_utilizado', label: 'Tecido efetivamente utilizado (metros)' },
+      { chave: 'prod_custo_por_peca', label: 'Custo por peça produzida (R$/un)' },
+      { chave: 'prod_produtividade', label: 'Produtividade (peças/funcionário)' },
+      { chave: 'prod_capacidade_utilizada', label: 'Capacidade Utilizada (%)' },
+      { chave: 'prod_perda_tecido', label: 'Perda de Tecido (%)' },
+    ],
+  },
+  {
+    titulo: '4. Financeiro e Capital de Giro',
+    itens: [
+      { chave: 'fin_contas_receber_media', label: 'Contas a Receber - média (R$)' },
+      { chave: 'fin_contas_pagar_media', label: 'Contas a Pagar a Fornecedores - média (R$)' },
+      { chave: 'fin_divida_financeira_total', label: 'Dívida Financeira Total (R$)' },
+      { chave: 'fin_ativo_circulante', label: 'Ativo Circulante (R$)' },
+      { chave: 'fin_passivo_circulante', label: 'Passivo Circulante (R$)' },
+      { chave: 'fin_pmr', label: 'PMR - Prazo Médio de Recebimento (dias)' },
+      { chave: 'fin_pmp', label: 'PMP - Prazo Médio de Pagamento (dias)' },
+      { chave: 'fin_pme', label: 'PME - Prazo Médio de Estoque (dias)' },
+      { chave: 'fin_ciclo_financeiro', label: 'Ciclo Financeiro (dias)' },
+      { chave: 'fin_ncg', label: 'Necessidade de Capital de Giro - NCG (R$)' },
+      { chave: 'fin_divida_ebitda', label: 'Dívida / EBITDA (x)' },
+    ],
+  },
+  {
     titulo: '💰 Liquidez',
     itens: [
       { chave: 'liquidez_corrente', label: 'Liquidez Corrente' },
@@ -4714,11 +4758,86 @@ const INDICADORES_SECOES = [
       { chave: 'liquidez_geral', label: 'Liquidez Geral' },
     ],
   },
-  // Demais 9 seções (Indicadores de Resultado, Produção e Custos
-  // Industriais, Financeiro e Capital de Giro, Estrutura de Capital e
-  // Endividamento, Estoques e Capital de Giro, Rentabilidade e Retorno,
-  // Fluxo de Caixa, Eficiência Operacional) entram aqui depois de
-  // validado o mecanismo com Liquidez.
+  {
+    titulo: '🏦 Estrutura de Capital e Endividamento',
+    itens: [
+      { chave: 'cap_endividamento_geral', label: 'Endividamento Geral' },
+      { chave: 'cap_endividamento_financeiro', label: 'Endividamento Financeiro' },
+      { chave: 'cap_endividamento_patrimonial', label: 'Endividamento Patrimonial' },
+      { chave: 'cap_participacao_capital_terceiros', label: 'Participação de Capital de Terceiros' },
+      { chave: 'cap_composicao_endividamento', label: 'Composição do Endividamento' },
+      { chave: 'cap_alavancagem_financeira', label: 'Alavancagem Financeira' },
+      { chave: 'cap_divida_liquida', label: 'Dívida Líquida' },
+      { chave: 'cap_divida_liquida_ebitda', label: 'Dívida Líquida / EBITDA' },
+      { chave: 'cap_cobertura_juros', label: 'Cobertura de Juros' },
+      { chave: 'cap_divida_cp_total', label: 'Dívida de Curto Prazo / Dívida Total' },
+      { chave: 'cap_caixa_divida_cp', label: 'Caixa / Dívida de Curto Prazo' },
+      { chave: 'cap_fator_venezuela', label: 'Fator Venezuela' },
+    ],
+  },
+  {
+    titulo: '📦 Estoques e Capital de Giro',
+    itens: [
+      { chave: 'est_giro_estoque', label: 'Giro de Estoque' },
+      { chave: 'est_prazo_medio_estocagem', label: 'Prazo Médio de Estocagem' },
+      { chave: 'est_capital_giro_liquido', label: 'Capital de Giro Líquido' },
+      { chave: 'est_ncg', label: 'Necessidade de Capital de Giro' },
+      { chave: 'est_capital_circulante_liquido', label: 'Capital Circulante Líquido' },
+      { chave: 'est_ciclo_operacional', label: 'Ciclo Operacional' },
+      { chave: 'est_ciclo_financeiro', label: 'Ciclo Financeiro' },
+      { chave: 'est_pmr', label: 'Prazo Médio de Recebimento' },
+      { chave: 'est_pmp', label: 'Prazo Médio de Pagamento' },
+      { chave: 'est_cobertura_estoque', label: 'Cobertura de Estoque' },
+      { chave: 'est_estoque_receita', label: 'Estoque / Receita' },
+      { chave: 'est_estoque_ativo_total', label: 'Estoque / Ativo Total' },
+    ],
+  },
+  {
+    titulo: '📈 Rentabilidade e Retorno',
+    itens: [
+      { chave: 'rent_margem_bruta', label: 'Margem Bruta' },
+      { chave: 'rent_margem_ebitda', label: 'Margem EBITDA' },
+      { chave: 'rent_margem_ebit', label: 'Margem EBIT' },
+      { chave: 'rent_margem_operacional', label: 'Margem Operacional' },
+      { chave: 'rent_margem_liquida', label: 'Margem Líquida' },
+      { chave: 'rent_roe', label: 'ROE' },
+      { chave: 'rent_roa', label: 'ROA' },
+      { chave: 'rent_roic', label: 'ROIC' },
+      { chave: 'rent_roi', label: 'ROI' },
+      { chave: 'rent_giro_ativo', label: 'Giro do Ativo' },
+      { chave: 'rent_retorno_capital_investido', label: 'Retorno sobre Capital Investido' },
+      { chave: 'rent_retorno_capital_proprio', label: 'Retorno sobre Capital Próprio' },
+      { chave: 'rent_eva', label: 'EVA' },
+    ],
+  },
+  {
+    titulo: '💸 Fluxo de Caixa',
+    itens: [
+      { chave: 'fc_operacional', label: 'Fluxo de Caixa Operacional' },
+      { chave: 'fc_livre', label: 'Fluxo de Caixa Livre' },
+      { chave: 'fc_conversao_caixa', label: 'Conversão de Caixa' },
+      { chave: 'fc_geracao_caixa_operacional', label: 'Geração de Caixa Operacional' },
+      { chave: 'fc_fco_receita', label: 'Fluxo de Caixa Operacional / Receita' },
+      { chave: 'fc_fco_ebitda', label: 'Fluxo de Caixa Operacional / EBITDA' },
+      { chave: 'fc_capex_receita', label: 'Capex / Receita' },
+      { chave: 'fc_capex_depreciacao', label: 'Capex / Depreciação' },
+      { chave: 'fc_fcf_yield', label: 'Free Cash Flow Yield' },
+      { chave: 'fc_queima_caixa', label: 'Queima de Caixa' },
+    ],
+  },
+  {
+    titulo: '🧾 Eficiência Operacional',
+    itens: [
+      { chave: 'efi_sga_receita_liquida', label: 'SG&A / Receita Líquida' },
+      { chave: 'efi_desp_operacionais_receita', label: 'Despesas Operacionais / Receita Líquida' },
+      { chave: 'efi_desp_administrativas_receita', label: 'Despesas Administrativas / Receita Líquida' },
+      { chave: 'efi_desp_comerciais_receita', label: 'Despesas Comerciais / Receita Líquida' },
+      { chave: 'efi_ebitda_desp_financeira', label: 'EBITDA / Despesa Financeira' },
+      { chave: 'efi_receita_ativo_total', label: 'Receita / Ativo Total' },
+      { chave: 'efi_receita_patrimonio_liquido', label: 'Receita / Patrimônio Líquido' },
+      { chave: 'efi_receita_capital_investido', label: 'Receita / Capital Investido' },
+    ],
+  },
 ];
 
 const INDICADORES_EMPRESAS = ['KMNO', 'NOVAH', 'RT'];
