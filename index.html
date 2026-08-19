@@ -4978,8 +4978,21 @@ function toggleIndicadorGrafico(rowId, chave, label) {
   const linha = document.querySelector(`tr[data-grafico-indicador="${rowId}"]`);
   const pai = document.getElementById('pai-' + rowId);
   const icon = document.getElementById('icon-' + rowId);
-  if (!linha) return;
+  if (!linha || !pai) return;
   const abrindo = linha.style.display === 'none';
+  if (abrindo) {
+    // Pedido 19/08/2026 ("faz o gráfico abrir pra cima também, não só
+    // pra baixo"): se a linha clicada está na metade de baixo da tela,
+    // o gráfico abre ANTES da linha (pra cima) em vez de depois (pra
+    // baixo) — evita cortar o gráfico fora da área visível.
+    const rect = pai.getBoundingClientRect();
+    const abrirParaCima = rect.top > window.innerHeight / 2;
+    if (abrirParaCima) {
+      pai.parentNode.insertBefore(linha, pai);
+    } else if (linha.previousElementSibling !== pai) {
+      pai.parentNode.insertBefore(linha, pai.nextSibling);
+    }
+  }
   linha.style.display = abrindo ? 'table-row' : 'none';
   if (pai) pai.classList.toggle('linha-pai-aberta', abrindo);
   if (icon) icon.textContent = abrindo ? '−' : '+';
