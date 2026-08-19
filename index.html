@@ -685,6 +685,12 @@
   .company-tag-KMNO { background: rgba(31, 95, 184, 0.12); color: #1f5fb8; border: 1px solid rgba(31, 95, 184, 0.35); }
   .company-tag-NOVAH { background: rgba(0, 110, 81, 0.12); color: #006E51; border: 1px solid rgba(0, 110, 81, 0.35); }
   .company-tag-RT { background: rgba(184, 98, 10, 0.12); color: #b8620a; border: 1px solid rgba(184, 98, 10, 0.35); }
+  /* NOVO (19/08/2026, pedido Lucas): coluna Novah com tom levemente
+     diferente no card "Indicadores" — reaproveita a mesma cor de
+     .company-tag-NOVAH (#006E51), só mais suave pra não pesar numa
+     coluna inteira. */
+  .indic-col-novah { background: rgba(0, 110, 81, 0.07); }
+  .indic-col-novah-head { background: rgba(0, 110, 81, 0.14); color: #006E51; }
 
   .bloco-head {
     display: flex;
@@ -4767,28 +4773,47 @@ async function editarIndicadorManual(chave, empresaId, campo, label) {
 
 // Monta a tabela do card "Indicadores" — 1 seção por bloco
 // (INDICADORES_SECOES), colunas fixas: Indicador | KMNO Real | KMNO
-// Meta | Novah Real | Novah Meta | RT Real | RT Meta.
+// Meta | Novah Real | Novah Meta | RT Real | RT Meta. Coluna Novah com
+// tom levemente diferente (pedido 19/08). Clique na linha expande um
+// gráfico de barras (KMNO/Novah/RT, valor "Real" atual) em vez de
+// linha filho — período ainda não definido, formato "coringa" (pedido
+// 19/08: "não sei o período, deixa meio coringa, formato da imagem").
 async function renderIndicadores() {
   const wrap = document.getElementById('wrapIndicadores');
   if (!wrap) return;
   if (!Object.keys(indicadoresManuaisCache).length) await carregarIndicadoresManuais();
   const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
+  let seqInd = 0;
 
   const html = INDICADORES_SECOES.map(secao => {
     const linhas = secao.itens.map(item => {
+      seqInd++;
+      const rowId = `ind-${seqInd}`;
       const celulas = INDICADORES_EMPRESAS.map(emp => {
+        const classeCol = emp === 'NOVAH' ? ' class="num indic-col-novah"' : ' class="num"';
         // Pedido 19/08/2026 (correção): só "Meta" é editável — "Real"
         // ainda não tem fonte definida (vem de algum lugar a decidir
         // depois), fica só exibindo zerado, sem lápis.
         return ['real', 'meta'].map(campo => {
           const v = valorIndicadorManual(item.chave, emp, campo);
           const lapis = (ehAdmin && campo === 'meta')
-            ? ` <span style="cursor:pointer;" title="Editar valor" onclick="editarIndicadorManual('${item.chave}','${emp}','${campo}','${item.label.replace(/'/g, "\\'")}')">✏️</span>`
+            ? ` <span style="cursor:pointer;" title="Editar valor" onclick="event.stopPropagation();editarIndicadorManual('${item.chave}','${emp}','${campo}','${item.label.replace(/'/g, "\\'")}')">✏️</span>`
             : '';
-          return `<td class="num">${v}${lapis}</td>`;
+          return `<td${classeCol}>${v}${lapis}</td>`;
         }).join('');
       }).join('');
-      return `<tr><td class="dre-tbl-sticky">${item.label}</td>${celulas}</tr>`;
+      return `
+        <tr class="dre-tbl-row colapsavel" id="pai-${rowId}" onclick="toggleIndicadorGrafico('${rowId}','${item.chave}','${item.label.replace(/'/g, "\\'")}')" title="Clique para ver o gráfico">
+          <td class="dre-tbl-sticky"><span class="dre-tbl-toggle-icon" id="icon-${rowId}">+</span>${item.label}</td>
+          ${celulas}
+        </tr>
+        <tr data-grafico-indicador="${rowId}" style="display:none;">
+          <td colspan="7" style="padding:16px 24px;">
+            <div style="position:relative;height:220px;">
+              <canvas id="chart-${rowId}"></canvas>
+            </div>
+          </td>
+        </tr>`;
     }).join('');
     return `
       <div class="bloco-card" style="margin-bottom:14px;">
@@ -4798,10 +4823,10 @@ async function renderIndicadores() {
             <table class="fin-tbl fin-tbl-sticky-col">
               <tr>
                 <th rowspan="2" class="dre-tbl-sticky">Indicador</th>
-                <th colspan="2">KMNO</th><th colspan="2">Novah</th><th colspan="2">RT</th>
+                <th colspan="2">KMNO</th><th colspan="2" class="indic-col-novah-head">Novah</th><th colspan="2">RT</th>
               </tr>
               <tr>
-                <th>Real</th><th>Meta</th><th>Real</th><th>Meta</th><th>Real</th><th>Meta</th>
+                <th>Real</th><th>Meta</th><th class="indic-col-novah-head">Real</th><th class="indic-col-novah-head">Meta</th><th>Real</th><th>Meta</th>
               </tr>
               ${linhas}
             </table>
@@ -4810,6 +4835,51 @@ async function renderIndicadores() {
       </div>`;
   }).join('');
   wrap.innerHTML = html;
+}
+
+// Clique na linha do indicador — expande/recolhe o gráfico (em vez de
+// linha filho, igual toggleResumoEmpresaConta). Gráfico é lazy (só
+// desenha no primeiro clique), 1 instância Chart.js por linha.
+const indicadorChartInstances = {};
+function toggleIndicadorGrafico(rowId, chave, label) {
+  const linha = document.querySelector(`tr[data-grafico-indicador="${rowId}"]`);
+  const pai = document.getElementById('pai-' + rowId);
+  const icon = document.getElementById('icon-' + rowId);
+  if (!linha) return;
+  const abrindo = linha.style.display === 'none';
+  linha.style.display = abrindo ? 'table-row' : 'none';
+  if (pai) pai.classList.toggle('linha-pai-aberta', abrindo);
+  if (icon) icon.textContent = abrindo ? '−' : '+';
+  if (abrindo) renderIndicadorChart(rowId, chave, label);
+}
+
+// Formato do gráfico "coringa" (pedido 19/08/2026: "não sei o período
+// que vão querer, deixa meio coringa... o gráfico deve ser parecido
+// com a imagem, não necessariamente esses valores/data"). Por ora usa
+// o valor "Real" atual das 3 empresas como barras — quando a fonte do
+// "Real" for definida (com período de verdade), trocar aqui pela série
+// temporal real, mantendo o mesmo formato visual (barras + valor).
+function renderIndicadorChart(rowId, chave, label) {
+  const canvas = document.getElementById('chart-' + rowId);
+  if (!canvas) return;
+  if (indicadorChartInstances[rowId]) indicadorChartInstances[rowId].destroy();
+  const cores = { KMNO: '#1f5fb8', NOVAH: '#006E51', RT: '#b8620a' };
+  const valores = INDICADORES_EMPRESAS.map(emp => valorIndicadorManual(chave, emp, 'real'));
+  indicadorChartInstances[rowId] = new Chart(canvas.getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: INDICADORES_EMPRESAS.map(e => e === 'NOVAH' ? 'Novah' : e),
+      datasets: [{ label, data: valores, backgroundColor: INDICADORES_EMPRESAS.map(e => cores[e]) }],
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { ticks: { color: CHART_COLORS.tickText }, grid: { display: false } },
+        y: { ticks: { color: CHART_COLORS.tickText }, grid: { color: CHART_COLORS.gridLine } },
+      },
+    },
+  });
 }
 
 // Pedido 10/08/2026 (2ª rodada): versão POR CATEGORIA do mesmo relatório
