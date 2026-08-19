@@ -699,6 +699,16 @@
     border-bottom-color: rgba(0, 110, 81, 0.20) !important;
   }
   .indic-col-novah-head { color: #006E51; }
+  /* Pedido 19/08/2026 ("as colunas não estão retas"): cada tabela do
+     card Indicadores é independente — sem largura fixa, o navegador
+     calculava a largura de cada coluna com base no texto mais longo
+     DAQUELA tabela, e como os rótulos variam de tamanho entre as 10
+     seções, a coluna "Indicador" (e por tabela, onde a faixa da Novah
+     cai) ficava deslocada de seção pra seção. table-layout:fixed +
+     colgroup (larguras fixas, geradas em renderIndicadores) faz todas
+     as 10 tabelas usarem exatamente a mesma largura de coluna, então a
+     faixa verde da Novah cai sempre no mesmo lugar, reta. */
+  .tbl-indicadores { table-layout: fixed; }
 
   .bloco-head {
     display: flex;
@@ -4953,7 +4963,13 @@ async function renderIndicadores() {
         <div class="bloco-head"><div class="bloco-titulo">${secao.titulo}</div></div>
         <div class="bloco-body">
           <div class="dre-tbl-wrap">
-            <table class="fin-tbl fin-tbl-sticky-col">
+            <table class="fin-tbl fin-tbl-sticky-col tbl-indicadores">
+              <colgroup>
+                <col style="width:280px;">
+                <col style="width:80px;"><col style="width:80px;">
+                <col style="width:80px;"><col style="width:80px;">
+                <col style="width:80px;"><col style="width:80px;">
+              </colgroup>
               <tr>
                 <th rowspan="2" class="dre-tbl-sticky">Indicador</th>
                 <th colspan="2">KMNO</th><th colspan="2" class="indic-col-novah-head">Novah</th><th colspan="2">RT</th>
