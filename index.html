@@ -2813,6 +2813,17 @@
         </div>
       </div>
 
+      <!-- Novo card "INDICADORES" (pedido 19/08/2026) — 10 seções, ~85
+           indicadores, todos manuais (KMNO/Novah/RT Real+Meta), sem
+           coluna Grupo por enquanto. Começando só com a estrutura +
+           seção Liquidez pra validar o mecanismo de edição. -->
+      <div class="nav-card" onclick="switchView('viewIndicadores')">
+        <div>
+          <div class="nav-card-title">Indicadores</div>
+          <div class="nav-card-desc">KMNO, Novah e RT — Real x Meta, preenchimento manual.</div>
+        </div>
+      </div>
+
     </div>
 
   </div>
@@ -3410,6 +3421,31 @@
     </div>
   </div>
 
+  <!-- ===== VIEW: INDICADORES (novo card, pedido 19/08/2026) — 10 seções,
+       ~85 indicadores, 100% manuais (KMNO/Novah/RT, Real+Meta cada,
+       sem coluna Grupo por enquanto). Todos começam zerados; usuário
+       (admin) preenche com o lápis. Log grava em dash_indicadores_
+       manuais_log mas SEM botão de histórico na tela (pedido explícito
+       — diferente do padrão dash_linhas_manuais que tinha 🕒).
+       Começando só com a seção "Liquidez" pra validar o mecanismo antes
+       de replicar pras outras 9 seções (Resultado, Produção e Custos
+       Industriais, Financeiro e Capital de Giro, Estrutura de Capital e
+       Endividamento, Estoques e Capital de Giro, Rentabilidade e
+       Retorno, Fluxo de Caixa, Eficiência Operacional). ===== -->
+  <div id="viewIndicadores" class="view-container">
+    <div class="blocks-inner">
+      <div class="btn-back-container">
+        <button class="btn-back" onclick="switchView('viewMenu')">← Voltar para o Menu</button>
+      </div>
+      <div class="section">
+        <div class="section-head">
+          <h2>Indicadores</h2>
+        </div>
+        <div id="wrapIndicadores"></div>
+      </div>
+    </div>
+  </div>
+
   <!-- ===== VIEW: IMPOSTOS E ANÁLISES (novo card, reunião 21.07) =====
        Fonte: planilha "Impostos Analise KMNO" (só KMNO por enquanto — é
        a única empresa com essa aba na planilha original). Valores
@@ -3734,6 +3770,7 @@ const VIEW_DISPLAY_NAMES = {
   viewDfcArvoreCopia: 'DRE por Competência',
   viewImpostos: 'Impostos e Análises',
   viewSaidasEntradasPecas: 'Saídas e Entradas x Peças Faturadas',
+  viewIndicadores: 'Indicadores',
   viewSaldoBancos: 'Saldo dos Bancos',
   viewComercial: 'Comercial (KMNO)',
   viewCicloFinanceiro: 'Ciclo Financeiro',
@@ -3795,6 +3832,13 @@ function switchView(viewId, options = {}) {
 
   if (viewId === 'viewSaidasEntradasPecas') {
     try { renderSaidasEntradasPecasTudo(); } catch (e) { console.error('renderSaidasEntradasPecasTudo falhou:', e); }
+  }
+
+  // Indicadores (pedido 19/08/2026): busca dash_indicadores_manuais toda
+  // vez que a view abre — mesmo padrão de renderComercial/renderSaldoBancos
+  // (dado pode ter sido editado por outra pessoa desde a última visita).
+  if (viewId === 'viewIndicadores') {
+    try { renderIndicadores(); } catch (e) { console.error('renderIndicadores falhou:', e); }
   }
 
   // Validação de Categorias: lê direto de DRE_ARVORE_BLOCOS (estático, já
@@ -4634,6 +4678,134 @@ let orcamentoRealizadoCache = {};
 // vindas da classificação real do Omie, igual qualquer outra categoria.
 // As tabelas no Supabase NÃO foram apagadas (dado permanente), só
 // ficaram sem uso.
+
+// ===================================================================
+// NOVO (19/08/2026, pedido Lucas) — card "INDICADORES". Todas as linhas
+// são 100% manuais, por empresa (KMNO/NOVAH/RT), Real e Meta separados.
+// Sem coluna Grupo por enquanto (avisado que pode vir depois, mas por
+// ora só as 3). Tabelas: dash_indicadores_manuais (chave, empresa_id,
+// campo 'real'/'meta', valor) + dash_indicadores_manuais_log (só grava,
+// SEM botão de histórico na tela — diferente do padrão anterior que
+// tinha 🕒). Todos os valores começam em 0.
+//
+// Começando só com a seção "Liquidez" pra validar o mecanismo de edição
+// antes de replicar pras outras 9 seções (pedido explícito 19/08).
+// Quando as demais seções forem confirmadas, adicionar novos objetos
+// nesta mesma lista INDICADORES_SECOES, no mesmo formato.
+let indicadoresManuaisCache = {}; // chave "chave|empresa|campo" -> valor
+
+function valorIndicadorManual(chave, empresaId, campo) {
+  return indicadoresManuaisCache[`${chave}|${empresaId}|${campo}`] || 0;
+}
+
+const INDICADORES_SECOES = [
+  {
+    titulo: '💰 Liquidez',
+    itens: [
+      { chave: 'liquidez_corrente', label: 'Liquidez Corrente' },
+      { chave: 'liquidez_seca', label: 'Liquidez Seca' },
+      { chave: 'liquidez_imediata', label: 'Liquidez Imediata' },
+      { chave: 'liquidez_geral', label: 'Liquidez Geral' },
+    ],
+  },
+  // Demais 9 seções (Indicadores de Resultado, Produção e Custos
+  // Industriais, Financeiro e Capital de Giro, Estrutura de Capital e
+  // Endividamento, Estoques e Capital de Giro, Rentabilidade e Retorno,
+  // Fluxo de Caixa, Eficiência Operacional) entram aqui depois de
+  // validado o mecanismo com Liquidez.
+];
+
+const INDICADORES_EMPRESAS = ['KMNO', 'NOVAH', 'RT'];
+
+async function carregarIndicadoresManuais() {
+  try {
+    const { data, error } = await supabaseClient
+      .from('dash_indicadores_manuais').select('chave,empresa_id,campo,valor');
+    if (error) throw error;
+    indicadoresManuaisCache = {};
+    (data || []).forEach(r => {
+      indicadoresManuaisCache[`${r.chave}|${r.empresa_id}|${r.campo}`] = Number(r.valor) || 0;
+    });
+  } catch (e) {
+    console.error('Erro ao carregar dash_indicadores_manuais:', e);
+    indicadoresManuaisCache = {};
+  }
+}
+
+// Admin edita 1 célula (chave+empresa+campo) — grava em
+// dash_indicadores_manuais e loga em dash_indicadores_manuais_log (sem
+// exibir histórico na tela, só o registro fica salvo).
+async function editarIndicadorManual(chave, empresaId, campo, label) {
+  if (!currentProfile || currentProfile.role !== 'admin') { alert('Somente admin pode editar essa linha.'); return; }
+  const atual = valorIndicadorManual(chave, empresaId, campo);
+  const campoLabel = campo === 'real' ? 'Real' : 'Meta';
+  const novoStr = prompt(`Novo valor — ${label} (${empresaId} · ${campoLabel}). Use ponto pra decimal, ex: 1.5:`, atual.toFixed(2));
+  if (novoStr === null) return; // cancelou
+  const novo = parseValorBR(novoStr);
+  if (isNaN(novo)) { alert('Valor inválido.'); return; }
+  try {
+    const { error: errUpdate } = await supabaseClient.from('dash_indicadores_manuais').upsert({
+      chave, empresa_id: empresaId, campo, valor: novo, updated_at: new Date().toISOString(),
+      updated_by: currentSession?.user?.id || null, updated_by_email: currentSession?.user?.email || null,
+    });
+    if (errUpdate) throw errUpdate;
+    const { error: errLog } = await supabaseClient.from('dash_indicadores_manuais_log').insert({
+      chave, empresa_id: empresaId, campo, valor_antigo: atual, valor_novo: novo,
+      editado_por: currentSession?.user?.id || null, editado_por_email: currentSession?.user?.email || null,
+    });
+    if (errLog) throw errLog;
+    indicadoresManuaisCache[`${chave}|${empresaId}|${campo}`] = novo;
+    renderIndicadores();
+  } catch (err) {
+    console.error('Erro ao salvar indicador manual:', err);
+    alert('Não foi possível salvar. Tente novamente.');
+  }
+}
+
+// Monta a tabela do card "Indicadores" — 1 seção por bloco
+// (INDICADORES_SECOES), colunas fixas: Indicador | KMNO Real | KMNO
+// Meta | Novah Real | Novah Meta | RT Real | RT Meta.
+async function renderIndicadores() {
+  const wrap = document.getElementById('wrapIndicadores');
+  if (!wrap) return;
+  if (!Object.keys(indicadoresManuaisCache).length) await carregarIndicadoresManuais();
+  const ehAdmin = !!(currentProfile && currentProfile.role === 'admin');
+
+  const html = INDICADORES_SECOES.map(secao => {
+    const linhas = secao.itens.map(item => {
+      const celulas = INDICADORES_EMPRESAS.map(emp => {
+        return ['real', 'meta'].map(campo => {
+          const v = valorIndicadorManual(item.chave, emp, campo);
+          const lapis = ehAdmin
+            ? ` <span style="cursor:pointer;" title="Editar valor" onclick="editarIndicadorManual('${item.chave}','${emp}','${campo}','${item.label.replace(/'/g, "\\'")}')">✏️</span>`
+            : '';
+          return `<td class="num">${v}${lapis}</td>`;
+        }).join('');
+      }).join('');
+      return `<tr><td class="dre-tbl-sticky">${item.label}</td>${celulas}</tr>`;
+    }).join('');
+    return `
+      <div class="bloco-card" style="margin-bottom:14px;">
+        <div class="bloco-head"><div class="bloco-titulo">${secao.titulo}</div></div>
+        <div class="bloco-body">
+          <div class="dre-tbl-wrap">
+            <table class="fin-tbl fin-tbl-sticky-col">
+              <tr>
+                <th rowspan="2" class="dre-tbl-sticky">Indicador</th>
+                <th colspan="2">KMNO</th><th colspan="2">Novah</th><th colspan="2">RT</th>
+              </tr>
+              <tr>
+                <th>Real</th><th>Meta</th><th>Real</th><th>Meta</th><th>Real</th><th>Meta</th>
+              </tr>
+              ${linhas}
+            </table>
+          </div>
+        </div>
+      </div>`;
+  }).join('');
+  wrap.innerHTML = html;
+}
+
 // Pedido 10/08/2026 (2ª rodada): versão POR CATEGORIA do mesmo relatório
 // oficial (dash_orcamento_realizado_categoria) — usada em
 // buildTotalPorCategoriaEmpresa pra substituir o cálculo inteiro (não só
