@@ -5715,9 +5715,20 @@ function buildArvoreNativaDreConsolidado(categories, movements, meses, nfeRows, 
 }
 
 function buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows, extratoSemTitulo, cmcVendas) {
+  // Exclusão pontual (20/08/2026, confirmado com Lucas): "Transferência
+  // entre contas" (1.04.04, KMNO) é movimento de balanço entre contas da
+  // própria empresa, não receita/despesa real — mas o cadastro dessa
+  // categoria no Omie tem codigo_dre preenchido, então sem essa exclusão
+  // ela entraria indevidamente no DRE nativo. Corrigido no código em vez
+  // de alterar o cadastro no Omie (mesmo padrão já usado pra Adiantamento
+  // de Clientes/Dividendo Sócio em outros blocos deste arquivo).
+  const CATEGORIAS_EXCLUIDAS_DRE_NATIVO = { KMNO: ['1.04.04'] };
   const catByCodigo = {};
   (categories || []).forEach(c => {
-    if (c._empresa === empresa && c.codigo_dre) catByCodigo[c.codigo] = c;
+    if (c._empresa !== empresa || !c.codigo_dre) return;
+    const excluidas = CATEGORIAS_EXCLUIDAS_DRE_NATIVO[empresa] || [];
+    if (excluidas.includes(c.codigo)) return;
+    catByCodigo[c.codigo] = c;
   });
 
   const valores = {};
@@ -11621,6 +11632,13 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   const catPath = 'dash_categories?select=codigo,descricao,conta_receita,conta_despesa,codigo_dre';
   const recPath = 'dash_accounts_receivable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor,codigo_lancamento_omie';
   const payPath = 'dash_accounts_payable?select=data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,status_titulo,codigo_categoria,observacao,numero_documento,codigo_lancamento_omie';
+  // Fallback de categoria (20/08/2026): alguns títulos de payable/receivable
+  // (folha — FGTS/GPS/PJ/PPR etc, mais comum na Novah) vêm com
+  // codigo_categoria NULO do Omie, mesmo o MESMO título tendo a categoria
+  // certa em dash_financial_movements (via cod_titulo). Sem esse fallback,
+  // esses títulos ficam de fora do DRE nativo inteiro (nunca acham
+  // codigo_dre). Busca só cod_titulo+cod_categoria, sem trazer o resto.
+  const fmCategPath = 'dash_financial_movements?select=cod_titulo,cod_categoria&cod_categoria=not.is.null&cod_titulo=not.is.null&cod_titulo=neq.0';
   // NFe: usado só pela árvore nativa (Impostos), pra somar ICMS/PIS/COFINS
   // embutidos na nota, atribuídos à mesma categoria do título de venda —
   // ver comentário mais abaixo sobre DRE_NATIVO_IMPOSTO_NFE_CODIGO_DRE.
@@ -11675,10 +11693,11 @@ async function carregarDadosDreArvoreTodasEmpresas() {
     }
   };
 
-  const [categories, receivable, payable, cmvProdutos, fatUnidades, financiamentos, parcelas, inadimplencia, nfe, extratoSemTitulo, cmcVendas] = await Promise.all([
+  const [categories, receivable, payable, fmCategFallback, cmvProdutos, fatUnidades, financiamentos, parcelas, inadimplencia, nfe, extratoSemTitulo, cmcVendas] = await Promise.all([
     buscarPorEmpresa(catPath),
     buscarPorEmpresa(recPath),
     buscarPorEmpresa(payPath),
+    buscarPorEmpresa(fmCategPath),
     buscarPorEmpresa(cmvPath),
     buscarPorEmpresa(fatUnidPath),
     buscarPorEmpresa(finPath),
@@ -11779,6 +11798,17 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   const DRE_NATIVO_DUPLICADOS_CONHECIDOS_IDS = new Set([
     2149035474, 2149037995, 2149025068, 2149054857, 2149062390, 2149051661,
   ]);
+  // Mapa empresa|cod_titulo -> categoria, só usado quando o título de
+  // payable/receivable vier com codigo_categoria nulo (ver comentário no
+  // fmCategPath acima). "last wins" é seguro aqui — nunca vimos categoria
+  // divergente pro mesmo cod_titulo entre linhas de financial_movements.
+  const categoriaPorTituloFallback = new Map();
+  (fmCategFallback || []).forEach(f => {
+    categoriaPorTituloFallback.set(`${f._empresa}|${f.cod_titulo}`, f.cod_categoria);
+  });
+  const resolverCategoriaComFallback = (empresa, codTitulo, categoriaOriginal) =>
+    categoriaOriginal || categoriaPorTituloFallback.get(`${empresa}|${codTitulo}`) || null;
+
   const unifiedMovementsNativo = [
     ...receivable.filter(r => r.status_titulo !== 'CANCELADO' && !DRE_NATIVO_DUPLICADOS_CONHECIDOS_IDS.has(Number(r.codigo_lancamento_omie))).map(r => ({
       dt_emissao: r.data_emissao,
@@ -11786,7 +11816,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
       natureza: 'R',
       val_pago: Number(r.valor_documento || 0),
       val_liquido: Number(r.valor_documento || 0),
-      cod_categoria: r.codigo_categoria,
+      cod_categoria: resolverCategoriaComFallback(r._empresa, r.codigo_lancamento_omie, r.codigo_categoria),
       omie_id: r.codigo_lancamento_omie,
       _empresa: r._empresa,
     })),
@@ -11796,7 +11826,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
       natureza: 'P',
       val_pago: Number(p.valor_documento || 0),
       val_liquido: Number(p.valor_documento || 0),
-      cod_categoria: p.codigo_categoria,
+      cod_categoria: resolverCategoriaComFallback(p._empresa, p.codigo_lancamento_omie, p.codigo_categoria),
       omie_id: p.codigo_lancamento_omie,
       _empresa: p._empresa,
     })),
