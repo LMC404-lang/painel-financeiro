@@ -12462,6 +12462,23 @@ try {
     (rateioPayableCache[key] || (rateioPayableCache[key] = [])).push(c);
   });
 
+    // FIX 20/08/2026 (mesmo achado do buildArvoreNativaDre hoje de manhã):
+    // títulos de receivable/payable com codigo_categoria nulo (folha —
+    // FGTS/GPS/PJ/PPR etc, mais comum na Novah — e outros tipos na KMNO)
+    // ficavam fora do DRE por Competência inteiro. Mesmo fallback: busca
+    // a categoria em dash_financial_movements (via cod_titulo), que
+    // reliably tem a categoria certa mesmo quando accounts_payable/
+    // receivable vem nula. Só usado quando não tem categoria E (payable)
+    // não tem rateio conhecido.
+    const categoriaPorTituloFallbackUnified = new Map();
+    (movements || []).forEach(m => {
+      if (m.cod_categoria && m.cod_titulo) {
+        categoriaPorTituloFallbackUnified.set(`${m._empresa}|${m.cod_titulo}`, m.cod_categoria);
+      }
+    });
+    const resolverCategoriaFallbackUnified = (empresa, codTitulo, categoriaOriginal) =>
+      categoriaOriginal || categoriaPorTituloFallbackUnified.get(`${empresa}|${codTitulo}`) || null;
+
     // Build unified movements from accounts receivable + payable (more complete than omie_financial_movements)
     const unifiedMovements = [
       ...(receivable || []).filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor)).map(r => ({
@@ -12472,7 +12489,7 @@ try {
         natureza: 'R',
         val_pago: Number(r.valor_documento || 0),
         val_liquido: Number(r.valor_documento || 0),
-        cod_categoria: r.codigo_categoria,
+        cod_categoria: resolverCategoriaFallbackUnified(r._empresa, r.codigo_lancamento_omie, r.codigo_categoria),
         status: r.status_titulo,
         observacao: r.observacao,
         num_titulo: r.numero_documento,
@@ -12516,7 +12533,7 @@ try {
           ...base,
           val_pago: Number(p.valor_documento || 0),
           val_liquido: Number(p.valor_documento || 0),
-          cod_categoria: p.codigo_categoria,
+          cod_categoria: resolverCategoriaFallbackUnified(p._empresa, p.codigo_lancamento_omie, p.codigo_categoria),
         }];
       }),
     ];
