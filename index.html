@@ -3897,12 +3897,21 @@ function switchView(viewId, options = {}) {
   // DRE por Competência — Novo Layout (clone, pedido 27/07/2026):
   // recalcula ao abrir a view, mesmo padrão do card original.
   if (viewId === 'viewDfcArvoreCopia') {
-    try {
-      const { de: copiaDe, ate: copiaAteInicio } = getSelectedPeriodRange();
-      const copiaAte = copiaAteInicio.add(1, 'month');
-      renderGrupoDreCompetenciaCopia(copiaDe, copiaAte);
-    } catch (e) { console.error('renderGrupoDreCompetenciaCopia (switchView) falhou:', e); }
-    try { renderDreNativoCopia(); } catch (e) { console.error('renderDreNativoCopia (switchView) falhou:', e); }
+    const { de: copiaDe, ate: copiaAteInicio } = getSelectedPeriodRange();
+    const copiaAte = copiaAteInicio.add(1, 'month');
+    // FIX 20/08/2026 (corrida de carregamento): renderDreNativoCopia() é
+    // quem popula os caches da árvore nativa (dreArvoreCategoriesCache
+    // etc) — o Resumo Grupo agora depende deles
+    // (buildResumoCompetenciaViaArvoreNativa). Antes rodava em paralelo
+    // (fire-and-forget) sem ordem garantida — na 1ª visita à tela,
+    // renderGrupoDreCompetenciaCopia() às vezes executava ANTES do
+    // cache estar pronto, caindo silenciosamente no sistema antigo
+    // (menos preciso) sem nada disparar um recálculo depois. Agora
+    // espera a árvore carregar primeiro, só então desenha o Resumo.
+    (async () => {
+      try { await renderDreNativoCopia(); } catch (e) { console.error('renderDreNativoCopia (switchView) falhou:', e); }
+      try { renderGrupoDreCompetenciaCopia(copiaDe, copiaAte); } catch (e) { console.error('renderGrupoDreCompetenciaCopia (switchView) falhou:', e); }
+    })();
   }
   
   // 4. Faz scroll suave para o topo da página para dar conforto ao utilizador
@@ -6089,6 +6098,126 @@ function acharContaPorCodigo(arvore, codigo) {
     }
   }
   return 0;
+}
+
+function acharContaCompletaPorCodigo(arvore, codigo) {
+  for (const tipo of arvore.tipos) {
+    for (const grupo of tipo.grupos) {
+      const conta = grupo.contas.find(c => c.codigo === codigo);
+      if (conta) return conta;
+    }
+  }
+  return null;
+}
+
+// FIX 20/08/2026 (pedido explícito Lucas: "DRE por Competência 100%
+// igual, centavo a centavo, ao do Omie — sem margem de erro"). Até aqui,
+// o card "Resumo (Grupo, R$)"/"Resumo Detalhado" (tela DRE por
+// Competência) usava um motor de cálculo PRÓPRIO (buildTodosBlocosRealizado
+// + buildResumoCategoriasMes), com agrupamento por PREFIXO de código
+// hardcoded por empresa (ex: '2.18.' pra Custo de Matéria-Prima da
+// KMNO) — um sistema herdado da réplica do Excel, nunca desenhado pra
+// espelhar o codigo_dre nativo do Omie. Isso causou uma cadeia de
+// divergências o dia inteiro (caixa-vs-competência, categoria nula,
+// CMC ausente) porque cada uma dependia de mecanismos diferentes desse
+// motor antigo.
+//
+// A árvore nativa (buildArvoreNativaDre, usada no card "Árvore DRE
+// Nativa" da mesma tela) já é a fonte CORRETA e validada: agrupa por
+// codigo_dre de verdade (mesma classificação que o Omie usa
+// internamente), já inclui imposto de NFe embutido (17/07) e CMC
+// automático por produto vendido (17/07, validado com gap de 0,1%
+// contra o pivot nativo do Omie). Em vez de manter dois motores
+// paralelos que nunca vão concordar entre si, o Resumo Detalhado agora
+// LÊ os totais direto da árvore nativa — mesma mecânica, mesma fonte,
+// garantindo consistência entre os dois cards da mesma tela.
+//
+// Mapeamento 1:1 com a estrutura Tipo/Grupo/Conta do Omie (mesma
+// nomenclatura vista no relatório nativo, "1. Lucro Bruto" → "2.
+// Despesas" → "3. Investimentos"):
+//   1.01.01 Receita Bruta de Vendas | 1.01.02 Impostos | 1.01.03 Deduções
+//   1.11.01 Outras Receitas | 1.11.02 Receitas Financeiras
+//   1.21.01 CMC das Vendas | 1.21.02 Custo dos Serviços Prestados | 1.21.03 Outros Custos
+//   2.01.01 Despesas Variáveis | 2.01.02 Recuperação de Desp. Variáveis
+//   2.11.01 Pessoal | 2.11.02 Administrativas | 2.11.03 Financeiras | 2.11.04 Vendas/Marketing | 2.11.05 Outros Tributos
+//   3.01.01+3.01.02 Investimentos/Ativos
+//
+// Escopo do Grupo: KMNO+NOVAH (RT fica de fora, mesmo escopo que o
+// congelado do Excel sempre teve — sem mudança de comportamento aí).
+function buildResumoCompetenciaViaArvoreNativa(empresaFiltro, monthStart, monthEnd) {
+  if (!dreArvoreCategoriesCache || !dreArvoreMovementsCacheNativo) return null;
+  const empresas = empresaFiltro ? [empresaFiltro] : ['KMNO', 'NOVAH'];
+  const meses = [monthStart];
+
+  const arvoresPorEmpresa = {};
+  empresas.forEach(emp => {
+    arvoresPorEmpresa[emp] = buildArvoreNativaDre(
+      emp, dreArvoreCategoriesCache, dreArvoreMovementsCacheNativo, meses,
+      dreArvoreNfeCache, dreArvoreExtratoSemTituloCache, dreArvoreCmcVendasCache
+    );
+  });
+
+  const soma = (codigo) => empresas.reduce((acc, emp) => acc + acharContaPorCodigo(arvoresPorEmpresa[emp], codigo), 0);
+
+  // Quebra Produtos/Mercadorias/Serviços dentro da conta 1.01.01 (Receita
+  // Bruta) — mesma regra visual de sempre: KMNO separa "Clientes -
+  // Revenda de Mercadoria" como Mercadorias, resto vira Produtos; NOVAH
+  // inteiro vira Serviços (não tem essa distinção de categoria).
+  let receitaProdutos = 0, receitaMercadorias = 0, receitaServicos = 0;
+  empresas.forEach(emp => {
+    const conta = acharContaCompletaPorCodigo(arvoresPorEmpresa[emp], '1.01.01');
+    const totalConta = conta ? conta.total : 0;
+    if (emp === 'NOVAH') { receitaServicos += totalConta; return; }
+    const catMercadoria = conta ? (conta.categorias.find(c => c.label === 'Clientes - Revenda de Mercadoria') || { total: 0 }).total : 0;
+    receitaProdutos += totalConta - catMercadoria;
+    receitaMercadorias += catMercadoria;
+  });
+
+  const impostos = -soma('1.01.02');
+  const devolucoes = -soma('1.01.03');
+  const receita = receitaProdutos + receitaMercadorias + receitaServicos;
+  const receitaLiquida = receita - impostos - devolucoes;
+
+  const cmcAutomatico = -soma('1.21.01');
+  const custoServicosPrestados = -soma('1.21.02');
+  const outrosCustos = -soma('1.21.03'); // Royalties + Frete Pago, já juntos (classificação real do Omie)
+  const cmv = cmcAutomatico + custoServicosPrestados;
+  const royalties = outrosCustos; // mantém o nome da linha existente; valor agora é a conta 1.21.03 completa
+
+  const outrasReceitas = soma('1.11.01');
+  const receitasFinanceirasBruto = soma('1.11.02');
+  const margemContribuicao = receitaLiquida + outrasReceitas - cmv - royalties;
+
+  const custoAdm = -soma('2.11.01') - soma('2.11.02'); // Pessoal + Administrativas
+  const despesasComerciais = -soma('2.11.04'); // Vendas/Marketing
+  const outrosTributos = -soma('2.11.05');
+  const despesasVariaveis = -soma('2.01.01') + soma('2.01.02'); // Recuperação já vem positiva
+  const ebitda = margemContribuicao - custoAdm - despesasComerciais - outrosTributos - despesasVariaveis;
+
+  const depreciacao = empresas.reduce((acc, emp) => acc + calcDepreciacao(emp, acharContaPorCodigo(arvoresPorEmpresa[emp], '1.01.01')), 0);
+  const despesasFinanceiras = -soma('2.11.03');
+  const receitasFinanceiras = receitasFinanceirasBruto;
+  const lucroLiquido = ebitda - depreciacao - despesasFinanceiras + receitasFinanceiras;
+
+  const investimentos = -soma('3.01.01') - soma('3.01.02');
+  // Distribuição/Capex/Outros: sem conta própria no codigo_dre nativo
+  // (empréstimo/dividendo fica fora do resultado, por decisão de
+  // 17/07/2026 documentada acima do card informativo) — Capex já é
+  // "investimentos" (3.01.xx) acima; Distribuição e "Outros" não têm
+  // fonte native própria nesse nível, ficam zerados aqui (mesmo padrão
+  // já usado pro card informativo separado de Empréstimos/Dividendos).
+  const distribuicao = 0;
+  const capex = investimentos;
+  const refis = 0;
+  const saldoLiquido = lucroLiquido - distribuicao - capex - refis;
+
+  return {
+    receitaProdutos, receitaMercadorias, receitaServicos, receita, impostos, devolucoes, deducoes: impostos + devolucoes, receitaLiquida,
+    custoInsumos: cmcAutomatico, custoServicos: custoServicosPrestados, custoMaoObra: 0, cmv, royalties, margemContribuicao,
+    custoAdm, despesasComerciais, ebitda, depreciacao, despesasFinanceiras, receitasFinanceiras, lucroLiquido,
+    distribuicao, capex, refis, saldoLiquido, recebimentoEmprestimos: 0, pagamentoEmprestimos: 0, saldoCaixa: saldoLiquido,
+    detalhes: {},
+  };
 }
 
 // ===================================================================
@@ -14511,8 +14640,12 @@ function renderForSelectedMonth() {
     const { de: grupoDe, ate: grupoAteInicio } = getSelectedPeriodRange();
     const grupoAte = grupoAteInicio.add(1, 'month'); // getSelectedPeriodRange devolve o INÍCIO do mês final; buildDfc/etc esperam o fim exclusivo
     renderGrupoDfc(grupoDe, grupoAte);
-    try { renderGrupoDreCompetenciaCopia(grupoDe, grupoAte); } catch (e) { console.error('renderGrupoDreCompetenciaCopia falhou:', e); }
-    try { renderDreNativoCopia(); } catch (e) { console.error('renderDreNativoCopia falhou:', e); }
+    // FIX 20/08/2026: mesma correção de ordem do switchView acima —
+    // espera a árvore nativa carregar antes de desenhar o Resumo.
+    (async () => {
+      try { await renderDreNativoCopia(); } catch (e) { console.error('renderDreNativoCopia falhou:', e); }
+      try { renderGrupoDreCompetenciaCopia(grupoDe, grupoAte); } catch (e) { console.error('renderGrupoDreCompetenciaCopia falhou:', e); }
+    })();
     renderInadimplencia(movementsCache, receivableCache, payableCache, grupoDe);
     renderPagarAnalises(payableCache, grupoDe);
   } catch (e) { console.error('renderGrupoDfc falhou:', e); }
@@ -18778,6 +18911,16 @@ function renderGrupoProvaReal(monthStart, monthEnd) {
 // KMNO-mercadorias vs NOVAH-serviços) só faz sentido pra KMNO ou NOVAH
 // isoladas — pra RT (sem essas categorias) ficam 0 naturalmente.
 function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthEnd, empresaFiltro, modo, contasCache) {
+  // FIX 20/08/2026 (pedido Lucas): em modo Competência (qualquer coisa
+  // que não seja explicitamente 'caixa'), usa a árvore nativa como
+  // fonte — ver comentário completo em buildResumoCompetenciaViaArvoreNativa.
+  // Só cai no sistema antigo (resto desta função) se a árvore nativa
+  // ainda não carregou (cache null) ou se for modo==='caixa' de
+  // verdade (usado por outro card, DFC por Caixa, que não muda).
+  if (modo !== 'caixa') {
+    const viaArvore = buildResumoCompetenciaViaArvoreNativa(empresaFiltro, monthStart, monthEnd);
+    if (viaArvore) return viaArvore;
+  }
   if (empresaFiltro) {
     const dados = buildResumoCategoriasMes(empresaFiltro, categories, movements, monthStart, monthEnd, modo, contasCache);
     const somaMapa = (m) => Object.values(m || {}).reduce((s, v) => s + v, 0);
