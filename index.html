@@ -5074,6 +5074,30 @@ let dreArvoreExtratoSemTituloCache = null; // lançamentos de extrato sem títul
 let dreArvoreCmcVendasCache = null; // CMC real por venda (codOrigem='VEN'), usado só pela árvore nativa — só KMNO tem dado hoje
 let dreArvoreCarregando = false;
 
+// FIX 20/08/2026 (pedido Lucas, "DRE por Competência 100% igual ao Omie,
+// sem margem de erro"): "01. Custo Médio (CMC) das Vendas" do relatório
+// nativo do Omie NUNCA foi um título categorizado — é o custo médio de
+// compra × quantidade vendida, calculado automaticamente por produto
+// (confirmado: no CSV nativo, essas 1.304 linhas de junho/KMNO vêm com
+// categoria "N/D", batendo exato com o valor da conta "01. Custo Médio
+// (CMC) das Vendas"). O card "Resumo (Grupo)" nunca somava isso — só
+// título categorizado (Custo de Insumos + Custo de Serviços) — por isso
+// nunca batia 100% com o Omie mesmo depois de zerar todos os outros
+// gaps. Populado no carregamento principal (não depende de o usuário
+// abrir a tela "DRE por Bloco", que tem o próprio cache separado —
+// dreArvoreCmcVendasCache — usado só ali).
+let cmcVendasPorEmpresaCache = null;
+function somaCmcVendasPeriodo(empresa, monthStart, monthEnd) {
+  if (!cmcVendasPorEmpresaCache) return 0;
+  const de = monthStart.format('YYYY-MM-DD');
+  const ate = monthEnd.format('YYYY-MM-DD');
+  return cmcVendasPorEmpresaCache.reduce((acc, c) => {
+    if (c._empresa !== empresa || c.cancelamento) return acc;
+    if (!c.dt_mov || c.dt_mov < de || c.dt_mov >= ate) return acc;
+    return acc + Number(c.custo || 0);
+  }, 0);
+}
+
 // --- GRUPO 3: Dados operacionais manuais ---
 // Substituem a antiga planilha DRE_2026_KMNO_e_NOVAH (CMV por produto e
 // faturamento por unidades) — alimentados manualmente no próprio
@@ -12376,7 +12400,7 @@ async function loadCompanyData() {
 lastFetchHadErrors = false;
 try {
   carregarDashMetas(); // não precisa esperar — não bloqueia o resto, renderiza quando chegar
-  const [categories, movements, receivable, payable, clients, contasCorrentes, payableCategorias] = await Promise.all([
+  const [categories, movements, receivable, payable, clients, contasCorrentes, payableCategorias, cmcVendasBruto] = await Promise.all([
     sbMultiPaged('dash_categories?select=codigo,descricao,conta_receita,conta_despesa,natureza,transferencia,nao_exibir,nao_fluxo,categoria_superior'),
     sbMultiPaged('dash_financial_movements?select=cod_categoria,dt_emissao,dt_registro,dt_pagamento,dt_vencimento,status,natureza,val_pago,val_liquido,num_titulo,observacao,origem,cod_titulo,cod_cc'),
     sbMultiPaged('dash_accounts_receivable?select=codigo_lancamento_omie,data_emissao,data_registro,data_vencimento,data_pagamento,data_previsao,valor_documento,valor_recebido,status_titulo,codigo_categoria,observacao,numero_documento,codigo_cliente_fornecedor'),
@@ -12393,7 +12417,12 @@ try {
     // mesmo fix no sync) — dash_accounts_payable_categorias fica vazia
     // pras outras, sem quebrar nada (fallback = comportamento antigo).
     sbMultiPaged('dash_accounts_payable_categorias?select=parent_omie_id,cod_categoria,valor,percentual'),
+    // NOVO (20/08/2026, pedido Lucas): CMC (custo médio de compra ×
+    // quantidade vendida, calculado automaticamente pelo Omie por
+    // produto) — ver comentário completo em cmcVendasPorEmpresaCache.
+    sbMultiPaged('dash_estoque_cmc_vendas?select=dt_mov,custo,cancelamento'),
   ]);
+  cmcVendasPorEmpresaCache = (cmcVendasBruto || []).filter(c => !c.cancelamento);
   clientsCache = clients;
   contasCorrentesCache = contasCorrentes;
 
@@ -18831,7 +18860,11 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     const custoInsumos = somaBucket('custoInsumos');
     const custoServicos = somaBucket('custoServicos'); // só KMNO tem essa categoria separada — Novah/RT retornam 0 naturalmente (bucket não existe nelas)
     const custoMaoObra = somaBucket('custoMaoObra');
-    const cmv = custoInsumos + custoServicos + custoMaoObra;
+    // FIX 20/08/2026 (pedido Lucas): soma o CMC automático do Omie (ver
+    // cmcVendasPorEmpresaCache) — sem isso o CMV nunca batia com o
+    // "01. Custo Médio (CMC) das Vendas" do relatório nativo.
+    const cmcAutomatico = somaCmcVendasPeriodo(empresaFiltro, monthStart, monthEnd);
+    const cmv = custoInsumos + custoServicos + custoMaoObra + cmcAutomatico;
     const royalties = somaBucket('royalties');
     const margemContribuicao = receitaLiquida - cmv - royalties;
     const custoAdm = somaBucket('custoAdm');
@@ -18922,7 +18955,11 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   const custoInsumos = somaBucket('custoInsumos');
   const custoServicos = somaBucket('custoServicos'); // só KMNO tem essa categoria separada — Novah retorna 0 naturalmente
   const custoMaoObra = somaBucket('custoMaoObra');
-  const cmv = custoInsumos + custoServicos + custoMaoObra;
+  // FIX 20/08/2026 (pedido Lucas): mesmo CMC automático do branch com
+  // empresaFiltro acima — soma KMNO+NOVAH (mesmo escopo do resto do
+  // Grupo, que não inclui RT nesse card).
+  const cmcAutomaticoGrupo = somaCmcVendasPeriodo('KMNO', monthStart, monthEnd) + somaCmcVendasPeriodo('NOVAH', monthStart, monthEnd);
+  const cmv = custoInsumos + custoServicos + custoMaoObra + cmcAutomaticoGrupo;
   const royalties = somaBucket('royalties');
   const margemContribuicao = receitaLiquida - cmv - royalties;
   const custoAdm = somaBucket('custoAdm');
