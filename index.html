@@ -18757,7 +18757,20 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     // cálculo próprio já concordam, não desconta/reinclui mais.
     // "Transferência entre contas" (1.02.96) continua descontada.
     const transferenciaEmbutida = somaBucket('transferenciaEntreContas');
-    const receita = receitaOficialRow
+    // FIX 20/08/2026 (pedido Lucas, "precisa mostrar o certo como no
+    // Omie"): "receitas_realizado" (dash_orcamento_realizado) é o
+    // relatório de CAIXA do Omie ("Receitas Realizadas" = dinheiro
+    // recebido), não o DRE por Competência. Esse card vive na tela DRE
+    // por Competência — usar esse valor aqui fazia o card mostrar caixa
+    // com rótulo de competência (ex: KMNO Jun/26 mostrava R$596k, o DRE
+    // real do Omie por Competência mostra R$899.515,89). Só usa o
+    // oficial quando modo==='caixa' de verdade (chamador explícito, ver
+    // buildResumoDetalhadoMesFrozenPorEmpresa/DRE por Caixa); em
+    // competência (modo undefined/'competencia'), sempre usa a soma por
+    // categoria (receitaProdutos+Mercadorias+Serviços), que já é
+    // competência de verdade (dt_registro/dt_emissao, ver
+    // buildTodosBlocosRealizado).
+    const receita = (modo === 'caixa' && receitaOficialRow)
       ? Number(receitaOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - transferenciaEmbutida
       : (receitaProdutos + receitaMercadorias + receitaServicos);
     // FIX 20/08/2026: quando "receita" vem do oficial (Omie) e diverge da
@@ -18855,7 +18868,9 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   // próprio já concordam, não desconta/reinclui mais. "Transferência
   // entre contas" (1.02.96) continua descontada.
   const transferenciaEmbutidaGrupo = somaBucket('transferenciaEntreContas');
-  const receita = (kmnoOficialRow && novahOficialRow)
+  // FIX 20/08/2026 (mesmo motivo do branch com empresaFiltro acima): só
+  // usa o oficial (caixa) quando modo==='caixa' de verdade.
+  const receita = (modo === 'caixa' && kmnoOficialRow && novahOficialRow)
     ? (Number(kmnoOficialRow.receitas_realizado) + Number(novahOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutidoGrupo - transferenciaEmbutidaGrupo)
     : (receitaProdutos + receitaMercadorias + receitaServicos);
   // FIX 20/08/2026: mesma reescala do branch com empresaFiltro acima —
