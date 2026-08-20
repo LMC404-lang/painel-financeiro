@@ -5178,6 +5178,20 @@ function excluirGatewayReconciliacaoKmno(lista) {
   return (lista || []).filter(m => !isGatewayReconciliacaoKmno(m));
 }
 
+// Achado 20/08/2026: título isolado do MercadoPago (cliente "MERCADOPAGO.COM
+// REPRESENTACOES LTDA", codigo_lancamento_omie 10554331681, R$14.000,00,
+// sem número de documento) classificado por engano na categoria 1.01.02
+// (Clientes - Vendas Site e E-commerce) em accounts_receivable — não é
+// venda de e-commerce, é conciliação de gateway igual ao padrão da
+// categoria 1.04.96 acima, só que num título isolado com a categoria
+// errada no próprio cadastro do Omie. Excluído por ID (não por categoria,
+// já que a categoria em si é válida pra vendas reais) — mesmo padrão do
+// DRE_NATIVO_DUPLICADOS_CONHECIDOS_IDS usado em outro lugar deste arquivo.
+const KMNO_TITULOS_EXCLUIDOS_MANUALMENTE_IDS = new Set([10554331681]);
+function isTituloExcluidoManualmenteKmno(empresa, codigoLancamentoOmie) {
+  return empresa === 'KMNO' && KMNO_TITULOS_EXCLUIDOS_MANUALMENTE_IDS.has(Number(codigoLancamentoOmie));
+}
+
 function isExcludedFromDre(cat, label) {
   if (cat && cat.nao_exibir) return true;
   return CATEGORIAS_SEM_CONTA_DRE.has(label);
@@ -11741,7 +11755,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
   dreArvoreCmcVendasCache = (cmcVendas || []).filter(c => !c.cancelamento);
 
   const unifiedMovements = [
-    ...receivable.filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor)).map(r => ({
+    ...receivable.filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor) && !isTituloExcluidoManualmenteKmno(r._empresa, r.codigo_lancamento_omie)).map(r => ({
       dt_emissao: r.data_emissao,
       dt_registro: r.data_registro,
       dt_pagamento: r.data_pagamento || r.data_previsao,
@@ -11810,7 +11824,7 @@ async function carregarDadosDreArvoreTodasEmpresas() {
     categoriaOriginal || categoriaPorTituloFallback.get(`${empresa}|${codTitulo}`) || null;
 
   const unifiedMovementsNativo = [
-    ...receivable.filter(r => r.status_titulo !== 'CANCELADO' && !DRE_NATIVO_DUPLICADOS_CONHECIDOS_IDS.has(Number(r.codigo_lancamento_omie))).map(r => ({
+    ...receivable.filter(r => r.status_titulo !== 'CANCELADO' && !DRE_NATIVO_DUPLICADOS_CONHECIDOS_IDS.has(Number(r.codigo_lancamento_omie)) && !isTituloExcluidoManualmenteKmno(r._empresa, r.codigo_lancamento_omie)).map(r => ({
       dt_emissao: r.data_emissao,
       dt_registro: r.data_registro,
       natureza: 'R',
@@ -12481,7 +12495,7 @@ try {
 
     // Build unified movements from accounts receivable + payable (more complete than omie_financial_movements)
     const unifiedMovements = [
-      ...(receivable || []).filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor)).map(r => ({
+      ...(receivable || []).filter(r => r.status_titulo !== 'CANCELADO' && !isClientePrevisao(r._empresa, r.codigo_cliente_fornecedor) && !isTituloExcluidoManualmenteKmno(r._empresa, r.codigo_lancamento_omie)).map(r => ({
         dt_emissao: r.data_emissao,
         dt_registro: r.data_registro,
         dt_pagamento: r.data_pagamento || r.data_previsao,
