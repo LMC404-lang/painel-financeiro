@@ -18728,9 +18728,9 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     // KMNO: separa Produtos x Mercadorias (mesma regra da soma total).
     // NOVAH: tudo cai em "Serviços" (mesma regra da soma total). RT: sem
     // essa distinção — cai inteiro em receitaProdutos (categoria única).
-    const receitaProdutos = empresaFiltro === 'NOVAH' ? 0 : (receitaTotalEmpresa - revendaMercadoria);
-    const receitaMercadorias = empresaFiltro === 'NOVAH' ? 0 : revendaMercadoria;
-    const receitaServicos = empresaFiltro === 'NOVAH' ? receitaTotalEmpresa : 0;
+    let receitaProdutos = empresaFiltro === 'NOVAH' ? 0 : (receitaTotalEmpresa - revendaMercadoria);
+    let receitaMercadorias = empresaFiltro === 'NOVAH' ? 0 : revendaMercadoria;
+    let receitaServicos = empresaFiltro === 'NOVAH' ? receitaTotalEmpresa : 0;
 
     // Pedido 10/08/2026: "Recebimento" precisa bater com "Receitas
     // Realizadas" do relatório nativo do Omie — que soma TODO dinheiro que
@@ -18760,6 +18760,23 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
     const receita = receitaOficialRow
       ? Number(receitaOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutido - transferenciaEmbutida
       : (receitaProdutos + receitaMercadorias + receitaServicos);
+    // FIX 20/08/2026: quando "receita" vem do oficial (Omie) e diverge da
+    // soma das 3 linhas de quebra (Produtos/Mercadorias/Serviços, que
+    // sempre vêm do cálculo por categoria), a UI mostrava "Faturamento
+    // Bruto" ≠ soma das linhas de cima — inconsistência visual real
+    // (ex: KMNO Jun/26, quebra somava R$923k mas o Bruto oficial
+    // mostrava R$596k). Reescala as 3 linhas proporcionalmente pra
+    // sempre somarem exatamente "receita", preservando a proporção
+    // entre elas. Sem reescala quando a soma original é 0 (nada pra
+    // distribuir proporcionalmente) — receita oficial fica exposta só
+    // no total nesse caso raro.
+    const somaBreakdownOriginal1 = receitaProdutos + receitaMercadorias + receitaServicos;
+    if (somaBreakdownOriginal1 !== 0 && Math.abs(receita - somaBreakdownOriginal1) > 0.01) {
+      const fatorEscala1 = receita / somaBreakdownOriginal1;
+      receitaProdutos *= fatorEscala1;
+      receitaMercadorias *= fatorEscala1;
+      receitaServicos *= fatorEscala1;
+    }
     // Pedido 30/07: impostos/devolucoes expostos separados (buckets já
     // existiam em buildResumoCategoriasMes, só "deducoes" combinado
     // era usado aqui antes).
@@ -18810,9 +18827,9 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
 
   const kmnoRevendaMercadoria = Number((kmno.receita || {})['Clientes - Revenda de Mercadoria'] || 0);
   const kmnoReceitaTotal = somaMapa(kmno.receita);
-  const receitaProdutos = kmnoReceitaTotal - kmnoRevendaMercadoria;
-  const receitaMercadorias = kmnoRevendaMercadoria;
-  const receitaServicos = somaMapa(novah.receita);
+  let receitaProdutos = kmnoReceitaTotal - kmnoRevendaMercadoria;
+  let receitaMercadorias = kmnoRevendaMercadoria;
+  let receitaServicos = somaMapa(novah.receita);
 
   // Pedido 10/08/2026: mesmo ajuste do branch com empresaFiltro acima —
   // "Recebimento" do Grupo também precisa incluir recebimentoEmprestimos
@@ -18841,6 +18858,15 @@ function buildResumoDetalhadoMesAoVivo(categories, movements, monthStart, monthE
   const receita = (kmnoOficialRow && novahOficialRow)
     ? (Number(kmnoOficialRow.receitas_realizado) + Number(novahOficialRow.receitas_realizado) - recebimentoEmprestimosEmbutidoGrupo - transferenciaEmbutidaGrupo)
     : (receitaProdutos + receitaMercadorias + receitaServicos);
+  // FIX 20/08/2026: mesma reescala do branch com empresaFiltro acima —
+  // "receita" oficial pode divergir da soma das 3 linhas de quebra.
+  const somaBreakdownOriginalGrupo = receitaProdutos + receitaMercadorias + receitaServicos;
+  if (somaBreakdownOriginalGrupo !== 0 && Math.abs(receita - somaBreakdownOriginalGrupo) > 0.01) {
+    const fatorEscalaGrupo = receita / somaBreakdownOriginalGrupo;
+    receitaProdutos *= fatorEscalaGrupo;
+    receitaMercadorias *= fatorEscalaGrupo;
+    receitaServicos *= fatorEscalaGrupo;
+  }
   // Pedido 30/07: impostos/devolucoes expostos separados, mesmo padrão
   // do branch com empresaFiltro acima.
   const impostos = somaBucket('impostos');
