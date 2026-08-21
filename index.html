@@ -5814,6 +5814,7 @@ function buildArvoreNativaDre(empresa, categories, movements, meses, nfeRows, ex
     const cat = catByCodigo[n.codigo_categoria];
     if (!cat || !cat.codigo_dre) return;
     if (!n.dt_emissao) return;
+    if (n.dt_cancelamento || n.denegada === 'S' || n.dt_inutilizacao) return;
     const d = dayjs(n.dt_emissao);
     const mesIdx = meses.findIndex(mm => d.isSame(mm, 'month') && d.isSame(mm, 'year'));
     if (mesIdx < 0) return;
